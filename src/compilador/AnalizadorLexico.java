@@ -1,4 +1,5 @@
 package src.compilador;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PushbackReader;
@@ -6,6 +7,13 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+/*
+import accion_semantica.AS0;
+import accion_semantica.AS1;
+import accion_semantica.AS6;
+import src.accion_semantica.AccionSemantica;*/
+import src.accion_semantica.*;
+
 public class AnalizadorLexico {
    
     //RANGOS
@@ -31,6 +39,8 @@ public class AnalizadorLexico {
     private static final char DIGITO = '0';
     private static final char LETRA_MINUSCULA = 'a';
     private static final char LETRA_MAYUSCULA = 'A';
+    private static final char EXPONENTE = 's';
+
     
 
 
@@ -45,7 +55,7 @@ public class AnalizadorLexico {
 
     //Cantidad de simbolos reconocidos 24 + Otros
     private static final int CANT_SIMBOLOS = 25;
-    private static final StringBuilder token_actual = new StringBuilder();
+    private static StringBuilder token_actual = new StringBuilder();
 
     //Estructuras
     private static final String PATH_TABLA_TRANSICION_ESTADO = "src/estructuras/tabla_transicion_estados";
@@ -53,10 +63,26 @@ public class AnalizadorLexico {
     private static final int[][]tabla_transicion_estado = leerMatriz(PATH_TABLA_TRANSICION_ESTADO, CANT_ESTADOS, CANT_SIMBOLOS);
     private static final int[][]tabla_acciones_semanticas = leerMatriz(PATH_TABLA_ACCIONES_SEMANTICAS, CANT_ESTADOS, CANT_SIMBOLOS);
     
+
     
+    // GETTERS
+
+    public int get_cant_simbolos(){
+        return CANT_SIMBOLOS;
+    }
+
+    public int get_cant_estados(){
+        return CANT_ESTADOS;
+    }
+
+
+    // LOGICA DE NEGOCIO
+
     public static char getTipoCaracter(char caracterActual){
         if (Character.isDigit(caracterActual)){
             return DIGITO;
+        } else if (caracterActual == 's') {
+            return EXPONENTE;
         } else if (caracterActual != 's' && Character.isLowerCase(caracterActual)){
             return LETRA_MINUSCULA;
         } else if (Character.isUpperCase(caracterActual)){
@@ -65,7 +91,6 @@ public class AnalizadorLexico {
             return caracterActual;
         }
     }
-    
     
     private static int indexarCaracter(char caracterActual){
         switch (getTipoCaracter(caracterActual)) { 
@@ -115,22 +140,33 @@ public class AnalizadorLexico {
                 return 21;
             case ';':
                 return 22;
-            default:
+            case EXPONENTE:
                 return 23;
+            default:
+                return 24;
         }
     }
 
-    public static void cambiarEstado(Reader reader, char caracterActual){
-        //int indice_caracter = indexarCaracter(caracterActual);
-        //AccionSemantica accion = acciones_semanticas[estado_actual][indice_caracter];
-        //int resultado = accion.ejecutar(reader, token_actual);
-        //estado_actual = transicion_estados[estado_actual][indice_caracter];
-        //return resultado;
-        
+    public static int cambiarEstado(Reader reader, char caracterActual){
         int indice_caracter = indexarCaracter(caracterActual);
-        System.out.println("El caracter actual es: " + indice_caracter); 
+        int numero_accion_semantica = tabla_acciones_semanticas[estado_actual][indice_caracter];
+        AccionSemantica accion_semantica = getAccionSemantica(numero_accion_semantica);
+        int resultado = accion_semantica.ejecutar(reader, token_actual);
+        estado_actual = tabla_transicion_estado[estado_actual][indice_caracter];
+        return resultado;
+    }
+    //GET Y SET PARA QUE LAS ACCIONES SEMANTICAS PUEDAN MODIFICAR EL ESTADO ACTUAL Y LA LINEA ACTUAL
+    public static int getLineaActual() {
+        return linea_actual;
     }
 
+    public static void setLineaActual(int numero) {
+        linea_actual = numero;
+    }
+
+    public static StringBuilder getTokenActual() {
+        return token_actual;
+    }
     public static int[][] leerMatriz(String path, int filas, int columnas) {
         int[][] matriz = new int[filas][columnas];
 
@@ -152,4 +188,38 @@ public class AnalizadorLexico {
 
         return matriz;
     }
+
+    public static AccionSemantica getAccionSemantica(int numero){
+        switch (numero) {
+            case 0:
+                return new ASe();
+            case 1:
+                return new AS1();
+            case 2:
+                return new AS2();
+            case 3:
+                return new AS3();
+            case 4:
+                return new AS4();
+            case 5:
+                return new AS5();
+            case 6:
+                return new AS6();
+            case 7:
+                return new AS7();
+            case 8:
+                return new AS8();
+            case 9:
+                return new AS9();
+            case 10:
+                return new AS10();
+            case 11:
+                return new AS11();
+            case 12:
+                return new ASw();
+            default:
+                return null;
+        }
+    }
+
 }
