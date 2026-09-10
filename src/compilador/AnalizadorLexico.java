@@ -1,12 +1,11 @@
 package src.compilador;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.Reader;
+import java.io.*;
 import java.util.Scanner;
 import src.accion_semantica.*;
 
 public class AnalizadorLexico {
+
    
     //RANGOS
     public static final int MaxCaracteres = 22;
@@ -24,23 +23,22 @@ public class AnalizadorLexico {
     private static final char BLANCO = ' ';
     private static final char TAB = '\t';
     private static final char SALTO_LINEA = '\n';
-    private static final int IDENTIFICADOR = 257;
+    public static final int IDENTIFICADOR = 257;
     private static final int NUMERO = 258;
     private static final int CONSTANTE = 259;
-    private static final int CADENA = 260;
+    private static final int CADENA = 287; // Cuando esta entre " ... "
     private static final char DIGITO = '0';
     private static final char LETRA_MINUSCULA = 'a';
     private static final char LETRA_MAYUSCULA = 'A';
     private static final char EXPONENTE = 's';
 
     
-
-
     
     //Atributos de la clase
-    public static Reader reader;
+    public static PushbackReader reader;
     private static int estado_actual = 0;
-    private static int linea_actual = 1;    
+    private static int linea_actual = 1;   
+    private static String lexema; 
 
     // Cantidad de estados del automata 12 + Final + Error
     private static final int CANT_ESTADOS = 14;
@@ -68,6 +66,10 @@ public class AnalizadorLexico {
         return CANT_ESTADOS;
     }
 
+    public static void setLexema(String lex){
+        lexema = lex;
+    }
+
 
     // LOGICA DE NEGOCIO
 
@@ -84,9 +86,13 @@ public class AnalizadorLexico {
             return caracterActual;
         }
     }
+
+    public static void mostrarWarning(){
+        System.out.println("WARNING: Linea: " + linea_actual + "\n El identificador tenia mas de 22 caracteres y fue truncado");
+    }
     
     private static int indexarCaracter(char caracterActual){
-        switch (getTipoCaracter(caracterActual)) { 
+        switch (getTipoCaracter(caracterActual)) {
             case DIGITO: 
                 return 0;
             case LETRA_MINUSCULA:
@@ -142,12 +148,15 @@ public class AnalizadorLexico {
 
 
     // Metodo invocado por el parser:
-    public static int analizar(Reader reader, char caracterActual){ // Podria ser void y pasarle al sintactico el token de otra forma
+    public static void analizar(char caracterActual){ // Podria ser void y pasarle al sintactico el token de otra forma
         int indice_caracter = indexarCaracter(caracterActual);
+        System.out.println("Este es el indice del caracter: "+ indice_caracter);
         int numero_accion_semantica = tabla_acciones_semanticas[estado_actual][indice_caracter];
-        int resultado = ejecutar_accion_semantica(numero_accion_semantica, reader);
+        System.out.println("Este es el numero de accion semantica: " +numero_accion_semantica);
+        int resultado = ejecutar_accion_semantica(numero_accion_semantica, reader, caracterActual);
         estado_actual = tabla_transicion_estado[estado_actual][indice_caracter];
-        return resultado; // Aca tendria que venir la logica de que si el token es valido se lo pasa al analizador sintactico. Sino sigue leyendo el parser
+        //return resultado; // Aca tendria que venir la logica de que si el token es valido se lo pasa al analizador sintactico. Sino sigue leyendo el parser
+        System.out.println("TOKEN: "+resultado);
         /*
             if (resultado != -1) {
                 llamo al analizar sintatcio con el resultado: algo asi
@@ -157,9 +166,9 @@ public class AnalizadorLexico {
     }
 
     // Metodo para cambiar de accion semantica:
-    public static int ejecutar_accion_semantica(int accion, Reader reader){
+    public static int ejecutar_accion_semantica(int accion, PushbackReader reader, char caracter_actual){
         Accion_Semantica accion_semantica = getAccionSemantica(accion);
-        return accion_semantica.ejecutar(token_actual, reader);
+        return accion_semantica.ejecutar(token_actual, reader, caracter_actual);
     }
 
     // Metodo para incrementar linea

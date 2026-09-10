@@ -7,19 +7,13 @@ public class AS1 extends Accion_Semantica{
 
     @Override 
     //TODO: la AS1 tambien se ejecuta al cerrar los mensajes multilinea con " " ", o al terminar un comentario. Que hacemos? 
-    public int ejecutar(StringBuilder token_actual, Reader reader){
-        try{
-            char caracter_actual = (char) reader.read();
-            token_actual.append(caracter_actual);
-            String token_cerrado = token_actual.toString();
+    public int ejecutar(StringBuilder token_actual, PushbackReader reader, char caracter_actual){
 
-            int identificador_palabra_reservada = TablaPalabrasReservadas.obtenerIdentificador(token_cerrado);
-            return identificador_palabra_reservada; // Este devuelve el numero de token.
+        token_actual.append(caracter_actual);
+        String token_cerrado = token_actual.toString();
 
-        } catch (Exception e){
-            e.printStackTrace();
-        }
+        int identificador_palabra_reservada = TablaPalabrasReservadas.obtenerIdentificador(token_cerrado);
+        return identificador_palabra_reservada; // Este devuelve el numero de token.
 
-        return AnalizadorLexico.token_abierto;
     }
 }
