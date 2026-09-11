@@ -15,8 +15,7 @@ public class Main {
         AnalizadorLexico.reader = new PushbackReader(new BufferedReader(new FileReader(PATH_PROGRAMA)));
         int caracter_leido = AnalizadorLexico.reader.read();
         while(caracter_leido != -1){
-            //System.out.println("El caracter leido es: " + caracter_leido);
-            //caracter_leido = AnalizadorLexico.reader.read();
+            //pepe_ ;
             analizador.analizar((char) caracter_leido);
             caracter_leido = AnalizadorLexico.reader.read();
         }

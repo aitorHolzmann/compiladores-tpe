@@ -1,33 +1,47 @@
 package src.compilador;
-import java.io.*;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 
-public class FileHelper{
-
-
+public class FileHelper {
 
     public static Map<String, Integer> readMapFile(String path) {
-            Map<String, Integer> map = new HashMap<>();
+        Map<String, Integer> map = new HashMap<>();
 
-            try {
-                File archivo = new File(path);
-                Scanner scanner = new Scanner(archivo);
+        try (BufferedReader br = new BufferedReader(new FileReader(path))) {
+            String linea;
+            int numero_linea = 0;
 
-                while (scanner.hasNext()) {
-                    String palabra_reservada = scanner.next();
-                    int identificador = scanner.nextInt();
-                    map.put(palabra_reservada, identificador);
+            while ((linea = br.readLine()) != null) {
+                numero_linea++;
+                linea = linea.trim();
+                if (linea.isEmpty()) {
+                    continue; // ignora líneas vacías
                 }
 
-                scanner.close();
-            } catch (FileNotFoundException excepcion) {
-                System.out.println("No se pudo leer el archivo " + path);
-                excepcion.printStackTrace();
-            }
+                String[] partes = linea.split("\\s+");
+                if (partes.length != 2) {
+                    System.out.println("Linea " + numero_linea + " del archivo " + path
+                            + " mal formada, se ignora: \"" + linea + "\"");
+                    continue;
+                }
 
-            return map;
+                try {
+                    int identificador = Integer.parseInt(partes[1]);
+                    map.put(partes[0], identificador);
+                } catch (NumberFormatException e) {
+                    System.out.println("Linea " + numero_linea + " del archivo " + path
+                            + ": \"" + partes[1] + "\" no es un numero valido, se ignora");
+                }
+            }
+        } catch (IOException excepcion) {
+            System.out.println("No se pudo leer el archivo " + path);
+            excepcion.printStackTrace();
         }
-    
+
+        return map;
+    }
 }

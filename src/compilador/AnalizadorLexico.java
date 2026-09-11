@@ -41,7 +41,7 @@ public class AnalizadorLexico {
     private static String lexema; 
 
     // Cantidad de estados del automata 12 + Final + Error
-    private static final int CANT_ESTADOS = 14;
+    private static final int CANT_ESTADOS = 13;
 
     //Cantidad de simbolos reconocidos 24 + Otros
     private static final int CANT_SIMBOLOS = 25;
@@ -151,6 +151,7 @@ public class AnalizadorLexico {
     public static void analizar(char caracterActual){ // Podria ser void y pasarle al sintactico el token de otra forma
         int indice_caracter = indexarCaracter(caracterActual);
         System.out.println("Este es el indice del caracter: "+ indice_caracter);
+        System.out.println("Estado actual: "+estado_actual);
         int numero_accion_semantica = tabla_acciones_semanticas[estado_actual][indice_caracter];
         System.out.println("Este es el numero de accion semantica: " +numero_accion_semantica);
         int resultado = ejecutar_accion_semantica(numero_accion_semantica, reader, caracterActual);
@@ -159,13 +160,9 @@ public class AnalizadorLexico {
         System.out.println("TOKEN: "+resultado);
         if (resultado != -1){
             token_actual.setLength(0);
+            estado_actual = 0;
         }
-        /*
-            if (resultado != -1) {
-                llamo al analizar sintatcio con el resultado: algo asi
-                reinicio token actual para que quede vacio.
-            }
-        */
+
     }
 
     // Metodo para cambiar de accion semantica:
