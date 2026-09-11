@@ -1,7 +1,6 @@
 package src.accion_semantica;
 
 import java.io.PushbackReader;
-import java.io.Reader;
 import src.compilador.AnalizadorLexico;
 
 public class AS3 extends Accion_Semantica{
@@ -14,6 +13,11 @@ public class AS3 extends Accion_Semantica{
             String truncado = token_entregado.substring(0, 22); // o 21?
             token_entregado = truncado;
             AnalizadorLexico.mostrarWarning();
+        }
+        try{
+            reader.unread(caracter_actual);
+        } catch (Exception e){
+            e.printStackTrace();
         }
         AnalizadorLexico.setLexema(token_entregado);
         return AnalizadorLexico.IDENTIFICADOR;

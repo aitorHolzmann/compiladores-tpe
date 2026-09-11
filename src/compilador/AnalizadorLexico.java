@@ -157,6 +157,9 @@ public class AnalizadorLexico {
         estado_actual = tabla_transicion_estado[estado_actual][indice_caracter];
         //return resultado; // Aca tendria que venir la logica de que si el token es valido se lo pasa al analizador sintactico. Sino sigue leyendo el parser
         System.out.println("TOKEN: "+resultado);
+        if (resultado != -1){
+            token_actual.setLength(0);
+        }
         /*
             if (resultado != -1) {
                 llamo al analizar sintatcio con el resultado: algo asi
