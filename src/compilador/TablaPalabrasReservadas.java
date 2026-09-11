@@ -2,7 +2,7 @@ package src.compilador;
 
 import java.util.Map;
 
-import compilador.FileHelper;
+import src.compilador.FileHelper;
 
 public class TablaPalabrasReservadas {
     public static final int NOT_FOUND = -1;

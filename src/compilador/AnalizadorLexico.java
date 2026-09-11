@@ -1,30 +1,21 @@
 package src.compilador;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PushbackReader;
-import java.io.Reader;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.*;
 import java.util.Scanner;
-/*
-import accion_semantica.AS0;
-import accion_semantica.AS1;
-import accion_semantica.AS6;
-import src.accion_semantica.AccionSemantica;*/
 import src.accion_semantica.*;
 
 public class AnalizadorLexico {
+
    
     //RANGOS
     public static final int MaxCaracteres = 22;
     //RANGO SHORTINT: -2⁷ HASTA 2⁷-1
-    private static final int ValorMinimoInt = -128;
-    private static final int ValorMaximoInt = 127;
+    public static final int ValorMinimoInt = -128;
+    public static final int ValorMaximoInt = 127;
     
     //RANGO SINGLEF
-    private static final double ValorMinimoFloat = 1.17549435e-38;
-    private static final double ValorMaximoFloat = 3.40282347e+38;
+    public static final double ValorMinimoFloat = 1.17549435e-38;
+    public static final double ValorMaximoFloat = 3.40282347e+38;
     
     
 
@@ -32,30 +23,30 @@ public class AnalizadorLexico {
     private static final char BLANCO = ' ';
     private static final char TAB = '\t';
     private static final char SALTO_LINEA = '\n';
-    private static final int IDENTIFICADOR = 257;
+    public static final int IDENTIFICADOR = 257;
     private static final int NUMERO = 258;
     private static final int CONSTANTE = 259;
-    private static final int CADENA = 260;
+    private static final int CADENA = 287; // Cuando esta entre " ... "
     private static final char DIGITO = '0';
     private static final char LETRA_MINUSCULA = 'a';
     private static final char LETRA_MAYUSCULA = 'A';
     private static final char EXPONENTE = 's';
 
     
-
-
     
     //Atributos de la clase
-    public static Reader reader;
+    public static PushbackReader reader;
     private static int estado_actual = 0;
-    private static int linea_actual = 1;    
+    private static int linea_actual = 1;   
+    private static String lexema; 
 
     // Cantidad de estados del automata 12 + Final + Error
-    private static final int CANT_ESTADOS = 14;
+    private static final int CANT_ESTADOS = 13;
 
     //Cantidad de simbolos reconocidos 24 + Otros
     private static final int CANT_SIMBOLOS = 25;
     private static StringBuilder token_actual = new StringBuilder();
+    public static final int token_abierto = -1;
 
     //Estructuras
     private static final String PATH_TABLA_TRANSICION_ESTADO = "src/estructuras/tabla_transicion_estados";
@@ -75,6 +66,10 @@ public class AnalizadorLexico {
         return CANT_ESTADOS;
     }
 
+    public static void setLexema(String lex){
+        lexema = lex;
+    }
+
 
     // LOGICA DE NEGOCIO
 
@@ -91,9 +86,13 @@ public class AnalizadorLexico {
             return caracterActual;
         }
     }
+
+    public static void mostrarWarning(){
+        System.out.println("WARNING: Linea: " + linea_actual + "\n El identificador tenia mas de 22 caracteres y fue truncado");
+    }
     
     private static int indexarCaracter(char caracterActual){
-        switch (getTipoCaracter(caracterActual)) { 
+        switch (getTipoCaracter(caracterActual)) {
             case DIGITO: 
                 return 0;
             case LETRA_MINUSCULA:
@@ -147,23 +146,49 @@ public class AnalizadorLexico {
         }
     }
 
-    public static int cambiarEstado(Reader reader, char caracterActual){
+
+    // Metodo invocado por el parser:
+    public static void analizar(char caracterActual){ // Podria ser void y pasarle al sintactico el token de otra forma
         int indice_caracter = indexarCaracter(caracterActual);
+        System.out.println("Este es el indice del caracter: "+ indice_caracter);
+        System.out.println("Estado actual: "+estado_actual);
         int numero_accion_semantica = tabla_acciones_semanticas[estado_actual][indice_caracter];
-        AccionSemantica accion_semantica = getAccionSemantica(numero_accion_semantica);
-        int resultado = accion_semantica.ejecutar(reader, token_actual);
+        System.out.println("Este es el numero de accion semantica: " +numero_accion_semantica);
+        int resultado = ejecutar_accion_semantica(numero_accion_semantica, reader, caracterActual);
         estado_actual = tabla_transicion_estado[estado_actual][indice_caracter];
-        return resultado;
+        //return resultado; // Aca tendria que venir la logica de que si el token es valido se lo pasa al analizador sintactico. Sino sigue leyendo el parser
+        System.out.println("TOKEN: "+resultado);
+        if (resultado != -1){
+            token_actual.setLength(0);
+            estado_actual = 0;
+        }
+
     }
+
+    // Metodo para cambiar de accion semantica:
+    public static int ejecutar_accion_semantica(int accion, PushbackReader reader, char caracter_actual){
+        Accion_Semantica accion_semantica = getAccionSemantica(accion);
+        return accion_semantica.ejecutar(token_actual, reader, caracter_actual);
+    }
+
+    // Metodo para incrementar linea
+    public static void incrementarLinea(){
+        linea_actual = linea_actual + 1;
+    }
+
+
+
     //GET Y SET PARA QUE LAS ACCIONES SEMANTICAS PUEDAN MODIFICAR EL ESTADO ACTUAL Y LA LINEA ACTUAL
     public static int getLineaActual() {
         return linea_actual;
     }
 
+    /*
     public static void setLineaActual(int numero) {
         linea_actual = numero;
     }
-
+    Directamente usamos un metodo que haga linea +1
+    */ 
     public static StringBuilder getTokenActual() {
         return token_actual;
     }
@@ -189,7 +214,7 @@ public class AnalizadorLexico {
         return matriz;
     }
 
-    public static AccionSemantica getAccionSemantica(int numero){
+    public static Accion_Semantica getAccionSemantica(int numero){
         switch (numero) {
             case 0:
                 return new ASe();
