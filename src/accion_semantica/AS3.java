@@ -41,17 +41,16 @@ public class AS3 extends Accion_Semantica{
         identificador = TablaSimbolos.obtenerSimbolo(token_entregado);
 
         if  (identificador != TablaSimbolos.LEXEMA_NO_ENCONTRADO){
-            AnalizadorLexico.setLexema(token_entregado);
             // CORRECCION: guardamos la referencia para que yylex() arme yylval.
-            AnalizadorLexico.referenciaTablaSimbolos = identificador;
-            return AnalizadorLexico.IDENTIFICADOR;
+            AnalizadorLexico.setReferenciaTablaSimbolos(identificador);
+            return TablaPalabrasReservadas.obtenerIdentificador("IDENTIFICADOR");
         }
 
         // CORRECCION: antes se ignoraba el valor de retorno de
         // agregarSimbolo (era void). Ahora usamos el id que devuelve.
         int nuevo_identificador = TablaSimbolos.agregarSimbolo(token_entregado);
-        AnalizadorLexico.referenciaTablaSimbolos = nuevo_identificador;
-        return AnalizadorLexico.IDENTIFICADOR;
+        AnalizadorLexico.setReferenciaTablaSimbolos(nuevo_identificador);
+        return TablaPalabrasReservadas.obtenerIdentificador("IDENTIFICADOR");
 
     }
 }

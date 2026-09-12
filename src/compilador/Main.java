@@ -13,14 +13,10 @@ public class Main {
     System.out.println("Se inicia la compilacion del archivo: " + PATH_PROGRAMA);
     try {
         AnalizadorLexico.reader = new PushbackReader(new BufferedReader(new FileReader(PATH_PROGRAMA)));
-        int caracter_leido = AnalizadorLexico.reader.read();
-        while(caracter_leido != -1){
-            //pepe_ ;
-            analizador.analizar((char) caracter_leido);
-            caracter_leido = AnalizadorLexico.reader.read();
-        }
-        System.out.println("Se llego al final del archivo");
-    
+        
+        while (AnalizadorLexico.yylex() != -1 )
+        
+        System.out.println("Fin del archivo");
     } catch (Exception e) {
         e.printStackTrace();
     }

@@ -20,26 +20,41 @@ public class AnalizadorLexico {
     
 
     //Caracteres especiales
+
+    //private static final int NUMERO = 258; //Que hacemos si viene un numero sin sufijo. ej: x = 2
+
     private static final char BLANCO = ' ';
     private static final char TAB = '\t';
     private static final char SALTO_LINEA = '\n';
-    public static final int IDENTIFICADOR = 257;
-    private static final int NUMERO = 258;
-    private static final int CONSTANTE = 259;
-    private static final int CADENA = 287; // Cuando esta entre " ... "
+    
     private static final char DIGITO = '0';
     private static final char LETRA_MINUSCULA = 'a';
     private static final char LETRA_MAYUSCULA = 'A';
     private static final char EXPONENTE = 's';
 
-    
+    // ======================================================================
+    // CORRECCION (integracion con TP2 / yacc):
+    // Los 4 valores de arriba (IDENTIFICADOR, NUMERO, CONSTANTE, CADENA) son
+    // "provisorios". Una vez que generen Parser.java con byaccj, los numeros
+    // reales de token los define el .y (por ej. Parser.IDENTIFICADOR,
+    // Parser.CONSTANTE, Parser.CADENA). Ahi van a tener que:
+    //   a) borrar estas 4 constantes locales, y
+    //   b) en AS3/AS6/etc devolver Parser.IDENTIFICADOR / Parser.CONSTANTE
+    //      en lugar de AnalizadorLexico.IDENTIFICADOR.
+    // Mientras generan y prueban el Parser, pueden dejarlas como estan.
+    // ======================================================================
+
+    // CORRECCION: esta variable es NUEVA. Es el "puente" para yylval.
+    // Cuando una accion semantica cierra un token IDENTIFICADOR, CONSTANTE
+    // o CADENA, debe guardar aca el indice de la Tabla de Simbolos
+    // correspondiente ANTES de hacer el return. yylex() lo lee enseguida.
+    public static int referenciaTablaSimbolos = -1;
+
     
     //Atributos de la clase
     public static PushbackReader reader;
     public static int estado_actual = 0;
     private static int linea_actual = 1;   
-    private static String lexema; 
-    public static int referenciaTablaSimbolos;
 
     // Cantidad de estados del automata 12 + Final + Error
     private static final int CANT_ESTADOS = 14;
@@ -48,6 +63,7 @@ public class AnalizadorLexico {
     private static final int CANT_SIMBOLOS = 25;
     private static StringBuilder token_actual = new StringBuilder();
     public static final int token_abierto = -1;
+
 
     //Estructuras
     private static final String PATH_TABLA_TRANSICION_ESTADO = "src/estructuras/tabla_transicion_estados";
@@ -67,8 +83,8 @@ public class AnalizadorLexico {
         return CANT_ESTADOS;
     }
 
-    public static void setLexema(String lex){
-        lexema = lex;
+    public static void setReferenciaTablaSimbolos(int referencia){
+        referenciaTablaSimbolos = referencia;
     }
 
 
@@ -77,9 +93,9 @@ public class AnalizadorLexico {
     public static char getTipoCaracter(char caracterActual){
         if (Character.isDigit(caracterActual)){
             return DIGITO;
-        } else if (caracterActual == 's') {
+        } else if (caracterActual == 's' && (estado_actual == 5 || estado_actual == 7)) {
             return EXPONENTE;
-        } else if (caracterActual != 's' && Character.isLowerCase(caracterActual)){
+        } else if (Character.isLowerCase(caracterActual)){
             return LETRA_MINUSCULA;
         } else if (Character.isUpperCase(caracterActual)){
             return LETRA_MAYUSCULA;
@@ -150,24 +166,60 @@ public class AnalizadorLexico {
     }
 
 
-    // Metodo invocado por el parser:
-    public static void analizar(char caracterActual){ // Podria ser void y pasarle al sintactico el token de otra forma
+    // CORRECCION: este metodo pasa de "void" a "int". Antes solo imprimia
+    // por consola y se perdia el token devuelto por la accion semantica;
+    // ahora ese valor es indispensable porque yylex() lo necesita para
+    // saber cuando "cerrar" un token y devolverselo al parser.
+    public static int analizar(char caracterActual){
         int indice_caracter = indexarCaracter(caracterActual);
-        System.out.println("Este es el indice del caracter: "+ indice_caracter);
-        System.out.println("Estado actual: "+estado_actual);
-        System.out.println("Caracter actual: "+ caracterActual);
-
+        //System.out.println("El caracter actual es: " + caracterActual);
         int numero_accion_semantica = tabla_acciones_semanticas[estado_actual][indice_caracter];
-        System.out.println("Este es el numero de accion semantica: " +numero_accion_semantica);
+        //System.out.println("Accion semantica: " + numero_accion_semantica);
         int token_devuelto = ejecutar_accion_semantica(numero_accion_semantica, reader, caracterActual);
-
+        //System.out.println("Token devuelto: "+ token_devuelto);
         estado_actual = tabla_transicion_estado[estado_actual][indice_caracter];
-        //return resultado; // Aca tendria que venir la logica de que si el token es valido se lo pasa al analizador sintactico. Sino sigue leyendo el parser
-        System.out.println("TOKEN: "+ token_devuelto);
+
 
         if (token_devuelto != -1){
             token_actual.setLength(0);
             estado_actual = 0;
+        }
+
+        return token_devuelto;
+    }
+
+    // ======================================================================
+    // CORRECCION: metodo NUEVO. Es el que integra el Analizador Lexico con
+    // el Parser generado por yacc/byaccj. yyparse() (dentro de Parser.java)
+    // invoca a yylex() cada vez que necesita un token nuevo.
+    //
+    // Idea: seguimos leyendo caracteres (usando el MISMO reader estatico
+    // de siempre, que ya persiste entre llamadas) hasta que analizar()
+    // devuelva algo distinto de "token_abierto" (-1). Eso puede pasar
+    // porque:
+    //   - se cerro un identificador / palabra reservada / constante / cadena
+    //   - se termino de reconocer un simbolo (';', '+', ':=', etc.)
+    //   - hubo un error lexico y la accion semantica decidio "descartar"
+    //     el token y seguir (ver correccion en AS6)
+    // Si el reader llega a fin de archivo (-1), devolvemos 0, que es
+    // exactamente lo que yacc espera como marca de EOF.
+    // ======================================================================
+    public static int yylex(){
+        try {
+            int caracter_leido = reader.read();
+            while (caracter_leido != -1){
+                int token = analizar((char) caracter_leido);
+                
+                if (token != token_abierto){
+                    System.out.println("El token es: " + token);
+                    return token;
+                }
+                caracter_leido = reader.read();
+            }
+            return -1; // EOF para yacc
+        } catch (IOException e){
+            e.printStackTrace();
+            return -1;
         }
 
     }
@@ -190,12 +242,6 @@ public class AnalizadorLexico {
         return linea_actual;
     }
 
-    /*
-    public static void setLineaActual(int numero) {
-        linea_actual = numero;
-    }
-    Directamente usamos un metodo que haga linea +1
-    */ 
     public static StringBuilder getTokenActual() {
         return token_actual;
     }
@@ -248,6 +294,8 @@ public class AnalizadorLexico {
             case 11:
                 return new AS11();
             case 12:
+                return new AS12();
+            case 13:
                 return new ASw();
             default:
                 return null;

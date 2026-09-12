@@ -13,10 +13,10 @@ public class AS9 extends Accion_Semantica{
         Double baseD = Double.parseDouble(base); // "20.3" -> 20.3 en double
         String exp = token_entregado.substring(posicionS + 1); // Me quedo con lo que venga despues de la "s"
         int exponente = Integer.parseInt(exp); // parseo a int el exponente -> "2" = 2
-        Double resultado = Math.pow(baseD, exponente); // Eleba la base a la potencia 0 -> 20.3^2
+        Double resultado = Math.pow(baseD, exponente); // Eleva la base a la potencia 0 -> 20.3^2
         System.out.println("El resultado es: " + resultado);
         if (resultado >= AnalizadorLexico.ValorMinimoFloat && resultado <= AnalizadorLexico.ValorMaximoFloat){
-            return TablaPalabrasReservadas.obtenerIdentificador("ULONG");
+            return TablaPalabrasReservadas.obtenerIdentificador("SINGLEF");
         }
         System.out.println("WARNING: El double "+ resultado + " esta fuera de rango");
         return 0; // Manejar el error

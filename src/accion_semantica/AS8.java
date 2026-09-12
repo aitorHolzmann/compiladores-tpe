@@ -6,7 +6,7 @@ import src.compilador.*;
 
 public class AS8 extends Accion_Semantica{
     // tenemos por ejemplo 20.3sa , estamos en la letra "a" es decir que hay que cerrar token float. poner exponente 0.
-    // Para esto tenemos que transformar el string "20.3s" a algo como 20.30^0 , Luego chequear rango y devolver token "ULONG"
+    // Para esto tenemos que transformar el string "20.3s" a algo como 20.30^0 , Luego chequear rango y devolver token "SINGLEF"
     @Override 
     public int ejecutar(StringBuilder token_actual, PushbackReader reader, char caracter_actual){
         String token_entregado = token_actual.toString(); //"20.3s" como string
@@ -15,7 +15,7 @@ public class AS8 extends Accion_Semantica{
         Double baseD = Double.parseDouble(base); // "20.3" -> 20.3 en double
         Double resultado = Math.pow(baseD, 0); // Eleba la base a la potencia 0 -> 20.3^0
         if (resultado >= AnalizadorLexico.ValorMinimoFloat && resultado <= AnalizadorLexico.ValorMaximoFloat){
-            return TablaPalabrasReservadas.obtenerIdentificador("ULONG");
+            return TablaPalabrasReservadas.obtenerIdentificador("SINGLEF");
         }
         System.out.println("WARNING: El double "+ resultado + " esta fuera de rango");
         return 0; // Manejar el error
