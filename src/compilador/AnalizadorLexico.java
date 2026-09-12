@@ -36,12 +36,13 @@ public class AnalizadorLexico {
     
     //Atributos de la clase
     public static PushbackReader reader;
-    private static int estado_actual = 0;
+    public static int estado_actual = 0;
     private static int linea_actual = 1;   
     private static String lexema; 
+    public static int referenciaTablaSimbolos;
 
     // Cantidad de estados del automata 12 + Final + Error
-    private static final int CANT_ESTADOS = 13;
+    private static final int CANT_ESTADOS = 14;
 
     //Cantidad de simbolos reconocidos 24 + Otros
     private static final int CANT_SIMBOLOS = 25;
@@ -52,7 +53,7 @@ public class AnalizadorLexico {
     private static final String PATH_TABLA_TRANSICION_ESTADO = "src/estructuras/tabla_transicion_estados";
     private static final String PATH_TABLA_ACCIONES_SEMANTICAS = "src/estructuras/tabla_acciones_semanticas";
     private static final int[][]tabla_transicion_estado = leerMatriz(PATH_TABLA_TRANSICION_ESTADO, CANT_ESTADOS, CANT_SIMBOLOS);
-    private static final int[][]tabla_acciones_semanticas = leerMatriz(PATH_TABLA_ACCIONES_SEMANTICAS, CANT_ESTADOS, CANT_SIMBOLOS);
+    public static final int[][]tabla_acciones_semanticas = leerMatriz(PATH_TABLA_ACCIONES_SEMANTICAS, CANT_ESTADOS, CANT_SIMBOLOS);
     
 
     
@@ -93,6 +94,7 @@ public class AnalizadorLexico {
     
     private static int indexarCaracter(char caracterActual){
         switch (getTipoCaracter(caracterActual)) {
+            
             case DIGITO: 
                 return 0;
             case LETRA_MINUSCULA:
@@ -129,20 +131,21 @@ public class AnalizadorLexico {
                 return 16;
             case '$':
                 return 17;
-            case '(':
-                return 18;
-            case ')':
-                return 19;
-            case '.':
-                return 20;
-            case ',':
-                return 21;
-            case ';':
-                return 22;
             case EXPONENTE:
+                return 18;
+            case '(':
+                return 19;
+            case ')':
+                return 20;
+            case '.':
+                return 21;
+            case ',':
+                return 22;
+            case ';':
                 return 23;
             default:
-                return 24;
+                return 24;           
+
         }
     }
 
@@ -152,13 +155,17 @@ public class AnalizadorLexico {
         int indice_caracter = indexarCaracter(caracterActual);
         System.out.println("Este es el indice del caracter: "+ indice_caracter);
         System.out.println("Estado actual: "+estado_actual);
+        System.out.println("Caracter actual: "+ caracterActual);
+
         int numero_accion_semantica = tabla_acciones_semanticas[estado_actual][indice_caracter];
         System.out.println("Este es el numero de accion semantica: " +numero_accion_semantica);
-        int resultado = ejecutar_accion_semantica(numero_accion_semantica, reader, caracterActual);
+        int token_devuelto = ejecutar_accion_semantica(numero_accion_semantica, reader, caracterActual);
+
         estado_actual = tabla_transicion_estado[estado_actual][indice_caracter];
         //return resultado; // Aca tendria que venir la logica de que si el token es valido se lo pasa al analizador sintactico. Sino sigue leyendo el parser
-        System.out.println("TOKEN: "+resultado);
-        if (resultado != -1){
+        System.out.println("TOKEN: "+ token_devuelto);
+
+        if (token_devuelto != -1){
             token_actual.setLength(0);
             estado_actual = 0;
         }

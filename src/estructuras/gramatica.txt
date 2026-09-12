@@ -1,0 +1,45 @@
+%{
+package src.compilador;
+%}
+
+%token ID CTE ASIG
+
+%%
+
+prog : ID ASIG expresion
+     ;
+
+expresion : ID
+          | CTE
+          ;
+
+%%
+
+static Parser parser;
+
+public static void main(String[] args) {
+    parser = new Parser(true);
+    parser.yyparse();
+}
+
+int yylex_contador = 0;
+
+int yylex() {
+    yylex_contador++;
+    switch (yylex_contador) {
+        case 1:
+            yylval = new ParserVal("nombreVariable");
+            return ID;
+        case 2:
+            return ASIG;
+        case 3:
+            yylval = new ParserVal(42);
+            return CTE;
+        default:
+            return 0; // EOF
+    }
+}
+
+void yyerror(String s) {
+    System.out.println("Error: " + s);
+}

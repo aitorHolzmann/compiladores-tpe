@@ -8,9 +8,6 @@ public class TablaSimbolos {
     public static final String ATRIBUTO_NO_ENCONTRADO = "NO ENCONTRADO";
     
     public static final String LEXEMA = "LEXEMA";
-
-
-
     //La tabla de simbolos se accede con el numero de identifcador (despuse de ASCII ej 256).
     //Y tiene mapa de atributos. Por ejemplo si es entero o flotante.
     private static final Map<Integer, Map<String, String>> tabla_simbolos = new HashMap<>();
@@ -20,14 +17,20 @@ public class TablaSimbolos {
     private static int siguiente_identificador = 1; 
     
     
-    //Como minimo tods tienen 1 atributo tipo LEXEMA para guardar el nombre del lexema, ej <LEXEMA,Nombre>
-    public static void agregarSimbolo(String nombre_lexema){
+    // CORRECCION: agregarSimbolo ahora DEVUELVE el identificador asignado.
+    // Antes era void, y no habia forma de saber en que fila de la tabla
+    // quedo guardado el simbolo recien creado. Esto es necesario para
+    // poder setear AnalizadorLexico.referenciaTablaSimbolos (yylval) desde
+    // las acciones semanticas (ver AS3 / AS6 corregidos).
+    public static int agregarSimbolo(String nombre_lexema){
         Map<String, String> atributos = new HashMap<>();
         atributos.put(LEXEMA, nombre_lexema);
 
-        tabla_simbolos.put(siguiente_identificador, atributos);
-        
+        int id_asignado = siguiente_identificador;
+        tabla_simbolos.put(id_asignado, atributos);
+
         siguiente_identificador++;
+        return id_asignado;
     }
 
     //Recorro cada fila de la tabla. Cada fila es un par <Integer, Map<String, String>>.
@@ -36,8 +39,15 @@ public class TablaSimbolos {
     public static int obtenerSimbolo(String lexema_buscado){
         for (Map.Entry<Integer, Map<String, String>> entrada_tabla_simbolos: tabla_simbolos.entrySet()) {
             String nombre_lexema_actual = entrada_tabla_simbolos.getValue().get(LEXEMA);
-            
-            if (nombre_lexema_actual == lexema_buscado ){
+
+            // CORRECCION IMPORTANTE: estaba comparando con "==", que en Java
+            // compara REFERENCIAS, no contenido. Como el lexema buscado casi
+            // siempre es un String nuevo (viene de token_actual.toString()),
+            // esta comparacion practicamente NUNCA daba true, aunque el
+            // identificador ya existiera en la tabla. Resultado: cada
+            // aparicion de un mismo identificador se agregaba como un
+            // simbolo distinto. Se corrige usando .equals().
+            if (nombre_lexema_actual != null && nombre_lexema_actual.equals(lexema_buscado)){
                 return entrada_tabla_simbolos.getKey();
             }
         } 
