@@ -23,15 +23,7 @@ public class AS3 extends Accion_Semantica{
             e.printStackTrace();
         }
 
-        // CORRECCION: las palabras reservadas se pueden escribir en
-        // mayusculas o minusculas ("IF, else, END_if, begin..." segun el
-        // enunciado del TP1), pero los identificadores de usuario SOLO
-        // pueden tener minusculas (ya validado por el propio automata).
-        // Por eso es seguro normalizar a mayusculas UNICAMENTE para la
-        // busqueda en la tabla de palabras reservadas, sin tocar
-        // token_entregado (que es lo que se guarda como lexema real).
-        // Para que esto funcione, la tabla_palabras_reservadas debe tener
-        // sus claves guardadas en mayusculas (ej "BEGIN", "SHORTINT", etc).
+        //al pasar a mayuscula detectamos elSE, else, ... Unicamente para palabras reservadas
         int identificador = TablaPalabrasReservadas.obtenerIdentificador(token_entregado.toUpperCase());
 
         if (identificador != TablaPalabrasReservadas.NOT_FOUND){
@@ -41,13 +33,10 @@ public class AS3 extends Accion_Semantica{
         identificador = TablaSimbolos.obtenerSimbolo(token_entregado);
 
         if  (identificador != TablaSimbolos.LEXEMA_NO_ENCONTRADO){
-            // CORRECCION: guardamos la referencia para que yylex() arme yylval.
-            AnalizadorLexico.setReferenciaTablaSimbolos(identificador);
+            AnalizadorLexico.setReferenciaTablaSimbolos(identificador); //Para yyval
             return TablaPalabrasReservadas.obtenerIdentificador("IDENTIFICADOR");
         }
 
-        // CORRECCION: antes se ignoraba el valor de retorno de
-        // agregarSimbolo (era void). Ahora usamos el id que devuelve.
         int nuevo_identificador = TablaSimbolos.agregarSimbolo(token_entregado);
         AnalizadorLexico.setReferenciaTablaSimbolos(nuevo_identificador);
         return TablaPalabrasReservadas.obtenerIdentificador("IDENTIFICADOR");

@@ -32,22 +32,6 @@ public class AnalizadorLexico {
     private static final char LETRA_MAYUSCULA = 'A';
     private static final char EXPONENTE = 's';
 
-    // ======================================================================
-    // CORRECCION (integracion con TP2 / yacc):
-    // Los 4 valores de arriba (IDENTIFICADOR, NUMERO, CONSTANTE, CADENA) son
-    // "provisorios". Una vez que generen Parser.java con byaccj, los numeros
-    // reales de token los define el .y (por ej. Parser.IDENTIFICADOR,
-    // Parser.CONSTANTE, Parser.CADENA). Ahi van a tener que:
-    //   a) borrar estas 4 constantes locales, y
-    //   b) en AS3/AS6/etc devolver Parser.IDENTIFICADOR / Parser.CONSTANTE
-    //      en lugar de AnalizadorLexico.IDENTIFICADOR.
-    // Mientras generan y prueban el Parser, pueden dejarlas como estan.
-    // ======================================================================
-
-    // CORRECCION: esta variable es NUEVA. Es el "puente" para yylval.
-    // Cuando una accion semantica cierra un token IDENTIFICADOR, CONSTANTE
-    // o CADENA, debe guardar aca el indice de la Tabla de Simbolos
-    // correspondiente ANTES de hacer el return. yylex() lo lee enseguida.
     public static int referenciaTablaSimbolos = -1;
 
     
@@ -74,7 +58,6 @@ public class AnalizadorLexico {
 
     
     // GETTERS
-
     public int get_cant_simbolos(){
         return CANT_SIMBOLOS;
     }
@@ -89,7 +72,6 @@ public class AnalizadorLexico {
 
 
     // LOGICA DE NEGOCIO
-
     public static char getTipoCaracter(char caracterActual){
         if (Character.isDigit(caracterActual)){
             return DIGITO;
@@ -166,10 +148,6 @@ public class AnalizadorLexico {
     }
 
 
-    // CORRECCION: este metodo pasa de "void" a "int". Antes solo imprimia
-    // por consola y se perdia el token devuelto por la accion semantica;
-    // ahora ese valor es indispensable porque yylex() lo necesita para
-    // saber cuando "cerrar" un token y devolverselo al parser.
     public static int analizar(char caracterActual){
         int indice_caracter = indexarCaracter(caracterActual);
         //System.out.println("El caracter actual es: " + caracterActual);
@@ -188,22 +166,6 @@ public class AnalizadorLexico {
         return token_devuelto;
     }
 
-    // ======================================================================
-    // CORRECCION: metodo NUEVO. Es el que integra el Analizador Lexico con
-    // el Parser generado por yacc/byaccj. yyparse() (dentro de Parser.java)
-    // invoca a yylex() cada vez que necesita un token nuevo.
-    //
-    // Idea: seguimos leyendo caracteres (usando el MISMO reader estatico
-    // de siempre, que ya persiste entre llamadas) hasta que analizar()
-    // devuelva algo distinto de "token_abierto" (-1). Eso puede pasar
-    // porque:
-    //   - se cerro un identificador / palabra reservada / constante / cadena
-    //   - se termino de reconocer un simbolo (';', '+', ':=', etc.)
-    //   - hubo un error lexico y la accion semantica decidio "descartar"
-    //     el token y seguir (ver correccion en AS6)
-    // Si el reader llega a fin de archivo (-1), devolvemos 0, que es
-    // exactamente lo que yacc espera como marca de EOF.
-    // ======================================================================
     public static int yylex(){
         try {
             int caracter_leido = reader.read();
@@ -216,7 +178,7 @@ public class AnalizadorLexico {
                 }
                 caracter_leido = reader.read();
             }
-            return -1; // EOF para yacc
+            return -1; // debe retornar 0
         } catch (IOException e){
             e.printStackTrace();
             return -1;
@@ -224,20 +186,17 @@ public class AnalizadorLexico {
 
     }
 
-    // Metodo para cambiar de accion semantica:
     public static int ejecutar_accion_semantica(int accion, PushbackReader reader, char caracter_actual){
         Accion_Semantica accion_semantica = getAccionSemantica(accion);
         return accion_semantica.ejecutar(token_actual, reader, caracter_actual);
     }
 
-    // Metodo para incrementar linea
     public static void incrementarLinea(){
         linea_actual = linea_actual + 1;
     }
 
 
 
-    //GET Y SET PARA QUE LAS ACCIONES SEMANTICAS PUEDAN MODIFICAR EL ESTADO ACTUAL Y LA LINEA ACTUAL
     public static int getLineaActual() {
         return linea_actual;
     }
