@@ -18,8 +18,10 @@ parsers en Java en vez de C):
 4. La primera vez va a tardar un par de minutos: arma la imagen y instala
    `byacc-j` dentro. Las siguientes veces es instantáneo.
 5. Al terminar, la terminal integrada de VS Code ya corre *adentro* del
-   contenedor — `java -version`, `javac -version` y `byaccj -V` van a
-   andar sin que tengas que instalar nada en tu Windows.
+   contenedor — `java -version`, `javac -version`, `byaccj -V` y `yacc -V`
+   van a andar sin que tengas que instalar nada en tu Windows. Si ya tenías
+   el contenedor creado antes de agregar una herramienta, ejecutá el comando
+   **Dev Containers: Rebuild Container** desde la paleta de comandos.
 
 ## Flujo de trabajo típico (gramática → parser → compilado)
 
@@ -27,10 +29,11 @@ parsers en Java en vez de C):
    (reglas yacc + acciones semánticas en Java entre `%{ %}`).
 2. Generás el parser:
    ```
-   byaccj -J gramatica.y
+   yacc -J gramatica.y
    ```
-   Esto crea `Parser.java` y `ParserVal.java` en la carpeta actual. **No se
-   editan a mano** — si cambiás la gramática, se regeneran.
+   También podés usar `byaccj -J gramatica.y`: ambos comandos los instala el
+   paquete `byacc-j`. Esto crea `Parser.java` y `ParserVal.java` en la carpeta
+   actual. **No se editan a mano** — si cambiás la gramática, se regeneran.
 3. Movés esos dos archivos generados a tu paquete (en el ejemplo,
    `src/compilador/`), junto con el resto de tus clases (`AnalizadorLexico`,
    `FileHelper`, tus acciones semánticas `AS0`, `AS1`, etc.).

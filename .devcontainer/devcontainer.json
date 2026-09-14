@@ -19,5 +19,5 @@
       }
     }
   },
-  "postCreateCommand": "echo '--- Verificando herramientas ---' && java -version && javac -version && byaccj -V || true"
+  "postCreateCommand": "echo '--- Verificando herramientas ---' && java -version && javac -version && command -v byaccj && command -v yacc"
 }

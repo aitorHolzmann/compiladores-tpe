@@ -2,6 +2,8 @@
 package src.accion_semantica;
 import java.io.PushbackReader;
 import src.compilador.AnalizadorLexico;
+import src.compilador.Parser;
+import src.compilador.TablaPalabrasReservadas;
 import src.compilador.TablaSimbolos;
 
 public class AS6 extends Accion_Semantica{
@@ -25,7 +27,7 @@ public class AS6 extends Accion_Semantica{
 
             AnalizadorLexico.setReferenciaTablaSimbolos(id);
 
-            return TablaSimbolos.obtenerSimbolo("SHORTINT");
+            return TablaPalabrasReservadas.obtenerIdentificador("CONSTANTE");
         }
 
         //Si se fue de rango
