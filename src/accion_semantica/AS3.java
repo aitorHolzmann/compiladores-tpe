@@ -11,9 +11,11 @@ public class AS3 extends Accion_Semantica{
     
     @Override 
     public int ejecutar(StringBuilder token_actual, PushbackReader reader, char caracter_actual){
+        boolean estaTruncado = false;
         String token_entregado = token_actual.toString();
         if (token_entregado.length() > 22){
             String truncado = token_entregado.substring(0, 22);
+            estaTruncado = true;
             token_entregado = truncado;
             AnalizadorLexico.mostrarWarning();
         }
@@ -28,6 +30,7 @@ public class AS3 extends Accion_Semantica{
         int identificador = TablaPalabrasReservadas.obtenerIdentificador(token_entregado.toUpperCase());
 
         if (identificador != TablaPalabrasReservadas.NOT_FOUND){
+            Token t_palabra_reservada = new TokenPalabraReservada(identificador, AnalizadorLexico.getLineaActual());
             return identificador;
         }
     
@@ -38,8 +41,7 @@ public class AS3 extends Accion_Semantica{
             return TablaPalabrasReservadas.obtenerIdentificador("IDENTIFICADOR");
         }
 
-        Token nuevo_token_identificador = new TokenIdentificador(token_entregado, AnalizadorLexico.getLineaActual());
-
+        Token nuevo_token_identificador = new TokenIdentificador(token_entregado, AnalizadorLexico.getLineaActual(), estaTruncado);
         int nuevo_identificador = TablaSimbolos.agregarSimbolo(nuevo_token_identificador);
         nuevo_token_identificador.setId(nuevo_identificador);
         AnalizadorLexico.setReferenciaTablaSimbolos(nuevo_identificador);

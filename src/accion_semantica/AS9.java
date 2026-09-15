@@ -17,9 +17,7 @@ public class AS9 extends Accion_Semantica{
         int exponente = Integer.parseInt(exp); // parseo a int el exponente -> "2" = 2
         Double resultado = Math.pow(baseD, exponente); // Eleva la base a la potencia 0 -> 20.3^2
         System.out.println("El resultado es: " + resultado);
-        if (resultado < AnalizadorLexico.ValorMinimoFloat && resultado > AnalizadorLexico.ValorMaximoFloat){
-
-            
+        if (resultado < AnalizadorLexico.ValorMinimoFloat || resultado > AnalizadorLexico.ValorMaximoFloat){         
             System.out.println("WARNING: El double "+ resultado + " esta fuera de rango");
             return 0; // Manejar el error
         }

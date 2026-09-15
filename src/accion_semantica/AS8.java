@@ -3,6 +3,7 @@ package src.accion_semantica;
 import java.io.PushbackReader;
 import java.io.Reader;
 import src.compilador.*;
+import src.token.*;
 
 public class AS8 extends Accion_Semantica{
     // tenemos por ejemplo 20.3sa , estamos en la letra "a" es decir que hay que cerrar token float. poner exponente 0.
@@ -14,11 +15,17 @@ public class AS8 extends Accion_Semantica{
         String base = token_entregado.substring(0, posicionS); // Me quedo con "20.3"
         Double baseD = Double.parseDouble(base); // "20.3" -> 20.3 en double
         Double resultado = Math.pow(baseD, 0); // Eleba la base a la potencia 0 -> 20.3^0
-        if (resultado >= AnalizadorLexico.ValorMinimoFloat && resultado <= AnalizadorLexico.ValorMaximoFloat){
-            return TablaPalabrasReservadas.obtenerIdentificador("SINGLEF");
+        if (resultado < AnalizadorLexico.ValorMinimoFloat || resultado > AnalizadorLexico.ValorMaximoFloat){
+            System.out.println("WARNING: El double "+ resultado + " esta fuera de rango");
+            return 0; // Manejar el error
         }
-        System.out.println("WARNING: El double "+ resultado + " esta fuera de rango");
-        return 0; // Manejar el error
+
+        Token token_float = new TokenFloat(token_entregado, AnalizadorLexico.getLineaActual());
+
+        int nuevo_identificador = TablaSimbolos.agregarSimbolo(token_float);
+        token_float.setId(nuevo_identificador);
+        AnalizadorLexico.setReferenciaTablaSimbolos(nuevo_identificador);
+        return TablaPalabrasReservadas.obtenerIdentificador("SINGLEF");
     }
 }
 
