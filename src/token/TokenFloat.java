@@ -1,18 +1,24 @@
 package src.token;
+import src.compilador.TablaPalabrasReservadas;
 public class TokenFloat extends Token {
     private double valor;
-    private boolean enRango;
-    private String tipo="float";
 
-    public TokenFloat(String lexema) {
+    public TokenFloat(String lexema, int linea) {
+        super(TablaPalabrasReservadas.obtenerIdentificador("SINGLEF"));
+        this.linea = linea;
         this.lexema = lexema;
     }
 
-    public String getTipo(){
+    public int getTipo(){
         return tipo;
     }
 
-    public String getLexema() {
-        return lexema;
+    public double getValor() {
+        return valor;
     }
+
+    public void setValor(double valor) {
+        this.valor = valor;
+    }
+
 }

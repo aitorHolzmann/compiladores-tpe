@@ -1,10 +1,19 @@
 package src.token;
+import src.compilador.TablaPalabrasReservadas;
+
 public abstract class Token {
     protected int id; //posicion en la tabla de simbolos
     protected String lexema; //lexema del token
     protected int linea; //para reportar warnings y errores
-    // hay que cambiar las AS paara controlar rangos y demas dentro de cada token o no habrian problemas de esta manera?
-    public abstract String getTipo();
+    protected int tipo;
+
+    public Token(int tipo) {
+        this.id = -1;
+        this.lexema =  null;
+    }
+
+    public abstract int getTipo();
+    
     public String getLexema() {
         return lexema;
     }
@@ -14,4 +23,8 @@ public abstract class Token {
     public int getId() {
         return id;
     }
+    public void setId(int id) {
+        this.id = id;
+    }
+
 }

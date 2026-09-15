@@ -1,15 +1,26 @@
 package src.token;
-public class TokenIdentificador extends Token {
-    private String lexema;
-    private boolean truncado;
-    private String tipo="identificador";
 
-    public TokenIdentificador(String lexema) {
+import src.compilador.TablaPalabrasReservadas;
+
+public class TokenIdentificador extends Token {
+    private boolean truncado;
+
+    public TokenIdentificador(String lexema, int linea) {
+        super(TablaPalabrasReservadas.obtenerIdentificador("IDENTIFICADOR"));
+        this.linea = linea;
         this.lexema = lexema;
     }
 
-    public String getTipo(){
-        return tipo;
+    public int getTipo() {
+        return this.tipo;
+    }
+
+    public void truncar() {
+        this.truncado = true;
+    }
+
+    public boolean estaTruncado() {
+        return truncado;
     }
 
 }

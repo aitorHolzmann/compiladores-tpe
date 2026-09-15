@@ -1,17 +1,25 @@
 package src.token;
+import src.compilador.TablaPalabrasReservadas;
+
 public class TokenCadena extends Token {
     private String valor;
-    private String tipo="cadena";
 
-    public TokenCadena(String lexema) {
+    public TokenCadena(String lexema, int linea) {
+        super(TablaPalabrasReservadas.obtenerIdentificador("CADENA"));
         this.lexema = lexema;
+        this.linea = linea;
     }
 
-    public String getTipo(){
+    public int getTipo(){
         return tipo;
     }
-
-    public String getLexema() {
-        return lexema;
+    /* 
+    public String getValor() {
+        return valor;
     }
+
+    public void setValor(String valor) {
+        this.valor = valor;
+    }
+    */
 }

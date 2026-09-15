@@ -4,6 +4,7 @@ import java.io.PushbackReader;
 import src.compilador.AnalizadorLexico;
 import src.compilador.TablaPalabrasReservadas;
 import src.compilador.TablaSimbolos;
+import src.token.*;
 
 public class AS3 extends Accion_Semantica{
     // pepe_$ -> estoy en el "$" y no tiene que ser parte de la variable identificador
@@ -29,7 +30,7 @@ public class AS3 extends Accion_Semantica{
         if (identificador != TablaPalabrasReservadas.NOT_FOUND){
             return identificador;
         }
-
+    
         identificador = TablaSimbolos.obtenerSimbolo(token_entregado);
 
         if  (identificador != TablaSimbolos.LEXEMA_NO_ENCONTRADO){
@@ -37,7 +38,10 @@ public class AS3 extends Accion_Semantica{
             return TablaPalabrasReservadas.obtenerIdentificador("IDENTIFICADOR");
         }
 
-        int nuevo_identificador = TablaSimbolos.agregarSimbolo(token_entregado);
+        Token nuevo_token_identificador = new TokenIdentificador(token_entregado, AnalizadorLexico.getLineaActual());
+
+        int nuevo_identificador = TablaSimbolos.agregarSimbolo(nuevo_token_identificador);
+        nuevo_token_identificador.setId(nuevo_identificador);
         AnalizadorLexico.setReferenciaTablaSimbolos(nuevo_identificador);
         return TablaPalabrasReservadas.obtenerIdentificador("IDENTIFICADOR");
 

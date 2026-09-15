@@ -178,10 +178,10 @@ public class AnalizadorLexico {
                 }
                 caracter_leido = reader.read();
             }
-            return 0; // debe retornar 0 al final
+            return -1; // debe retornar 0 al final
         } catch (IOException e){
             e.printStackTrace();
-            return 0;
+            return -1;
         }
 
     }

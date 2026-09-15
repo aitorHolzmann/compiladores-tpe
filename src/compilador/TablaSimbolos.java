@@ -3,6 +3,9 @@ package src.compilador;
 import java.util.HashMap;
 import java.util.Map;
 
+import src.token.Token;
+import src.token.TokenIdentificador;
+
 public class TablaSimbolos {
     public static final int LEXEMA_NO_ENCONTRADO = -1;
     public static final String ATRIBUTO_NO_ENCONTRADO = "NO ENCONTRADO";
@@ -10,7 +13,7 @@ public class TablaSimbolos {
     public static final String LEXEMA = "LEXEMA";
     //La tabla de simbolos se accede con el numero de identifcador (despuse de ASCII ej 256).
     //Y tiene mapa de atributos. Por ejemplo si es entero o flotante.
-    private static final Map<Integer, Map<String, String>> tabla_simbolos = new HashMap<>();
+    private static final Map<Integer, Token> tabla_simbolos = new HashMap<>();
     
     
     //TODO: hay que ver cuantas palabras reservadas tenemos. Despues de la ultima palabra reservada podemos empezar a contar simbolos.
@@ -22,12 +25,9 @@ public class TablaSimbolos {
     // quedo guardado el simbolo recien creado. Esto es necesario para
     // poder setear AnalizadorLexico.referenciaTablaSimbolos (yylval) desde
     // las acciones semanticas (ver AS3 / AS6 corregidos).
-    public static int agregarSimbolo(String nombre_lexema){
-        Map<String, String> atributos = new HashMap<>();
-        atributos.put(LEXEMA, nombre_lexema);
-
+    public static int agregarSimbolo(Token nuevo_token){
         int id_asignado = siguiente_identificador;
-        tabla_simbolos.put(id_asignado, atributos);
+        tabla_simbolos.put(id_asignado, nuevo_token);
 
         siguiente_identificador++;
         return id_asignado;
@@ -37,16 +37,9 @@ public class TablaSimbolos {
     //                                                                 LEXEMA, ACA
     //Si el lexema fue agregado, su nombre va a estar en la marca "ACA".
     public static int obtenerSimbolo(String lexema_buscado){
-        for (Map.Entry<Integer, Map<String, String>> entrada_tabla_simbolos: tabla_simbolos.entrySet()) {
-            String nombre_lexema_actual = entrada_tabla_simbolos.getValue().get(LEXEMA);
+        for (Map.Entry<Integer, Token> entrada_tabla_simbolos: tabla_simbolos.entrySet()) {
+            String nombre_lexema_actual = entrada_tabla_simbolos.getValue().getLexema();
 
-            // CORRECCION IMPORTANTE: estaba comparando con "==", que en Java
-            // compara REFERENCIAS, no contenido. Como el lexema buscado casi
-            // siempre es un String nuevo (viene de token_actual.toString()),
-            // esta comparacion practicamente NUNCA daba true, aunque el
-            // identificador ya existiera en la tabla. Resultado: cada
-            // aparicion de un mismo identificador se agregaba como un
-            // simbolo distinto. Se corrige usando .equals().
             if (nombre_lexema_actual != null && nombre_lexema_actual.equals(lexema_buscado)){
                 return entrada_tabla_simbolos.getKey();
             }

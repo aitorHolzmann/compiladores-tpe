@@ -2,6 +2,8 @@ package src.accion_semantica;
 import java.io.*;
 import src.compilador.AnalizadorLexico;
 import src.compilador.TablaPalabrasReservadas;
+import src.compilador.TablaSimbolos;
+import src.token.*;
 
 public class AS12 extends Accion_Semantica{
 
@@ -10,7 +12,11 @@ public class AS12 extends Accion_Semantica{
     public int ejecutar(StringBuilder token_actual, PushbackReader reader, char caracter_actual){
         token_actual.append(caracter_actual);
         String token_cerrado = token_actual.toString();
-        System.out.println("El token de comentario es: " + TablaPalabrasReservadas.obtenerIdentificador("CADENA"));
+
+        Token nuevo_token_cadena = new TokenCadena(token_cerrado, AnalizadorLexico.getLineaActual());
+        int nuevo_identificador = TablaSimbolos.agregarSimbolo(nuevo_token_cadena);
+        AnalizadorLexico.setReferenciaTablaSimbolos(nuevo_identificador);
+        
         return TablaPalabrasReservadas.obtenerIdentificador("CADENA");
     }
 }
