@@ -1,12 +1,10 @@
-!
-$
+$ un peso
 (
 )
 *
 +
 ,
 -
-.
 /
 :
 ;
@@ -28,9 +26,15 @@ FUNCTION
 10.1s1
 //comentario
 "no lo esta detectando"
-500$s
+50$s
 :=
 >=
 <=
 ==
 !=
+persona.nombre
+persona.6
+persona.
+aitor.ca
+aitor. a
+10.f

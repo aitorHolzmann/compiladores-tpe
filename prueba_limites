@@ -1,0 +1,6 @@
+programa_limites
+shortint x;
+BEGIN
+  x := -32769$s;
+  x := -129$s;
+END

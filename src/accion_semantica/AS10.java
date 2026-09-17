@@ -13,8 +13,15 @@ public class AS10 extends Accion_Semantica{
         String token_entregado = token_actual.toString(); //"0.3s" como string"
         Double resultado = Double.parseDouble(token_entregado); // "20.3" -> 20.3 en double
         System.out.println("El resultado es: "+ resultado);
-        if (resultado >= AnalizadorLexico.ValorMinimoFloat && resultado <= AnalizadorLexico.ValorMaximoFloat){
-            return TablaPalabrasReservadas.obtenerIdentificador("SINGLEF");
+        try{
+            reader.unread(caracter_actual);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        if ((resultado >= AnalizadorLexico.ValorMinimoFloat && resultado <= AnalizadorLexico.ValorMaximoFloat) || resultado == 0.0){
+            int id = TablaSimbolos.gestionarConstante("" + resultado, "SINGLEF");
+            AnalizadorLexico.setReferenciaTablaSimbolos(id);
+            return TablaPalabrasReservadas.obtenerIdentificador("CONSTANTE");
         }
         System.out.println("WARNING: El double "+ resultado + " esta fuera de rango");
         return 0; // Manejar el error

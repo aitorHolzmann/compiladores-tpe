@@ -102,22 +102,17 @@ public class TablaSimbolos {
         // Validación de rangos para negativos
         if (tipo.equals("SHORTINT")) {
             int valor = Integer.parseInt(lexema_negativo);
-            if (valor < AnalizadorLexico.ValorMinimoInt) {
+            if (valor < -32768) {
                 System.out.println("ERROR - Linea " + AnalizadorLexico.getLineaActual() + ": Constante shortint fuera de rango (" + valor + ")");
             }
         } else if (tipo.equals("SINGLEF")) {
             double valor = Double.parseDouble(lexema_negativo);
-            if (valor != 0.0 && (valor < -AnalizadorLexico.ValorMaximoFloat || valor > -AnalizadorLexico.ValorMinimoFloat)) {
+            if (valor < -AnalizadorLexico.ValorMaximoFloat) {
+                // El float es simétrico, el mínimo es -3.40282347e+38F
                 System.out.println("ERROR - Linea " + AnalizadorLexico.getLineaActual() + ": Constante singlef fuera de rango (" + valor + ")");
             }
         }
 
         return gestionarConstante(lexema_negativo, tipo);
-    }
-    public static void imprimirTabla() {
-        System.out.println("=== TABLA DE SIMBOLOS ===");
-        for (Map.Entry<Integer, Map<String, String>> entry : tabla_simbolos.entrySet()) {
-            System.out.println(entry.getKey() + ": " + entry.getValue());
-        }
     }
 }

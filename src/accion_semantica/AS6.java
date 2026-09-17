@@ -38,6 +38,7 @@ Aca mi token va a tener algo del estilo "120$s"
 package src.accion_semantica;
 import java.io.PushbackReader;
 import src.compilador.AnalizadorLexico;
+import src.compilador.TablaPalabrasReservadas;
 import src.compilador.TablaSimbolos;
 
 public class AS6 extends Accion_Semantica{
@@ -52,19 +53,14 @@ public class AS6 extends Accion_Semantica{
         int posicion = resultado.indexOf('$');
         String soloDigitos = resultado.substring(0, posicion);
         int valor = Integer.parseInt(soloDigitos);
-//120$s
-        if (valor >= AnalizadorLexico.ValorMinimoInt && valor <= AnalizadorLexico.ValorMaximoInt) {
+        // Para shortint (8 bits, [-128, 127]), el lexico acepta hasta 128
+        // para permitir el negativo "-128$s". Si es positivo (128), lo rechazara la gramatica.
+        if (valor >= 0 && valor <= Math.abs(AnalizadorLexico.ValorMinimoInt)) {
 
-            //290, <LEXEMA, "120">, <TIPO, "SHORTINT">
-            //291, <LEXEMA, "500">, <TIPO, "SHORTINT">
-            //DUDA: TENEMOS QUE REUTILIZAR LAS CONSTANTES?
-            int id = TablaSimbolos.agregarSimbolo("" + valor);
-            TablaSimbolos.agregarAtributo(id, "TIPO", "SHORTINT");
-
-            // CORRECCION: guardamos la referencia para yylval.
+            int id = TablaSimbolos.gestionarConstante("" + valor, "SHORTINT");
             AnalizadorLexico.setReferenciaTablaSimbolos(id);
 
-            return TablaSimbolos.obtenerSimbolo("SHORTINT");
+            return TablaPalabrasReservadas.obtenerIdentificador("CONSTANTE");
         }
 
         // CORRECCION: se cambia de WARNING a ERROR (el enunciado pide

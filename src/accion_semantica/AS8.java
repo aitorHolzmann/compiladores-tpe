@@ -14,8 +14,15 @@ public class AS8 extends Accion_Semantica{
         String base = token_entregado.substring(0, posicionS); // Me quedo con "20.3"
         Double baseD = Double.parseDouble(base); // "20.3" -> 20.3 en double
         Double resultado = Math.pow(baseD, 0); // Eleba la base a la potencia 0 -> 20.3^0
-        if (resultado >= AnalizadorLexico.ValorMinimoFloat && resultado <= AnalizadorLexico.ValorMaximoFloat){
-            return TablaPalabrasReservadas.obtenerIdentificador("SINGLEF");
+        try{
+            reader.unread(caracter_actual);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        if ((resultado >= AnalizadorLexico.ValorMinimoFloat && resultado <= AnalizadorLexico.ValorMaximoFloat) || resultado == 0.0){
+            int id = TablaSimbolos.gestionarConstante("" + resultado, "SINGLEF");
+            AnalizadorLexico.setReferenciaTablaSimbolos(id);
+            return TablaPalabrasReservadas.obtenerIdentificador("CONSTANTE");
         }
         System.out.println("WARNING: El double "+ resultado + " esta fuera de rango");
         return 0; // Manejar el error

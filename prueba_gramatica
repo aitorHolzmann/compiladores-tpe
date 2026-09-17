@@ -1,0 +1,99 @@
+programa_test
+
+shortint x, y;
+singlef z;
+
+comptime shortint c1;
+comptime singlef c2, c3;
+
+class miclase
+BEGIN
+  shortint attr1, attr2;
+  singlef attr3;
+  shortint metodo1(shortint a)
+    shortint local;
+  BEGIN
+    RET(a);
+  END;
+  shortint getedad()
+  BEGIN
+    RET(20$s);
+  END;
+END;
+
+class clasehija import from miclase
+BEGIN
+  extends miclase;
+  shortint nuevo;
+END;
+
+miclase obj1, obj2;
+
+shortint FUNCTION sumar(shortint a, shortint b)
+  shortint resultado;
+BEGIN
+  resultado := a + b;
+  RET(resultado);
+END;
+
+AUTO FUNCTION inferir(shortint a)
+BEGIN
+  RET(a + 1$s);
+END;
+
+BEGIN
+
+  x := 3$s;
+  y := sumar(1$s, 2$s);
+
+  z := 1.5;
+
+  x := tos(z + 1.0);
+
+  obj1[0$s] := 10$s;
+  obj1[x] := 20$s;
+  x := obj1[0$s] + 1$s;
+
+  x := obj1.metodo1(4$s);
+  y := obj1.getedad();
+  obj1.metodo1(10$s);
+  x := obj2.metodo1(x) + 2$s;
+
+  x := y = (3$s + 1$s);
+
+  IF (x > y)
+    x := 1$s;
+  END_IF;
+
+  IF (x >= y)
+  BEGIN
+    x := 2$s;
+    y := 3$s;
+  END
+  ELSE
+  BEGIN
+    x := 4$s;
+  END
+  END_IF;
+
+  REPEAT
+    x := x + 1$s;
+  UNTIL (x > 10$s);
+
+  REPEAT
+  BEGIN
+    x := x - 1$s;
+    y := y + 1$s;
+  END
+  UNTIL (x <= 0$s);
+
+  pout("Hola Mundo");
+
+  sumar(1$s, 2$s);
+
+  x := sumar(1$s, 2$s) + 3$s;
+
+  x := -3$s;
+  z := -1.5;
+
+END

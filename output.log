@@ -1,0 +1,3065 @@
+Compilando archivo: prueba_gramatica
+loop
+yyn:0  state:0  yychar:-1
+El token es: 257
+ next yychar:257
+state 0, shifting to state 1
+loop
+state 1, reducing 0 by rule 2 (sentencias_declarativas :)
+reduce
+after reduction, shifting from state 1 to state 3
+loop
+yyn:0  state:3  yychar:-1
+El token es: 272
+ next yychar:272
+state 3, shifting to state 7
+loop
+state 7, reducing 1 by rule 12 (tipo : SHORTINT)
+reduce
+after reduction, shifting from state 3 to state 17
+loop
+yyn:0  state:17  yychar:-1
+El token es: 257
+ next yychar:257
+state 17, shifting to state 18
+loop
+state 18, reducing 1 by rule 10 (lista_identificadores : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 17 to state 25
+loop
+yyn:0  state:25  yychar:-1
+El token es: 44
+ next yychar:44
+state 25, shifting to state 27
+loop
+yyn:0  state:27  yychar:-1
+El token es: 257
+ next yychar:257
+state 27, shifting to state 56
+loop
+state 56, reducing 3 by rule 11 (lista_identificadores : lista_identificadores ',' IDENTIFICADOR)
+reduce
+after reduction, shifting from state 17 to state 25
+loop
+yyn:0  state:25  yychar:-1
+El token es: 59
+ next yychar:59
+state 25, shifting to state 55
+loop
+state 55, reducing 3 by rule 9 (declaracion_variables : tipo lista_identificadores ';')
+reduce
+after reduction, shifting from state 3 to state 12
+loop
+state 12, reducing 1 by rule 4 (sentencia_declarativa : declaracion_variables)
+reduce
+after reduction, shifting from state 3 to state 11
+loop
+state 11, reducing 2 by rule 3 (sentencias_declarativas : sentencias_declarativas sentencia_declarativa)
+reduce
+after reduction, shifting from state 1 to state 3
+loop
+yyn:0  state:3  yychar:-1
+El token es: 273
+ next yychar:273
+state 3, shifting to state 8
+loop
+state 8, reducing 1 by rule 13 (tipo : SINGLEF)
+reduce
+after reduction, shifting from state 3 to state 17
+loop
+yyn:0  state:17  yychar:-1
+El token es: 257
+ next yychar:257
+state 17, shifting to state 18
+loop
+state 18, reducing 1 by rule 10 (lista_identificadores : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 17 to state 25
+loop
+yyn:0  state:25  yychar:-1
+El token es: 59
+ next yychar:59
+state 25, shifting to state 55
+loop
+state 55, reducing 3 by rule 9 (declaracion_variables : tipo lista_identificadores ';')
+reduce
+after reduction, shifting from state 3 to state 12
+loop
+state 12, reducing 1 by rule 4 (sentencia_declarativa : declaracion_variables)
+reduce
+after reduction, shifting from state 3 to state 11
+loop
+state 11, reducing 2 by rule 3 (sentencias_declarativas : sentencias_declarativas sentencia_declarativa)
+reduce
+after reduction, shifting from state 1 to state 3
+loop
+yyn:0  state:3  yychar:-1
+El token es: 279
+ next yychar:279
+state 3, shifting to state 10
+loop
+yyn:0  state:10  yychar:-1
+El token es: 272
+ next yychar:272
+state 10, shifting to state 7
+loop
+state 7, reducing 1 by rule 12 (tipo : SHORTINT)
+reduce
+after reduction, shifting from state 10 to state 23
+loop
+yyn:0  state:23  yychar:-1
+El token es: 257
+ next yychar:257
+state 23, shifting to state 18
+loop
+state 18, reducing 1 by rule 10 (lista_identificadores : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 23 to state 53
+loop
+yyn:0  state:53  yychar:-1
+El token es: 59
+ next yychar:59
+state 53, shifting to state 81
+loop
+state 81, reducing 4 by rule 35 (declaracion_comptime : COMPTIME tipo lista_identificadores ';')
+reduce
+after reduction, shifting from state 3 to state 16
+loop
+state 16, reducing 1 by rule 8 (sentencia_declarativa : declaracion_comptime)
+reduce
+after reduction, shifting from state 3 to state 11
+loop
+state 11, reducing 2 by rule 3 (sentencias_declarativas : sentencias_declarativas sentencia_declarativa)
+reduce
+after reduction, shifting from state 1 to state 3
+loop
+yyn:0  state:3  yychar:-1
+El token es: 279
+ next yychar:279
+state 3, shifting to state 10
+loop
+yyn:0  state:10  yychar:-1
+El token es: 273
+ next yychar:273
+state 10, shifting to state 8
+loop
+state 8, reducing 1 by rule 13 (tipo : SINGLEF)
+reduce
+after reduction, shifting from state 10 to state 23
+loop
+yyn:0  state:23  yychar:-1
+El token es: 257
+ next yychar:257
+state 23, shifting to state 18
+loop
+state 18, reducing 1 by rule 10 (lista_identificadores : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 23 to state 53
+loop
+yyn:0  state:53  yychar:-1
+El token es: 44
+ next yychar:44
+state 53, shifting to state 27
+loop
+yyn:0  state:27  yychar:-1
+El token es: 257
+ next yychar:257
+state 27, shifting to state 56
+loop
+state 56, reducing 3 by rule 11 (lista_identificadores : lista_identificadores ',' IDENTIFICADOR)
+reduce
+after reduction, shifting from state 23 to state 53
+loop
+yyn:0  state:53  yychar:-1
+El token es: 59
+ next yychar:59
+state 53, shifting to state 81
+loop
+state 81, reducing 4 by rule 35 (declaracion_comptime : COMPTIME tipo lista_identificadores ';')
+reduce
+after reduction, shifting from state 3 to state 16
+loop
+state 16, reducing 1 by rule 8 (sentencia_declarativa : declaracion_comptime)
+reduce
+after reduction, shifting from state 3 to state 11
+loop
+state 11, reducing 2 by rule 3 (sentencias_declarativas : sentencias_declarativas sentencia_declarativa)
+reduce
+after reduction, shifting from state 1 to state 3
+loop
+yyn:0  state:3  yychar:-1
+El token es: 265
+ next yychar:265
+state 3, shifting to state 6
+loop
+yyn:0  state:6  yychar:-1
+El token es: 257
+ next yychar:257
+state 6, shifting to state 21
+loop
+yyn:0  state:21  yychar:-1
+El token es: 261
+ next yychar:261
+reduce
+state 21, reducing 0 by rule 21 (importacion_opcional :)
+reduce
+after reduction, shifting from state 21 to state 51
+loop
+yyn:0  state:51  yychar:261
+state 51, shifting to state 79
+loop
+yyn:0  state:79  yychar:-1
+El token es: 272
+ next yychar:272
+reduce
+state 79, reducing 0 by rule 23 (herencia_opcional :)
+reduce
+after reduction, shifting from state 79 to state 107
+loop
+state 107, reducing 0 by rule 25 (miembros_clase :)
+reduce
+after reduction, shifting from state 107 to state 132
+loop
+yyn:0  state:132  yychar:272
+state 132, shifting to state 7
+loop
+state 7, reducing 1 by rule 12 (tipo : SHORTINT)
+reduce
+after reduction, shifting from state 132 to state 145
+loop
+yyn:0  state:145  yychar:-1
+El token es: 257
+ next yychar:257
+state 145, shifting to state 18
+loop
+state 18, reducing 1 by rule 10 (lista_identificadores : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 145 to state 158
+loop
+yyn:0  state:158  yychar:-1
+El token es: 44
+ next yychar:44
+state 158, shifting to state 27
+loop
+yyn:0  state:27  yychar:-1
+El token es: 257
+ next yychar:257
+state 27, shifting to state 56
+loop
+state 56, reducing 3 by rule 11 (lista_identificadores : lista_identificadores ',' IDENTIFICADOR)
+reduce
+after reduction, shifting from state 145 to state 158
+loop
+yyn:0  state:158  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 158, reducing 0 by rule 32 (exportacion_opcional :)
+reduce
+after reduction, shifting from state 158 to state 167
+loop
+yyn:0  state:167  yychar:59
+state 167, shifting to state 174
+loop
+state 174, reducing 4 by rule 29 (atributo_clase : tipo lista_identificadores exportacion_opcional ';')
+reduce
+after reduction, shifting from state 132 to state 147
+loop
+state 147, reducing 1 by rule 27 (miembro_clase : atributo_clase)
+reduce
+after reduction, shifting from state 132 to state 146
+loop
+state 146, reducing 2 by rule 26 (miembros_clase : miembros_clase miembro_clase)
+reduce
+after reduction, shifting from state 107 to state 132
+loop
+yyn:0  state:132  yychar:-1
+El token es: 273
+ next yychar:273
+state 132, shifting to state 8
+loop
+state 8, reducing 1 by rule 13 (tipo : SINGLEF)
+reduce
+after reduction, shifting from state 132 to state 145
+loop
+yyn:0  state:145  yychar:-1
+El token es: 257
+ next yychar:257
+state 145, shifting to state 18
+loop
+state 18, reducing 1 by rule 10 (lista_identificadores : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 145 to state 158
+loop
+yyn:0  state:158  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 158, reducing 0 by rule 32 (exportacion_opcional :)
+reduce
+after reduction, shifting from state 158 to state 167
+loop
+yyn:0  state:167  yychar:59
+state 167, shifting to state 174
+loop
+state 174, reducing 4 by rule 29 (atributo_clase : tipo lista_identificadores exportacion_opcional ';')
+reduce
+after reduction, shifting from state 132 to state 147
+loop
+state 147, reducing 1 by rule 27 (miembro_clase : atributo_clase)
+reduce
+after reduction, shifting from state 132 to state 146
+loop
+state 146, reducing 2 by rule 26 (miembros_clase : miembros_clase miembro_clase)
+reduce
+after reduction, shifting from state 107 to state 132
+loop
+yyn:0  state:132  yychar:-1
+El token es: 272
+ next yychar:272
+state 132, shifting to state 7
+loop
+state 7, reducing 1 by rule 12 (tipo : SHORTINT)
+reduce
+after reduction, shifting from state 132 to state 145
+loop
+yyn:0  state:145  yychar:-1
+El token es: 266
+ next yychar:266
+state 145, shifting to state 157
+loop
+yyn:0  state:157  yychar:-1
+El token es: 257
+ next yychar:257
+state 157, shifting to state 165
+loop
+yyn:0  state:165  yychar:-1
+El token es: 40
+ next yychar:40
+state 165, shifting to state 172
+loop
+yyn:0  state:172  yychar:-1
+El token es: 272
+ next yychar:272
+state 172, shifting to state 7
+loop
+state 7, reducing 1 by rule 12 (tipo : SHORTINT)
+reduce
+after reduction, shifting from state 172 to state 108
+loop
+yyn:0  state:108  yychar:-1
+El token es: 257
+ next yychar:257
+state 108, shifting to state 133
+loop
+state 133, reducing 2 by rule 19 (parametro_formal : tipo IDENTIFICADOR)
+reduce
+after reduction, shifting from state 172 to state 110
+loop
+state 110, reducing 1 by rule 17 (lista_parametros_formales : parametro_formal)
+reduce
+after reduction, shifting from state 172 to state 179
+loop
+yyn:0  state:179  yychar:-1
+El token es: 41
+ next yychar:41
+state 179, shifting to state 183
+loop
+state 183, reducing 0 by rule 2 (sentencias_declarativas :)
+reduce
+after reduction, shifting from state 183 to state 185
+loop
+yyn:0  state:185  yychar:-1
+El token es: 272
+ next yychar:272
+state 185, shifting to state 7
+loop
+state 7, reducing 1 by rule 12 (tipo : SHORTINT)
+reduce
+after reduction, shifting from state 185 to state 17
+loop
+yyn:0  state:17  yychar:-1
+El token es: 257
+ next yychar:257
+state 17, shifting to state 18
+loop
+state 18, reducing 1 by rule 10 (lista_identificadores : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 17 to state 25
+loop
+yyn:0  state:25  yychar:-1
+El token es: 59
+ next yychar:59
+state 25, shifting to state 55
+loop
+state 55, reducing 3 by rule 9 (declaracion_variables : tipo lista_identificadores ';')
+reduce
+after reduction, shifting from state 185 to state 12
+loop
+state 12, reducing 1 by rule 4 (sentencia_declarativa : declaracion_variables)
+reduce
+after reduction, shifting from state 185 to state 11
+loop
+state 11, reducing 2 by rule 3 (sentencias_declarativas : sentencias_declarativas sentencia_declarativa)
+reduce
+after reduction, shifting from state 183 to state 185
+loop
+yyn:0  state:185  yychar:-1
+El token es: 261
+ next yychar:261
+state 185, shifting to state 187
+loop
+state 187, reducing 0 by rule 36 (sentencias_ejecutables :)
+reduce
+after reduction, shifting from state 187 to state 189
+loop
+yyn:0  state:189  yychar:-1
+El token es: 264
+ next yychar:264
+state 189, shifting to state 32
+loop
+yyn:0  state:32  yychar:-1
+El token es: 40
+ next yychar:40
+state 32, shifting to state 63
+loop
+yyn:0  state:63  yychar:-1
+El token es: 257
+ next yychar:257
+state 63, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 41
+ next yychar:41
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 63 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 63 to state 45
+loop
+yyn:0  state:45  yychar:41
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 63 to state 96
+loop
+yyn:0  state:96  yychar:41
+state 96, shifting to state 127
+loop
+state 127, reducing 4 by rule 81 (sentencia_ret : RET '(' expresion ')')
+reduce
+after reduction, shifting from state 189 to state 43
+loop
+yyn:0  state:43  yychar:-1
+El token es: 59
+ next yychar:59
+state 43, shifting to state 74
+loop
+state 74, reducing 2 by rule 43 (sentencia_ejecutable : sentencia_ret ';')
+reduce
+after reduction, shifting from state 189 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 187 to state 189
+loop
+yyn:0  state:189  yychar:-1
+El token es: 262
+ next yychar:262
+state 189, shifting to state 191
+loop
+yyn:0  state:191  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 191, reducing 0 by rule 32 (exportacion_opcional :)
+reduce
+after reduction, shifting from state 191 to state 193
+loop
+yyn:0  state:193  yychar:59
+state 193, shifting to state 194
+loop
+state 194, reducing 12 by rule 30 (metodo_clase : tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END exportacion_opcional ';')
+reduce
+after reduction, shifting from state 132 to state 148
+loop
+state 148, reducing 1 by rule 28 (miembro_clase : metodo_clase)
+reduce
+after reduction, shifting from state 132 to state 146
+loop
+state 146, reducing 2 by rule 26 (miembros_clase : miembros_clase miembro_clase)
+reduce
+after reduction, shifting from state 107 to state 132
+loop
+yyn:0  state:132  yychar:-1
+El token es: 262
+ next yychar:262
+state 132, shifting to state 143
+loop
+yyn:0  state:143  yychar:-1
+El token es: 59
+ next yychar:59
+state 143, shifting to state 155
+loop
+state 155, reducing 8 by rule 20 (declaracion_clase : CLASS IDENTIFICADOR importacion_opcional BEGIN herencia_opcional miembros_clase END ';')
+reduce
+after reduction, shifting from state 3 to state 14
+loop
+state 14, reducing 1 by rule 6 (sentencia_declarativa : declaracion_clase)
+reduce
+after reduction, shifting from state 3 to state 11
+loop
+state 11, reducing 2 by rule 3 (sentencias_declarativas : sentencias_declarativas sentencia_declarativa)
+reduce
+after reduction, shifting from state 1 to state 3
+loop
+yyn:0  state:3  yychar:-1
+El token es: 265
+ next yychar:265
+state 3, shifting to state 6
+loop
+yyn:0  state:6  yychar:-1
+El token es: 257
+ next yychar:257
+state 6, shifting to state 21
+loop
+yyn:0  state:21  yychar:-1
+El token es: 280
+ next yychar:280
+state 21, shifting to state 50
+loop
+yyn:0  state:50  yychar:-1
+El token es: 281
+ next yychar:281
+state 50, shifting to state 78
+loop
+yyn:0  state:78  yychar:-1
+El token es: 257
+ next yychar:257
+state 78, shifting to state 18
+loop
+state 18, reducing 1 by rule 10 (lista_identificadores : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 78 to state 105
+loop
+yyn:0  state:105  yychar:-1
+El token es: 261
+ next yychar:261
+reduce
+state 105, reducing 3 by rule 22 (importacion_opcional : IMPORT FROM lista_identificadores)
+reduce
+after reduction, shifting from state 21 to state 51
+loop
+yyn:0  state:51  yychar:261
+state 51, shifting to state 79
+loop
+yyn:0  state:79  yychar:-1
+El token es: 284
+ next yychar:284
+state 79, shifting to state 106
+loop
+yyn:0  state:106  yychar:-1
+El token es: 257
+ next yychar:257
+state 106, shifting to state 18
+loop
+state 18, reducing 1 by rule 10 (lista_identificadores : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 106 to state 131
+loop
+yyn:0  state:131  yychar:-1
+El token es: 59
+ next yychar:59
+state 131, shifting to state 142
+loop
+state 142, reducing 3 by rule 24 (herencia_opcional : EXTENDS lista_identificadores ';')
+reduce
+after reduction, shifting from state 79 to state 107
+loop
+state 107, reducing 0 by rule 25 (miembros_clase :)
+reduce
+after reduction, shifting from state 107 to state 132
+loop
+yyn:0  state:132  yychar:-1
+El token es: 272
+ next yychar:272
+state 132, shifting to state 7
+loop
+state 7, reducing 1 by rule 12 (tipo : SHORTINT)
+reduce
+after reduction, shifting from state 132 to state 145
+loop
+yyn:0  state:145  yychar:-1
+El token es: 257
+ next yychar:257
+state 145, shifting to state 18
+loop
+state 18, reducing 1 by rule 10 (lista_identificadores : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 145 to state 158
+loop
+yyn:0  state:158  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 158, reducing 0 by rule 32 (exportacion_opcional :)
+reduce
+after reduction, shifting from state 158 to state 167
+loop
+yyn:0  state:167  yychar:59
+state 167, shifting to state 174
+loop
+state 174, reducing 4 by rule 29 (atributo_clase : tipo lista_identificadores exportacion_opcional ';')
+reduce
+after reduction, shifting from state 132 to state 147
+loop
+state 147, reducing 1 by rule 27 (miembro_clase : atributo_clase)
+reduce
+after reduction, shifting from state 132 to state 146
+loop
+state 146, reducing 2 by rule 26 (miembros_clase : miembros_clase miembro_clase)
+reduce
+after reduction, shifting from state 107 to state 132
+loop
+yyn:0  state:132  yychar:-1
+El token es: 262
+ next yychar:262
+state 132, shifting to state 143
+loop
+yyn:0  state:143  yychar:-1
+El token es: 59
+ next yychar:59
+state 143, shifting to state 155
+loop
+state 155, reducing 8 by rule 20 (declaracion_clase : CLASS IDENTIFICADOR importacion_opcional BEGIN herencia_opcional miembros_clase END ';')
+reduce
+after reduction, shifting from state 3 to state 14
+loop
+state 14, reducing 1 by rule 6 (sentencia_declarativa : declaracion_clase)
+reduce
+after reduction, shifting from state 3 to state 11
+loop
+state 11, reducing 2 by rule 3 (sentencias_declarativas : sentencias_declarativas sentencia_declarativa)
+reduce
+after reduction, shifting from state 1 to state 3
+loop
+yyn:0  state:3  yychar:-1
+El token es: 257
+ next yychar:257
+state 3, shifting to state 4
+loop
+yyn:0  state:4  yychar:-1
+El token es: 257
+ next yychar:257
+state 4, shifting to state 18
+loop
+state 18, reducing 1 by rule 10 (lista_identificadores : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 4 to state 19
+loop
+yyn:0  state:19  yychar:-1
+El token es: 44
+ next yychar:44
+state 19, shifting to state 27
+loop
+yyn:0  state:27  yychar:-1
+El token es: 257
+ next yychar:257
+state 27, shifting to state 56
+loop
+state 56, reducing 3 by rule 11 (lista_identificadores : lista_identificadores ',' IDENTIFICADOR)
+reduce
+after reduction, shifting from state 4 to state 19
+loop
+yyn:0  state:19  yychar:-1
+El token es: 59
+ next yychar:59
+state 19, shifting to state 26
+loop
+state 26, reducing 3 by rule 34 (declaracion_objeto : IDENTIFICADOR lista_identificadores ';')
+reduce
+after reduction, shifting from state 3 to state 15
+loop
+state 15, reducing 1 by rule 7 (sentencia_declarativa : declaracion_objeto)
+reduce
+after reduction, shifting from state 3 to state 11
+loop
+state 11, reducing 2 by rule 3 (sentencias_declarativas : sentencias_declarativas sentencia_declarativa)
+reduce
+after reduction, shifting from state 1 to state 3
+loop
+yyn:0  state:3  yychar:-1
+El token es: 272
+ next yychar:272
+state 3, shifting to state 7
+loop
+state 7, reducing 1 by rule 12 (tipo : SHORTINT)
+reduce
+after reduction, shifting from state 3 to state 17
+loop
+yyn:0  state:17  yychar:-1
+El token es: 266
+ next yychar:266
+state 17, shifting to state 24
+loop
+yyn:0  state:24  yychar:-1
+El token es: 257
+ next yychar:257
+state 24, shifting to state 54
+loop
+yyn:0  state:54  yychar:-1
+El token es: 40
+ next yychar:40
+state 54, shifting to state 82
+loop
+yyn:0  state:82  yychar:-1
+El token es: 272
+ next yychar:272
+state 82, shifting to state 7
+loop
+state 7, reducing 1 by rule 12 (tipo : SHORTINT)
+reduce
+after reduction, shifting from state 82 to state 108
+loop
+yyn:0  state:108  yychar:-1
+El token es: 257
+ next yychar:257
+state 108, shifting to state 133
+loop
+state 133, reducing 2 by rule 19 (parametro_formal : tipo IDENTIFICADOR)
+reduce
+after reduction, shifting from state 82 to state 110
+loop
+state 110, reducing 1 by rule 17 (lista_parametros_formales : parametro_formal)
+reduce
+after reduction, shifting from state 82 to state 111
+loop
+yyn:0  state:111  yychar:-1
+El token es: 44
+ next yychar:44
+state 111, shifting to state 134
+loop
+yyn:0  state:134  yychar:-1
+El token es: 272
+ next yychar:272
+state 134, shifting to state 7
+loop
+state 7, reducing 1 by rule 12 (tipo : SHORTINT)
+reduce
+after reduction, shifting from state 134 to state 108
+loop
+yyn:0  state:108  yychar:-1
+El token es: 257
+ next yychar:257
+state 108, shifting to state 133
+loop
+state 133, reducing 2 by rule 19 (parametro_formal : tipo IDENTIFICADOR)
+reduce
+after reduction, shifting from state 134 to state 149
+loop
+state 149, reducing 3 by rule 18 (lista_parametros_formales : lista_parametros_formales ',' parametro_formal)
+reduce
+after reduction, shifting from state 82 to state 111
+loop
+yyn:0  state:111  yychar:-1
+El token es: 41
+ next yychar:41
+state 111, shifting to state 136
+loop
+state 136, reducing 0 by rule 2 (sentencias_declarativas :)
+reduce
+after reduction, shifting from state 136 to state 151
+loop
+yyn:0  state:151  yychar:-1
+El token es: 272
+ next yychar:272
+state 151, shifting to state 7
+loop
+state 7, reducing 1 by rule 12 (tipo : SHORTINT)
+reduce
+after reduction, shifting from state 151 to state 17
+loop
+yyn:0  state:17  yychar:-1
+El token es: 257
+ next yychar:257
+state 17, shifting to state 18
+loop
+state 18, reducing 1 by rule 10 (lista_identificadores : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 17 to state 25
+loop
+yyn:0  state:25  yychar:-1
+El token es: 59
+ next yychar:59
+state 25, shifting to state 55
+loop
+state 55, reducing 3 by rule 9 (declaracion_variables : tipo lista_identificadores ';')
+reduce
+after reduction, shifting from state 151 to state 12
+loop
+state 12, reducing 1 by rule 4 (sentencia_declarativa : declaracion_variables)
+reduce
+after reduction, shifting from state 151 to state 11
+loop
+state 11, reducing 2 by rule 3 (sentencias_declarativas : sentencias_declarativas sentencia_declarativa)
+reduce
+after reduction, shifting from state 136 to state 151
+loop
+yyn:0  state:151  yychar:-1
+El token es: 261
+ next yychar:261
+state 151, shifting to state 160
+loop
+state 160, reducing 0 by rule 36 (sentencias_ejecutables :)
+reduce
+after reduction, shifting from state 160 to state 169
+loop
+yyn:0  state:169  yychar:-1
+El token es: 257
+ next yychar:257
+state 169, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 257
+ next yychar:257
+state 57, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 43
+ next yychar:43
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:43
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:43
+state 84, shifting to state 70
+loop
+yyn:0  state:70  yychar:-1
+El token es: 257
+ next yychar:257
+state 70, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 70 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 70 to state 100
+loop
+yyn:0  state:100  yychar:59
+reduce
+state 100, reducing 3 by rule 49 (expresion : expresion '+' termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 169 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 169 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 160 to state 169
+loop
+yyn:0  state:169  yychar:-1
+El token es: 264
+ next yychar:264
+state 169, shifting to state 32
+loop
+yyn:0  state:32  yychar:-1
+El token es: 40
+ next yychar:40
+state 32, shifting to state 63
+loop
+yyn:0  state:63  yychar:-1
+El token es: 257
+ next yychar:257
+state 63, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 41
+ next yychar:41
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 63 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 63 to state 45
+loop
+yyn:0  state:45  yychar:41
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 63 to state 96
+loop
+yyn:0  state:96  yychar:41
+state 96, shifting to state 127
+loop
+state 127, reducing 4 by rule 81 (sentencia_ret : RET '(' expresion ')')
+reduce
+after reduction, shifting from state 169 to state 43
+loop
+yyn:0  state:43  yychar:-1
+El token es: 59
+ next yychar:59
+state 43, shifting to state 74
+loop
+state 74, reducing 2 by rule 43 (sentencia_ejecutable : sentencia_ret ';')
+reduce
+after reduction, shifting from state 169 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 160 to state 169
+loop
+yyn:0  state:169  yychar:-1
+El token es: 262
+ next yychar:262
+state 169, shifting to state 176
+loop
+yyn:0  state:176  yychar:-1
+El token es: 59
+ next yychar:59
+state 176, shifting to state 181
+loop
+state 181, reducing 11 by rule 14 (declaracion_funciones : tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';')
+reduce
+after reduction, shifting from state 3 to state 13
+loop
+state 13, reducing 1 by rule 5 (sentencia_declarativa : declaracion_funciones)
+reduce
+after reduction, shifting from state 3 to state 11
+loop
+state 11, reducing 2 by rule 3 (sentencias_declarativas : sentencias_declarativas sentencia_declarativa)
+reduce
+after reduction, shifting from state 1 to state 3
+loop
+yyn:0  state:3  yychar:-1
+El token es: 278
+ next yychar:278
+state 3, shifting to state 9
+loop
+yyn:0  state:9  yychar:-1
+El token es: 266
+ next yychar:266
+state 9, shifting to state 22
+loop
+yyn:0  state:22  yychar:-1
+El token es: 257
+ next yychar:257
+state 22, shifting to state 52
+loop
+yyn:0  state:52  yychar:-1
+El token es: 40
+ next yychar:40
+state 52, shifting to state 80
+loop
+yyn:0  state:80  yychar:-1
+El token es: 272
+ next yychar:272
+state 80, shifting to state 7
+loop
+state 7, reducing 1 by rule 12 (tipo : SHORTINT)
+reduce
+after reduction, shifting from state 80 to state 108
+loop
+yyn:0  state:108  yychar:-1
+El token es: 257
+ next yychar:257
+state 108, shifting to state 133
+loop
+state 133, reducing 2 by rule 19 (parametro_formal : tipo IDENTIFICADOR)
+reduce
+after reduction, shifting from state 80 to state 110
+loop
+state 110, reducing 1 by rule 17 (lista_parametros_formales : parametro_formal)
+reduce
+after reduction, shifting from state 80 to state 109
+loop
+yyn:0  state:109  yychar:-1
+El token es: 41
+ next yychar:41
+state 109, shifting to state 135
+loop
+yyn:0  state:135  yychar:-1
+El token es: 261
+ next yychar:261
+state 135, shifting to state 150
+loop
+state 150, reducing 0 by rule 36 (sentencias_ejecutables :)
+reduce
+after reduction, shifting from state 150 to state 159
+loop
+yyn:0  state:159  yychar:-1
+El token es: 264
+ next yychar:264
+state 159, shifting to state 32
+loop
+yyn:0  state:32  yychar:-1
+El token es: 40
+ next yychar:40
+state 32, shifting to state 63
+loop
+yyn:0  state:63  yychar:-1
+El token es: 257
+ next yychar:257
+state 63, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 43
+ next yychar:43
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 63 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 63 to state 45
+loop
+yyn:0  state:45  yychar:43
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 63 to state 96
+loop
+yyn:0  state:96  yychar:43
+state 96, shifting to state 70
+loop
+yyn:0  state:70  yychar:-1
+El token es: 275
+ next yychar:275
+state 70, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 70 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 70 to state 100
+loop
+yyn:0  state:100  yychar:-1
+El token es: 41
+ next yychar:41
+reduce
+state 100, reducing 3 by rule 49 (expresion : expresion '+' termino)
+reduce
+after reduction, shifting from state 63 to state 96
+loop
+yyn:0  state:96  yychar:41
+state 96, shifting to state 127
+loop
+state 127, reducing 4 by rule 81 (sentencia_ret : RET '(' expresion ')')
+reduce
+after reduction, shifting from state 159 to state 43
+loop
+yyn:0  state:43  yychar:-1
+El token es: 59
+ next yychar:59
+state 43, shifting to state 74
+loop
+state 74, reducing 2 by rule 43 (sentencia_ejecutable : sentencia_ret ';')
+reduce
+after reduction, shifting from state 159 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 150 to state 159
+loop
+yyn:0  state:159  yychar:-1
+El token es: 262
+ next yychar:262
+state 159, shifting to state 168
+loop
+yyn:0  state:168  yychar:-1
+El token es: 59
+ next yychar:59
+state 168, shifting to state 175
+loop
+state 175, reducing 10 by rule 15 (declaracion_funciones : AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')' BEGIN sentencias_ejecutables END ';')
+reduce
+after reduction, shifting from state 3 to state 13
+loop
+state 13, reducing 1 by rule 5 (sentencia_declarativa : declaracion_funciones)
+reduce
+after reduction, shifting from state 3 to state 11
+loop
+state 11, reducing 2 by rule 3 (sentencias_declarativas : sentencias_declarativas sentencia_declarativa)
+reduce
+after reduction, shifting from state 1 to state 3
+loop
+yyn:0  state:3  yychar:-1
+El token es: 261
+ next yychar:261
+state 3, shifting to state 5
+loop
+state 5, reducing 0 by rule 36 (sentencias_ejecutables :)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 257
+ next yychar:257
+state 20, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 275
+ next yychar:275
+state 57, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 20 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 257
+ next yychar:257
+state 20, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 257
+ next yychar:257
+state 57, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 40
+ next yychar:40
+state 83, shifting to state 58
+loop
+yyn:0  state:58  yychar:-1
+El token es: 275
+ next yychar:275
+state 58, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 58 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 58 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 44
+ next yychar:44
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 58 to state 87
+loop
+yyn:0  state:87  yychar:44
+reduce
+state 87, reducing 1 by rule 62 (lista_expresiones : expresion)
+reduce
+after reduction, shifting from state 58 to state 88
+loop
+yyn:0  state:88  yychar:44
+state 88, shifting to state 112
+loop
+yyn:0  state:112  yychar:-1
+El token es: 275
+ next yychar:275
+state 112, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 112 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 112 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 41
+ next yychar:41
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 112 to state 137
+loop
+yyn:0  state:137  yychar:41
+reduce
+state 137, reducing 3 by rule 63 (lista_expresiones : lista_expresiones ',' expresion)
+reduce
+after reduction, shifting from state 58 to state 88
+loop
+yyn:0  state:88  yychar:41
+state 88, shifting to state 113
+loop
+state 113, reducing 4 by rule 57 (factor : IDENTIFICADOR '(' lista_expresiones ')')
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 20 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 257
+ next yychar:257
+state 20, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El resultado es: 1.5
+El token es: 275
+ next yychar:275
+state 57, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 20 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 257
+ next yychar:257
+state 20, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 285
+ next yychar:285
+state 57, shifting to state 35
+loop
+yyn:0  state:35  yychar:-1
+El token es: 40
+ next yychar:40
+state 35, shifting to state 67
+loop
+yyn:0  state:67  yychar:-1
+El token es: 257
+ next yychar:257
+state 67, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 43
+ next yychar:43
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 67 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 67 to state 45
+loop
+yyn:0  state:45  yychar:43
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 67 to state 99
+loop
+yyn:0  state:99  yychar:43
+state 99, shifting to state 70
+loop
+yyn:0  state:70  yychar:-1
+El resultado es: 1.0
+El token es: 275
+ next yychar:275
+state 70, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 70 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 70 to state 100
+loop
+yyn:0  state:100  yychar:-1
+El token es: 41
+ next yychar:41
+reduce
+state 100, reducing 3 by rule 49 (expresion : expresion '+' termino)
+reduce
+after reduction, shifting from state 67 to state 99
+loop
+yyn:0  state:99  yychar:41
+state 99, shifting to state 130
+loop
+state 130, reducing 4 by rule 66 (conversion_tos : TOS '(' expresion ')')
+reduce
+after reduction, shifting from state 57 to state 49
+loop
+state 49, reducing 1 by rule 60 (factor : conversion_tos)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 20 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 257
+ next yychar:257
+state 20, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 91
+ next yychar:91
+state 28, shifting to state 59
+loop
+yyn:0  state:59  yychar:-1
+El token es: 275
+ next yychar:275
+state 59, shifting to state 90
+loop
+yyn:0  state:90  yychar:-1
+El token es: 93
+ next yychar:93
+state 90, shifting to state 115
+loop
+state 115, reducing 4 by rule 46 (acceso_posicional : IDENTIFICADOR '[' CONSTANTE ']')
+reduce
+after reduction, shifting from state 20 to state 44
+loop
+yyn:0  state:44  yychar:-1
+El token es: 267
+ next yychar:267
+state 44, shifting to state 75
+loop
+yyn:0  state:75  yychar:-1
+El token es: 275
+ next yychar:275
+state 75, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 75 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 75 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 75 to state 102
+loop
+yyn:0  state:102  yychar:59
+reduce
+state 102, reducing 3 by rule 45 (asignacion : acceso_posicional ASIGNAR expresion)
+reduce
+after reduction, shifting from state 20 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 257
+ next yychar:257
+state 20, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 91
+ next yychar:91
+state 28, shifting to state 59
+loop
+yyn:0  state:59  yychar:-1
+El token es: 257
+ next yychar:257
+state 59, shifting to state 89
+loop
+yyn:0  state:89  yychar:-1
+El token es: 93
+ next yychar:93
+state 89, shifting to state 114
+loop
+state 114, reducing 4 by rule 47 (acceso_posicional : IDENTIFICADOR '[' IDENTIFICADOR ']')
+reduce
+after reduction, shifting from state 20 to state 44
+loop
+yyn:0  state:44  yychar:-1
+El token es: 267
+ next yychar:267
+state 44, shifting to state 75
+loop
+yyn:0  state:75  yychar:-1
+El token es: 275
+ next yychar:275
+state 75, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 75 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 75 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 75 to state 102
+loop
+yyn:0  state:102  yychar:59
+reduce
+state 102, reducing 3 by rule 45 (asignacion : acceso_posicional ASIGNAR expresion)
+reduce
+after reduction, shifting from state 20 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 257
+ next yychar:257
+state 20, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 257
+ next yychar:257
+state 57, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 91
+ next yychar:91
+state 83, shifting to state 59
+loop
+yyn:0  state:59  yychar:-1
+El token es: 275
+ next yychar:275
+state 59, shifting to state 90
+loop
+yyn:0  state:90  yychar:-1
+El token es: 93
+ next yychar:93
+state 90, shifting to state 115
+loop
+state 115, reducing 4 by rule 46 (acceso_posicional : IDENTIFICADOR '[' CONSTANTE ']')
+reduce
+after reduction, shifting from state 57 to state 85
+loop
+state 85, reducing 1 by rule 61 (factor : acceso_posicional)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 43
+ next yychar:43
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:43
+state 84, shifting to state 70
+loop
+yyn:0  state:70  yychar:-1
+El token es: 275
+ next yychar:275
+state 70, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 70 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 70 to state 100
+loop
+yyn:0  state:100  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 100, reducing 3 by rule 49 (expresion : expresion '+' termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 20 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 257
+ next yychar:257
+state 20, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 257
+ next yychar:257
+state 57, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 61
+ next yychar:61
+state 83, shifting to state 60
+loop
+yyn:0  state:60  yychar:-1
+El token es: 40
+ next yychar:40
+state 60, shifting to state 91
+loop
+yyn:0  state:91  yychar:-1
+El token es: 275
+ next yychar:275
+state 91, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 91 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 91 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 43
+ next yychar:43
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 91 to state 116
+loop
+yyn:0  state:116  yychar:43
+state 116, shifting to state 70
+loop
+yyn:0  state:70  yychar:-1
+El token es: 275
+ next yychar:275
+state 70, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 70 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 70 to state 100
+loop
+yyn:0  state:100  yychar:-1
+El token es: 41
+ next yychar:41
+reduce
+state 100, reducing 3 by rule 49 (expresion : expresion '+' termino)
+reduce
+after reduction, shifting from state 91 to state 116
+loop
+yyn:0  state:116  yychar:41
+state 116, shifting to state 138
+loop
+state 138, reducing 5 by rule 64 (unica : IDENTIFICADOR '=' '(' expresion ')')
+reduce
+after reduction, shifting from state 57 to state 47
+loop
+state 47, reducing 1 by rule 58 (factor : unica)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 20 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 258
+ next yychar:258
+state 20, shifting to state 29
+loop
+yyn:0  state:29  yychar:-1
+El token es: 40
+ next yychar:40
+state 29, shifting to state 61
+loop
+yyn:0  state:61  yychar:-1
+El token es: 257
+ next yychar:257
+state 61, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 62
+ next yychar:62
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 61 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 61 to state 45
+loop
+yyn:0  state:45  yychar:62
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 61 to state 92
+loop
+yyn:0  state:92  yychar:62
+state 92, shifting to state 121
+loop
+state 121, reducing 1 by rule 74 (comparador : '>')
+reduce
+after reduction, shifting from state 92 to state 123
+loop
+yyn:0  state:123  yychar:-1
+El token es: 257
+ next yychar:257
+state 123, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 41
+ next yychar:41
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 123 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 123 to state 45
+loop
+yyn:0  state:45  yychar:41
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 123 to state 139
+loop
+yyn:0  state:139  yychar:41
+reduce
+state 139, reducing 3 by rule 69 (condicion : expresion comparador expresion)
+reduce
+after reduction, shifting from state 61 to state 93
+loop
+yyn:0  state:93  yychar:41
+state 93, shifting to state 124
+loop
+yyn:0  state:124  yychar:-1
+El token es: 257
+ next yychar:257
+state 124, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 275
+ next yychar:275
+state 57, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 124 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 124 to state 65
+loop
+state 65, reducing 1 by rule 77 (bloque : sentencia_ejecutable)
+reduce
+after reduction, shifting from state 124 to state 140
+loop
+yyn:0  state:140  yychar:-1
+El token es: 260
+ next yychar:260
+state 140, shifting to state 153
+loop
+yyn:0  state:153  yychar:-1
+El token es: 59
+ next yychar:59
+state 153, shifting to state 162
+loop
+state 162, reducing 7 by rule 68 (sentencia_if : IF '(' condicion ')' bloque END_IF ';')
+reduce
+after reduction, shifting from state 20 to state 40
+loop
+state 40, reducing 1 by rule 40 (sentencia_ejecutable : sentencia_if)
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 258
+ next yychar:258
+state 20, shifting to state 29
+loop
+yyn:0  state:29  yychar:-1
+El token es: 40
+ next yychar:40
+state 29, shifting to state 61
+loop
+yyn:0  state:61  yychar:-1
+El token es: 257
+ next yychar:257
+state 61, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 268
+ next yychar:268
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 61 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 61 to state 45
+loop
+yyn:0  state:45  yychar:268
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 61 to state 92
+loop
+yyn:0  state:92  yychar:268
+state 92, shifting to state 117
+loop
+state 117, reducing 1 by rule 70 (comparador : MAYORIGUAL)
+reduce
+after reduction, shifting from state 92 to state 123
+loop
+yyn:0  state:123  yychar:-1
+El token es: 257
+ next yychar:257
+state 123, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 41
+ next yychar:41
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 123 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 123 to state 45
+loop
+yyn:0  state:45  yychar:41
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 123 to state 139
+loop
+yyn:0  state:139  yychar:41
+reduce
+state 139, reducing 3 by rule 69 (condicion : expresion comparador expresion)
+reduce
+after reduction, shifting from state 61 to state 93
+loop
+yyn:0  state:93  yychar:41
+state 93, shifting to state 124
+loop
+yyn:0  state:124  yychar:-1
+El token es: 261
+ next yychar:261
+state 124, shifting to state 64
+loop
+state 64, reducing 0 by rule 36 (sentencias_ejecutables :)
+reduce
+after reduction, shifting from state 64 to state 97
+loop
+yyn:0  state:97  yychar:-1
+El token es: 257
+ next yychar:257
+state 97, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 275
+ next yychar:275
+state 57, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 97 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 97 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 64 to state 97
+loop
+yyn:0  state:97  yychar:-1
+El token es: 257
+ next yychar:257
+state 97, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 275
+ next yychar:275
+state 57, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 97 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 97 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 64 to state 97
+loop
+yyn:0  state:97  yychar:-1
+El token es: 262
+ next yychar:262
+state 97, shifting to state 128
+loop
+state 128, reducing 3 by rule 76 (bloque : BEGIN sentencias_ejecutables END)
+reduce
+after reduction, shifting from state 124 to state 140
+loop
+yyn:0  state:140  yychar:-1
+El token es: 259
+ next yychar:259
+state 140, shifting to state 152
+loop
+yyn:0  state:152  yychar:-1
+El token es: 261
+ next yychar:261
+state 152, shifting to state 64
+loop
+state 64, reducing 0 by rule 36 (sentencias_ejecutables :)
+reduce
+after reduction, shifting from state 64 to state 97
+loop
+yyn:0  state:97  yychar:-1
+El token es: 257
+ next yychar:257
+state 97, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 275
+ next yychar:275
+state 57, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 97 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 97 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 64 to state 97
+loop
+yyn:0  state:97  yychar:-1
+El token es: 262
+ next yychar:262
+state 97, shifting to state 128
+loop
+state 128, reducing 3 by rule 76 (bloque : BEGIN sentencias_ejecutables END)
+reduce
+after reduction, shifting from state 152 to state 161
+loop
+yyn:0  state:161  yychar:-1
+El token es: 260
+ next yychar:260
+state 161, shifting to state 170
+loop
+yyn:0  state:170  yychar:-1
+El token es: 59
+ next yychar:59
+state 170, shifting to state 177
+loop
+state 177, reducing 9 by rule 67 (sentencia_if : IF '(' condicion ')' bloque ELSE bloque END_IF ';')
+reduce
+after reduction, shifting from state 20 to state 40
+loop
+state 40, reducing 1 by rule 40 (sentencia_ejecutable : sentencia_if)
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 276
+ next yychar:276
+state 20, shifting to state 34
+loop
+yyn:0  state:34  yychar:-1
+El token es: 257
+ next yychar:257
+state 34, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 257
+ next yychar:257
+state 57, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 43
+ next yychar:43
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:43
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:43
+state 84, shifting to state 70
+loop
+yyn:0  state:70  yychar:-1
+El token es: 275
+ next yychar:275
+state 70, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 70 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 70 to state 100
+loop
+yyn:0  state:100  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 100, reducing 3 by rule 49 (expresion : expresion '+' termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 34 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 34 to state 65
+loop
+state 65, reducing 1 by rule 77 (bloque : sentencia_ejecutable)
+reduce
+after reduction, shifting from state 34 to state 66
+loop
+yyn:0  state:66  yychar:-1
+El token es: 277
+ next yychar:277
+state 66, shifting to state 98
+loop
+yyn:0  state:98  yychar:-1
+El token es: 40
+ next yychar:40
+state 98, shifting to state 129
+loop
+yyn:0  state:129  yychar:-1
+El token es: 257
+ next yychar:257
+state 129, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 62
+ next yychar:62
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 129 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 129 to state 45
+loop
+yyn:0  state:45  yychar:62
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 129 to state 92
+loop
+yyn:0  state:92  yychar:62
+state 92, shifting to state 121
+loop
+state 121, reducing 1 by rule 74 (comparador : '>')
+reduce
+after reduction, shifting from state 92 to state 123
+loop
+yyn:0  state:123  yychar:-1
+El token es: 275
+ next yychar:275
+state 123, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 123 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 123 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 41
+ next yychar:41
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 123 to state 139
+loop
+yyn:0  state:139  yychar:41
+reduce
+state 139, reducing 3 by rule 69 (condicion : expresion comparador expresion)
+reduce
+after reduction, shifting from state 129 to state 141
+loop
+yyn:0  state:141  yychar:41
+state 141, shifting to state 154
+loop
+yyn:0  state:154  yychar:-1
+El token es: 59
+ next yychar:59
+state 154, shifting to state 163
+loop
+state 163, reducing 7 by rule 78 (sentencia_repeat_until : REPEAT bloque UNTIL '(' condicion ')' ';')
+reduce
+after reduction, shifting from state 20 to state 41
+loop
+state 41, reducing 1 by rule 41 (sentencia_ejecutable : sentencia_repeat_until)
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 276
+ next yychar:276
+state 20, shifting to state 34
+loop
+yyn:0  state:34  yychar:-1
+El token es: 261
+ next yychar:261
+state 34, shifting to state 64
+loop
+state 64, reducing 0 by rule 36 (sentencias_ejecutables :)
+reduce
+after reduction, shifting from state 64 to state 97
+loop
+yyn:0  state:97  yychar:-1
+El token es: 257
+ next yychar:257
+state 97, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 257
+ next yychar:257
+state 57, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 45
+ next yychar:45
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:45
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:45
+state 84, shifting to state 71
+loop
+yyn:0  state:71  yychar:-1
+El token es: 275
+ next yychar:275
+state 71, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 71 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 71 to state 101
+loop
+yyn:0  state:101  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 101, reducing 3 by rule 50 (expresion : expresion '-' termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 97 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 97 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 64 to state 97
+loop
+yyn:0  state:97  yychar:-1
+El token es: 257
+ next yychar:257
+state 97, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 257
+ next yychar:257
+state 57, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 43
+ next yychar:43
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:43
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:43
+state 84, shifting to state 70
+loop
+yyn:0  state:70  yychar:-1
+El token es: 275
+ next yychar:275
+state 70, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 70 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 70 to state 100
+loop
+yyn:0  state:100  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 100, reducing 3 by rule 49 (expresion : expresion '+' termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 97 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 97 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 64 to state 97
+loop
+yyn:0  state:97  yychar:-1
+El token es: 262
+ next yychar:262
+state 97, shifting to state 128
+loop
+state 128, reducing 3 by rule 76 (bloque : BEGIN sentencias_ejecutables END)
+reduce
+after reduction, shifting from state 34 to state 66
+loop
+yyn:0  state:66  yychar:-1
+El token es: 277
+ next yychar:277
+state 66, shifting to state 98
+loop
+yyn:0  state:98  yychar:-1
+El token es: 40
+ next yychar:40
+state 98, shifting to state 129
+loop
+yyn:0  state:129  yychar:-1
+El token es: 257
+ next yychar:257
+state 129, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 269
+ next yychar:269
+reduce
+state 83, reducing 1 by rule 54 (factor : IDENTIFICADOR)
+reduce
+after reduction, shifting from state 129 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 129 to state 45
+loop
+yyn:0  state:45  yychar:269
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 129 to state 92
+loop
+yyn:0  state:92  yychar:269
+state 92, shifting to state 118
+loop
+state 118, reducing 1 by rule 71 (comparador : MENORIGUAL)
+reduce
+after reduction, shifting from state 92 to state 123
+loop
+yyn:0  state:123  yychar:-1
+El token es: 275
+ next yychar:275
+state 123, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 123 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 123 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 41
+ next yychar:41
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 123 to state 139
+loop
+yyn:0  state:139  yychar:41
+reduce
+state 139, reducing 3 by rule 69 (condicion : expresion comparador expresion)
+reduce
+after reduction, shifting from state 129 to state 141
+loop
+yyn:0  state:141  yychar:41
+state 141, shifting to state 154
+loop
+yyn:0  state:154  yychar:-1
+El token es: 59
+ next yychar:59
+state 154, shifting to state 163
+loop
+state 163, reducing 7 by rule 78 (sentencia_repeat_until : REPEAT bloque UNTIL '(' condicion ')' ';')
+reduce
+after reduction, shifting from state 20 to state 41
+loop
+state 41, reducing 1 by rule 41 (sentencia_ejecutable : sentencia_repeat_until)
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 263
+ next yychar:263
+state 20, shifting to state 31
+loop
+yyn:0  state:31  yychar:-1
+El token es: 40
+ next yychar:40
+state 31, shifting to state 62
+loop
+yyn:0  state:62  yychar:-1
+El token de comentario es: 274
+El token es: 274
+ next yychar:274
+state 62, shifting to state 94
+loop
+yyn:0  state:94  yychar:-1
+El token es: 41
+ next yychar:41
+state 94, shifting to state 125
+loop
+state 125, reducing 4 by rule 79 (sentencia_pout : POUT '(' CADENA ')')
+reduce
+after reduction, shifting from state 20 to state 42
+loop
+yyn:0  state:42  yychar:-1
+El token es: 59
+ next yychar:59
+state 42, shifting to state 73
+loop
+state 73, reducing 2 by rule 42 (sentencia_ejecutable : sentencia_pout ';')
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 257
+ next yychar:257
+state 20, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 40
+ next yychar:40
+state 28, shifting to state 58
+loop
+yyn:0  state:58  yychar:-1
+El token es: 275
+ next yychar:275
+state 58, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 58 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 58 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 44
+ next yychar:44
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 58 to state 87
+loop
+yyn:0  state:87  yychar:44
+reduce
+state 87, reducing 1 by rule 62 (lista_expresiones : expresion)
+reduce
+after reduction, shifting from state 58 to state 88
+loop
+yyn:0  state:88  yychar:44
+state 88, shifting to state 112
+loop
+yyn:0  state:112  yychar:-1
+El token es: 275
+ next yychar:275
+state 112, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 112 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 112 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 41
+ next yychar:41
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 112 to state 137
+loop
+yyn:0  state:137  yychar:41
+reduce
+state 137, reducing 3 by rule 63 (lista_expresiones : lista_expresiones ',' expresion)
+reduce
+after reduction, shifting from state 58 to state 88
+loop
+yyn:0  state:88  yychar:41
+state 88, shifting to state 113
+loop
+state 113, reducing 4 by rule 57 (factor : IDENTIFICADOR '(' lista_expresiones ')')
+reduce
+after reduction, shifting from state 20 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 20 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 20 to state 39
+loop
+yyn:0  state:39  yychar:59
+state 39, shifting to state 72
+loop
+state 72, reducing 2 by rule 39 (sentencia_ejecutable : expresion ';')
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 257
+ next yychar:257
+state 20, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 257
+ next yychar:257
+state 57, shifting to state 83
+loop
+yyn:0  state:83  yychar:-1
+El token es: 40
+ next yychar:40
+state 83, shifting to state 58
+loop
+yyn:0  state:58  yychar:-1
+El token es: 275
+ next yychar:275
+state 58, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 58 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 58 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 44
+ next yychar:44
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 58 to state 87
+loop
+yyn:0  state:87  yychar:44
+reduce
+state 87, reducing 1 by rule 62 (lista_expresiones : expresion)
+reduce
+after reduction, shifting from state 58 to state 88
+loop
+yyn:0  state:88  yychar:44
+state 88, shifting to state 112
+loop
+yyn:0  state:112  yychar:-1
+El token es: 275
+ next yychar:275
+state 112, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 112 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 112 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 41
+ next yychar:41
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 112 to state 137
+loop
+yyn:0  state:137  yychar:41
+reduce
+state 137, reducing 3 by rule 63 (lista_expresiones : lista_expresiones ',' expresion)
+reduce
+after reduction, shifting from state 58 to state 88
+loop
+yyn:0  state:88  yychar:41
+state 88, shifting to state 113
+loop
+state 113, reducing 4 by rule 57 (factor : IDENTIFICADOR '(' lista_expresiones ')')
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 43
+ next yychar:43
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:43
+state 84, shifting to state 70
+loop
+yyn:0  state:70  yychar:-1
+El token es: 275
+ next yychar:275
+state 70, shifting to state 33
+loop
+state 33, reducing 1 by rule 55 (factor : CONSTANTE)
+reduce
+after reduction, shifting from state 70 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 70 to state 100
+loop
+yyn:0  state:100  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 100, reducing 3 by rule 49 (expresion : expresion '+' termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 20 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 257
+ next yychar:257
+state 20, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 45
+ next yychar:45
+state 57, shifting to state 36
+loop
+yyn:0  state:36  yychar:-1
+El token es: 275
+ next yychar:275
+state 36, shifting to state 68
+loop
+state 68, reducing 2 by rule 65 (numero_negativo : '-' CONSTANTE)
+convertirANegativo llamado con: '3'
+reduce
+after reduction, shifting from state 57 to state 48
+loop
+state 48, reducing 1 by rule 59 (factor : numero_negativo)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 20 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 257
+ next yychar:257
+state 20, shifting to state 28
+loop
+yyn:0  state:28  yychar:-1
+El token es: 267
+ next yychar:267
+state 28, shifting to state 57
+loop
+yyn:0  state:57  yychar:-1
+El token es: 45
+ next yychar:45
+state 57, shifting to state 36
+loop
+yyn:0  state:36  yychar:-1
+El resultado es: 1.5
+El token es: 275
+ next yychar:275
+state 36, shifting to state 68
+loop
+state 68, reducing 2 by rule 65 (numero_negativo : '-' CONSTANTE)
+convertirANegativo llamado con: '1.5'
+reduce
+after reduction, shifting from state 57 to state 48
+loop
+state 48, reducing 1 by rule 59 (factor : numero_negativo)
+reduce
+after reduction, shifting from state 57 to state 46
+loop
+state 46, reducing 1 by rule 51 (termino : factor)
+reduce
+after reduction, shifting from state 57 to state 45
+loop
+yyn:0  state:45  yychar:-1
+El token es: 59
+ next yychar:59
+reduce
+state 45, reducing 1 by rule 48 (expresion : termino)
+reduce
+after reduction, shifting from state 57 to state 84
+loop
+yyn:0  state:84  yychar:59
+reduce
+state 84, reducing 3 by rule 44 (asignacion : IDENTIFICADOR ASIGNAR expresion)
+reduce
+after reduction, shifting from state 20 to state 38
+loop
+yyn:0  state:38  yychar:59
+state 38, shifting to state 69
+loop
+state 69, reducing 2 by rule 38 (sentencia_ejecutable : asignacion ';')
+reduce
+after reduction, shifting from state 20 to state 37
+loop
+state 37, reducing 2 by rule 37 (sentencias_ejecutables : sentencias_ejecutables sentencia_ejecutable)
+reduce
+after reduction, shifting from state 5 to state 20
+loop
+yyn:0  state:20  yychar:-1
+El token es: 262
+ next yychar:262
+state 20, shifting to state 30
+loop
+state 30, reducing 5 by rule 1 (programa : IDENTIFICADOR sentencias_declarativas BEGIN sentencias_ejecutables END)
+Programa reconocido correctamente
+reduce
+After reduction, shifting from state 0 to state 2
+state 2, reading 0 (end-of-file)
+=== TABLA DE SIMBOLOS ===
+1: {LEXEMA=programa_test}
+2: {LEXEMA=x}
+3: {LEXEMA=y}
+4: {LEXEMA=z}
+5: {LEXEMA=c1}
+6: {LEXEMA=c2}
+7: {LEXEMA=c3}
+8: {LEXEMA=miclase}
+9: {LEXEMA=attr1}
+10: {LEXEMA=attr2}
+11: {LEXEMA=attr3}
+12: {LEXEMA=metodo1}
+13: {LEXEMA=a}
+14: {LEXEMA=local}
+15: {LEXEMA=clasehija}
+16: {LEXEMA=nuevo}
+17: {LEXEMA=obj1}
+18: {LEXEMA=obj2}
+19: {LEXEMA=sumar}
+20: {LEXEMA=b}
+21: {LEXEMA=resultado}
+22: {LEXEMA=inferir}
+23: {TIPO=SHORTINT, LEXEMA=1, OCURRENCIAS=10}
+24: {TIPO=SHORTINT, LEXEMA=3, OCURRENCIAS=4}
+25: {TIPO=SHORTINT, LEXEMA=2, OCURRENCIAS=4}
+26: {TIPO=SINGLEF, LEXEMA=1.5, OCURRENCIAS=1}
+27: {TIPO=SINGLEF, LEXEMA=1.0, OCURRENCIAS=1}
+28: {TIPO=SHORTINT, LEXEMA=0, OCURRENCIAS=3}
+29: {TIPO=SHORTINT, LEXEMA=10, OCURRENCIAS=2}
+30: {TIPO=SHORTINT, LEXEMA=20, OCURRENCIAS=1}
+31: {TIPO=SHORTINT, LEXEMA=4, OCURRENCIAS=1}
+32: {TIPO=SHORTINT, LEXEMA=-3, OCURRENCIAS=1}
+33: {TIPO=SINGLEF, LEXEMA=-1.5, OCURRENCIAS=1}

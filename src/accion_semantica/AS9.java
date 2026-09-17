@@ -7,6 +7,11 @@ import src.compilador.*;
 public class AS9 extends Accion_Semantica{
     @Override 
     public int ejecutar(StringBuilder token_actual, PushbackReader reader, char caracter_actual){
+        try {
+            reader.unread(caracter_actual);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         String token_entregado = token_actual.toString(); //"20.3s" como string
         int posicionS = token_entregado.indexOf("s"); // Me fijo en que posicion esta la "s"
         String base = token_entregado.substring(0, posicionS); // Me quedo con "20.3"
@@ -15,8 +20,10 @@ public class AS9 extends Accion_Semantica{
         int exponente = Integer.parseInt(exp); // parseo a int el exponente -> "2" = 2
         Double resultado = Math.pow(baseD, exponente); // Eleva la base a la potencia 0 -> 20.3^2
         System.out.println("El resultado es: " + resultado);
-        if (resultado >= AnalizadorLexico.ValorMinimoFloat && resultado <= AnalizadorLexico.ValorMaximoFloat){
-            return TablaPalabrasReservadas.obtenerIdentificador("SINGLEF");
+        if ((resultado >= AnalizadorLexico.ValorMinimoFloat && resultado <= AnalizadorLexico.ValorMaximoFloat) || resultado == 0.0){
+            int id = TablaSimbolos.gestionarConstante("" + resultado, "SINGLEF");
+            AnalizadorLexico.setReferenciaTablaSimbolos(id);
+            return TablaPalabrasReservadas.obtenerIdentificador("CONSTANTE");
         }
         System.out.println("WARNING: El double "+ resultado + " esta fuera de rango");
         return 0; // Manejar el error

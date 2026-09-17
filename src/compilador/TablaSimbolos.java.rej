@@ -1,0 +1,14 @@
+--- TablaSimbolos.java
++++ TablaSimbolos.java
+@@ -107,4 +107,11 @@
+ 
+         return gestionarConstante(lexema_negativo, tipo);
+     }
++    
++    public static void imprimirTabla() {
++        System.out.println("=== TABLA DE SIMBOLOS ===");
++        for (Map.Entry<Integer, Map<String, String>> entry : tabla_simbolos.entrySet()) {
++            System.out.println(entry.getKey() + ": " + entry.getValue());
++        }
++    }
+ }
