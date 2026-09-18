@@ -19,13 +19,13 @@ public class AS9 extends Accion_Semantica{
         String exp = token_entregado.substring(posicionS + 1); // Me quedo con lo que venga despues de la "s"
         int exponente = Integer.parseInt(exp); // parseo a int el exponente -> "2" = 2
         Double resultado = Math.pow(baseD, exponente); // Eleva la base a la potencia 0 -> 20.3^2
-        System.out.println("El resultado es: " + resultado);
+        //System.out.println("El resultado es: " + resultado);
         if ((resultado >= AnalizadorLexico.ValorMinimoFloat && resultado <= AnalizadorLexico.ValorMaximoFloat) || resultado == 0.0){
             int id = TablaSimbolos.gestionarConstante("" + resultado, "SINGLEF");
             AnalizadorLexico.setReferenciaTablaSimbolos(id);
-            return TablaPalabrasReservadas.obtenerIdentificador("CONSTANTE");
+            return TablaPalabrasReservadas.obtenerIdentificador("SINGLEF");
         }
-        System.out.println("WARNING: El double "+ resultado + " esta fuera de rango");
+        AnalizadorLexico.mostrarWarning("El double "+ resultado + " esta fuera de rango");
         return 0; // Manejar el error
     }
 }

@@ -1,40 +1,3 @@
-
-    /*
-package src.accion_semantica;
-
-    import java.io.PushbackReader;
-    import java.io.Reader;
-    import src.compilador.AnalizadorLexico;
-    import src.compilador.TablaPalabrasReservadas;
-
-    public class AS6 extends Accion_Semantica{
-        // Tiene que cerrar el token de numeros enteros, ver si esta en el rango y devolver el token de SHORTINT
-        
-        //POR QUE GUARDAMOS $s?
-        @Override 
-        public int ejecutar(StringBuilder token_actual, PushbackReader reader, char caracter_actual){
-            //120$s
-            token_actual.append(caracter_actual);
-            String resultado = token_actual.toString();
-            int posicion = resultado.indexOf('$');
-            String soloDigitos = resultado.substring(0, posicion);
-            int resultado_entero = Integer.parseInt(soloDigitos);
-            if (resultado_entero >= AnalizadorLexico.ValorMinimoInt && resultado_entero <= AnalizadorLexico.ValorMaximoInt) {
-                return TablaPalabrasReservadas.obtenerIdentificador("SHORTINT");
-            }
-            System.out.println("WARNING: El numero se sale de rango"); // deberia ser un error
-            token_actual.setLength(0);
-            return AnalizadorLexico.token_abierto;
-        }
-    }
-Aca mi token va a tener algo del estilo "120$s"
-    Como hago para que al parsear a INT solo tome el 120??
-
-    Respuesta Claude:          
-            int posicion = resultado.indexOf('$');
-            String soloDigitos = resultado.substring(0, posicion);
-    */
-
 package src.accion_semantica;
 import java.io.PushbackReader;
 import src.compilador.AnalizadorLexico;
@@ -42,44 +5,41 @@ import src.compilador.TablaPalabrasReservadas;
 import src.compilador.TablaSimbolos;
 
 public class AS6 extends Accion_Semantica{
-    // Cierra el token de numeros shortint (sufijo $s), valida el rango
-    // y devuelve el token de CONSTANTE al parser.
-
+    // Cierra el token de numeros shortint
     @Override
     public int ejecutar(StringBuilder token_actual, PushbackReader reader, char caracter_actual){
-        //120$s
-        token_actual.append(caracter_actual);
+        if (caracter_actual != 's'){
+            try{
+                reader.unread(caracter_actual);
+            } catch (Exception e){
+                e.printStackTrace();
+            }
+        } else {
+            token_actual.append(caracter_actual);
+        }
+        
         String resultado = token_actual.toString();
-        int posicion = resultado.indexOf('$');
-        String soloDigitos = resultado.substring(0, posicion);
-        int valor = Integer.parseInt(soloDigitos);
-        // Para shortint (8 bits, [-128, 127]), el lexico acepta hasta 128
-        // para permitir el negativo "-128$s". Si es positivo (128), lo rechazara la gramatica.
-        if (valor >= 0 && valor <= Math.abs(AnalizadorLexico.ValorMinimoInt)) {
+        if (!resultado.contains("$") || !resultado.contains("s")){
+            AnalizadorLexico.mostrarWarning("El numero leido fue "+ resultado + " -> Los SHORTINT terminan con $s"); 
+        }
+        //Con la expresion regular limpiamos todos los caracteres ej:
+        //5$, 5s, 5$s
+        String valor = resultado.replaceAll("[a-zA-Z\\$]+", "");
+        String lexema = valor + "$s";
+        
+      
+        
+        int valor_int = Integer.parseInt(valor);
+        // Para shortint (8 bits, [-128, 127]) el lexico acepta hasta 128
+        if (valor_int <= Math.abs(AnalizadorLexico.ValorMinimoInt)) {
 
             int id = TablaSimbolos.gestionarConstante("" + valor, "SHORTINT");
             AnalizadorLexico.setReferenciaTablaSimbolos(id);
 
-            return TablaPalabrasReservadas.obtenerIdentificador("CONSTANTE");
+            return TablaPalabrasReservadas.obtenerIdentificador("SHORTINT");
         }
 
-        // CORRECCION: se cambia de WARNING a ERROR (el enunciado pide
-        // reportar como error, con numero de linea, las constantes fuera
-        // de rango: "Linea 24: Constante entera fuera del rango permitido").
-        // Ademas, antes se hacia token_actual.setLength(0) pero se
-        // devolvia token_abierto (-1) SIN resetear estado_actual. Como
-        // analizar() solo resetea el estado a 0 cuando el token
-        // devuelto != -1, el automata podia quedar "colgado" en un
-        // estado intermedio esperando mas digitos que ya nunca van a
-        // llegar (por ejemplo, si el siguiente caracter es una letra).
-        // Reseteamos el estado explicitamente para que el compilador
-        // pueda seguir compilando despues del error, tal como pide el
-        // enunciado del TP2 ("cuando se detecte un error, la
-        // compilacion debe continuar").
-        System.out.println("ERROR - Linea " + AnalizadorLexico.getLineaActual()
-                + ": Constante shortint fuera de rango (" + valor + ")");
-        token_actual.setLength(0);
-        AnalizadorLexico.estado_actual = 0;
-        return AnalizadorLexico.token_abierto;
+        AnalizadorLexico.mostrarError(": Constante shortint fuera de rango (" + valor + ")");
+        return 0;
     }
 }

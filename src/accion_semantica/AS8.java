@@ -22,7 +22,7 @@ public class AS8 extends Accion_Semantica{
         if ((resultado >= AnalizadorLexico.ValorMinimoFloat && resultado <= AnalizadorLexico.ValorMaximoFloat) || resultado == 0.0){
             int id = TablaSimbolos.gestionarConstante("" + resultado, "SINGLEF");
             AnalizadorLexico.setReferenciaTablaSimbolos(id);
-            return TablaPalabrasReservadas.obtenerIdentificador("CONSTANTE");
+            return TablaPalabrasReservadas.obtenerIdentificador("SINGLEF");
         }
         System.out.println("WARNING: El double "+ resultado + " esta fuera de rango");
         return 0; // Manejar el error

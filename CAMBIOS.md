@@ -1,0 +1,1 @@
+El profesor nos dijo que no es correcto retornar CONSTANTE. Lo correcto es retorna SHORTINT o SINGLEF segun sea el caso. Eso implica cambios en la gramatica. Mas alla de los obvios, es importante porque ahora podemos detectar un error de acceso a los atributos posicionales, ya que solo debe ser valido si es SHORTINT positivo o un identificador.

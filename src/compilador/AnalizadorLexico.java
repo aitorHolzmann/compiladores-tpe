@@ -89,9 +89,14 @@ public class AnalizadorLexico {
         }
     }
 
-    public static void mostrarWarning(){
-        System.out.println("WARNING: Linea: " + linea_actual + "\n El identificador tenia mas de 22 caracteres y fue truncado");
+    public static void mostrarWarning(String mensaje){
+        System.out.println(" - WARNING: Linea: " + linea_actual + "\n -- " + mensaje);
     }
+
+    public static void mostrarError(String mensaje){
+        System.out.println(" - ERROR: Linea: " + linea_actual + "\n -- " + mensaje);
+    }
+
     
     private static int indexarCaracter(char caracterActual){
         switch (getTipoCaracter(caracterActual)) {
@@ -275,6 +280,8 @@ public class AnalizadorLexico {
             case 13:
                 return new AS13();
             case 14:
+                return new AS14();
+            case 15:
                 return new ASw();
             default:
                 return null;

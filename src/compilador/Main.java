@@ -9,12 +9,12 @@ public class Main {
     var cant_estados = analizador.get_cant_estados();
     var cant_simbolos = analizador.get_cant_simbolos();
 
-    String PATH_PROGRAMA = "tests/prueba1.txt";
+    String PATH_PROGRAMA = "tests/prueba3.txt";
     System.out.println("Se inicia la compilacion del archivo: " + PATH_PROGRAMA);
     try {
         AnalizadorLexico.reader = new PushbackReader(new BufferedReader(new FileReader(PATH_PROGRAMA)));
         
-        while (AnalizadorLexico.yylex() != -1 )
+        while (AnalizadorLexico.yylex() != -1 );
         
         System.out.println("Fin del archivo");
     } catch (Exception e) {

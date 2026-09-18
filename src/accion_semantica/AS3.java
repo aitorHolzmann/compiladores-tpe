@@ -6,7 +6,6 @@ import src.compilador.TablaPalabrasReservadas;
 import src.compilador.TablaSimbolos;
 
 public class AS3 extends Accion_Semantica{
-    // pepe_$ -> estoy en el "$" y no tiene que ser parte de la variable identificador
     
     @Override 
     public int ejecutar(StringBuilder token_actual, PushbackReader reader, char caracter_actual){
@@ -14,7 +13,7 @@ public class AS3 extends Accion_Semantica{
         if (token_entregado.length() > 22){
             String truncado = token_entregado.substring(0, 22);
             token_entregado = truncado;
-            AnalizadorLexico.mostrarWarning();
+            AnalizadorLexico.mostrarWarning("El identificador tenia mas de 22 caracteres y fue truncado");
         }
 
         try{
@@ -23,21 +22,16 @@ public class AS3 extends Accion_Semantica{
             e.printStackTrace();
         }
 
-        // CORRECCION: las palabras reservadas se pueden escribir en
-        // mayusculas o minusculas ("IF, else, END_if, begin..." segun el
-        // enunciado del TP1), pero los identificadores de usuario SOLO
-        // pueden tener minusculas (ya validado por el propio automata).
-        // Por eso es seguro normalizar a mayusculas UNICAMENTE para la
-        // busqueda en la tabla de palabras reservadas, sin tocar
-        // token_entregado (que es lo que se guarda como lexema real).
-        // Para que esto funcione, la tabla_palabras_reservadas debe tener
-        // sus claves guardadas en mayusculas (ej "BEGIN", "SHORTINT", etc).
         int identificador = TablaPalabrasReservadas.obtenerIdentificador(token_entregado.toUpperCase());
-
-        if (identificador != TablaPalabrasReservadas.NOT_FOUND){
+        //eLsA
+        if (identificador != TablaPalabrasReservadas.NOT_FOUND){ //es palabra reservada
             return identificador;
         }
 
+        if (token_entregado.matches(".*[A-Z].*")) {
+            AnalizadorLexico.mostrarWarning("El texto { " + token_entregado + " } contiene mayúsculas. Se convirtió a minusculas, resultado: " + token_entregado.toLowerCase());
+        }
+        
         identificador = TablaSimbolos.obtenerSimbolo(token_entregado);
 
         if  (identificador != TablaSimbolos.LEXEMA_NO_ENCONTRADO){

@@ -27,6 +27,9 @@ FUNCTION
 //comentario
 "no lo esta detectando"
 50$s
+50s
+50$
+50
 :=
 >=
 <=
@@ -37,4 +40,5 @@ persona.6
 persona.
 aitor.ca
 aitor. a
+aitor .a
 10.f
