@@ -85,8 +85,7 @@ sentencia_declarativa
 
 declaracion_variables
     : tipo lista_identificadores ';'
-    | tipo lista_identificadores
-        { yyerror("Falta ';' al final de la declaracion de variables"); }
+    | tipo lista_identificadores {yyerror("Falta de ';' en declaracion de variable");}
     ;
 
 lista_identificadores
@@ -105,21 +104,16 @@ declaracion_funciones
     : tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
         sentencias_declarativas
         BEGIN sentencias_ejecutables END ';'
-    | tipo FUNCTION error { yyerror("Falta nombre de funcion"); } '(' lista_parametros_formales ')'
+        
+    |tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
         sentencias_declarativas
-        BEGIN sentencias_ejecutables END ';'
-    | tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
-        sentencias_declarativas
-        BEGIN sentencias_ejecutables END
-        { yyerror("Falta ';' al final de la declaracion de funcion"); }
+        BEGIN sentencias_ejecutables END {yyerror("Falta de ';' en declaracion de funcion");}
+
     | AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
         BEGIN sentencias_ejecutables END ';'
-    | AUTO FUNCTION error { yyerror("Falta nombre de funcion"); } '(' lista_parametros_formales ')'
-        sentencias_declarativas
-        BEGIN sentencias_ejecutables END ';'
+
     | AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
-        BEGIN sentencias_ejecutables END
-        { yyerror("Falta ';' al final de la declaracion de funcion"); }
+        BEGIN sentencias_ejecutables END {yyerror("Falta de ';' en declaracion de funcion");}
     ;
 
 lista_parametros_formales
@@ -138,8 +132,7 @@ declaracion_clase
     : CLASS IDENTIFICADOR importacion_opcional
         BEGIN herencia_opcional miembros_clase END ';'
     | CLASS IDENTIFICADOR importacion_opcional
-        BEGIN herencia_opcional miembros_clase END
-        { yyerror("Falta ';' al final de la declaracion de clase"); }
+        BEGIN herencia_opcional miembros_clase END {yyerror("Falta de ';' en declaracion de clase");}
     ;
 
 importacion_opcional
@@ -183,34 +176,29 @@ exportacion_opcional
 
 declaracion_objeto
     : IDENTIFICADOR lista_identificadores ';'
-    | IDENTIFICADOR lista_identificadores
-        { yyerror("Falta ';' al final de la declaracion de objeto"); }
     ;
 
 /* COMPTIME (Tema 22) */
 
 declaracion_comptime
     : COMPTIME tipo lista_identificadores ';'
-    | COMPTIME tipo lista_identificadores
-        { yyerror("Falta ';' al final de la declaracion comptime"); }
     ;
 
 /* SENTENCIAS EJECUTABLES                                                    */
 
 sentencias_ejecutables
     : /* vacio */
-    | sentencias_ejecutables sentencia_ejecutable
+    | sentencias_ejecutables sentencia_ejecutable ';'
+    | sentencias_ejecutables sentencia_ejecutable {yyerror("Falta el ';' luego de la sentencia ejecutable");}
     ;
 
 sentencia_ejecutable
-    : asignacion ';'
-    | expresion ';'
+    : asignacion 
+    | expresion 
     | sentencia_if
     | sentencia_repeat_until
-    | sentencia_pout ';'
-    | sentencia_ret ';'
-    | error ';'
-        { yyerror("Sentencia ejecutable malformada o falta ';' previo"); }
+    | sentencia_pout 
+    | sentencia_ret 
     ;
 
 asignacion
@@ -325,6 +313,7 @@ bloque
 /* Tema 12: Repeat-Until */
 sentencia_repeat_until
     : REPEAT bloque UNTIL '(' condicion ')' ';'
+    | REPEAT bloque UNTIL '(' condicion ')' {yyerror("Falta de ';' en declaracion de sentencia_repeat_until");}
     ;
 
 /* ENTRADA / SALIDA                                                          */

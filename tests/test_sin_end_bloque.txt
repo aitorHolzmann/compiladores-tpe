@@ -1,0 +1,10 @@
+programa_bloque
+
+shortint a;
+BEGIN
+  IF (a > a)
+  BEGIN
+    pout("Falta cerrar bloque");
+  END_IF;
+END
+

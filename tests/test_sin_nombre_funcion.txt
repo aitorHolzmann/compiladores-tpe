@@ -1,0 +1,30 @@
+programa_decl
+
+shortint a, b
+singlef c;
+
+shortint FUNCTION sumar(shortint a, shortint b)
+  shortint resultado;
+BEGIN
+  resultado := a + b;
+  RET(resultado);
+END;
+
+shortint FUNCTION (shortint a, shortint b)
+  shortint resultado;
+BEGIN
+  resultado := a + b;
+  RET(resultado);
+END;
+
+shortint FUNCTION restar(shortint a, shortint b)
+  shortint resultado;
+BEGIN
+  resultado := a + b;
+  RET(resultado);
+END
+
+BEGIN
+  pout("Declaracion sin punto y coma");
+END
+

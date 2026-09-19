@@ -1,0 +1,10 @@
+programa_repeat
+
+shortint a;
+BEGIN
+  REPEAT
+  BEGIN
+    pout("Falta end en repeat");
+  UNTIL (a > a);
+END
+

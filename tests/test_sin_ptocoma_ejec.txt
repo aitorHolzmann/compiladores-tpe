@@ -1,0 +1,8 @@
+programa_ejec
+
+shortint a;
+BEGIN
+  pout("Primer mensaje")
+  pout("Segundo mensaje");
+END
+

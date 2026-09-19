@@ -1,0 +1,6 @@
+programa_sin_begin
+
+shortint a;
+pout("Prueba sin begin");
+END
+

@@ -1,0 +1,7 @@
+programa_valido
+
+shortint a;
+BEGIN
+  pout("Hola Mundo");
+END
+

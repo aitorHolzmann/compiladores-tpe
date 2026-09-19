@@ -1,5 +1,6 @@
 %{
 import java.io.*;
+import src.compilador.AnalizadorLexico;
 %}
 
 /* ===== TOKENS ===== */
@@ -46,26 +47,13 @@ import java.io.*;
 
 programa
     : IDENTIFICADOR sentencias_declarativas BEGIN sentencias_ejecutables END
-        { 
-            if (cant_errores == 0) {
-                System.out.println("Programa reconocido correctamente"); 
-            } else {
-                System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s)");
-            }
-        }
-    | error { yyerror("Falta el nombre del programa al inicio"); } sentencias_declarativas BEGIN sentencias_ejecutables END
-        { 
-            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s)");
-        }
-    | IDENTIFICADOR sentencias_declarativas error { yyerror("Falta el delimitador BEGIN de sentencias ejecutables"); } sentencias_ejecutables END
-        {
-            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s)");
-        }
-    | IDENTIFICADOR sentencias_declarativas BEGIN sentencias_ejecutables
-        {
-            yyerror("Falta el delimitador END al final del programa");
-            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s)");
-        }
+        { System.out.println("Programa reconocido correctamente"); }
+    | error sentencias_declarativas BEGIN sentencias_ejecutables END 
+        { System.out.println("Programa reconocido correctamente"); }
+    | IDENTIFICADOR sentencias_declarativas error sentencias_ejecutables END
+        {System.out.println(AnalizadorLexico.mostrarWarning("Falta el BEGIN"));}
+    | IDENTIFICADOR sentencias_declarativas BEGIN sentencias_ejecutables error
+        { System.out.println("Programa reconocido correctamente"); }
     ;
 
 /* SENTENCIAS DECLARATIVAS                                                   */
@@ -85,8 +73,6 @@ sentencia_declarativa
 
 declaracion_variables
     : tipo lista_identificadores ';'
-    | tipo lista_identificadores
-        { yyerror("Falta ';' al final de la declaracion de variables"); }
     ;
 
 lista_identificadores
@@ -105,21 +91,18 @@ declaracion_funciones
     : tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
         sentencias_declarativas
         BEGIN sentencias_ejecutables END ';'
-    | tipo FUNCTION error { yyerror("Falta nombre de funcion"); } '(' lista_parametros_formales ')'
-        sentencias_declarativas
+    | AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
         BEGIN sentencias_ejecutables END ';'
     | tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
         sentencias_declarativas
-        BEGIN sentencias_ejecutables END
-        { yyerror("Falta ';' al final de la declaracion de funcion"); }
-    | AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
-        BEGIN sentencias_ejecutables END ';'
-    | AUTO FUNCTION error { yyerror("Falta nombre de funcion"); } '(' lista_parametros_formales ')'
+        error sentencias_ejecutables END ';' {System.out.println(AnalizadorLexico.mostrarWarning("Falta el BEGIN"));}
+    | tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
         sentencias_declarativas
-        BEGIN sentencias_ejecutables END ';'
+        BEGIN sentencias_ejecutables error ';' {System.out.println(AnalizadorLexico.mostrarWarning("Falta el END"));}
     | AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
-        BEGIN sentencias_ejecutables END
-        { yyerror("Falta ';' al final de la declaracion de funcion"); }
+        error sentencias_ejecutables END ';' {System.out.println(AnalizadorLexico.mostrarWarning("Falta el BEGIN"));}
+    | AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
+        BEGIN sentencias_ejecutables error ';' {System.out.println(AnalizadorLexico.mostrarWarning("Falta el END"));}
     ;
 
 lista_parametros_formales
@@ -137,9 +120,6 @@ parametro_formal
 declaracion_clase
     : CLASS IDENTIFICADOR importacion_opcional
         BEGIN herencia_opcional miembros_clase END ';'
-    | CLASS IDENTIFICADOR importacion_opcional
-        BEGIN herencia_opcional miembros_clase END
-        { yyerror("Falta ';' al final de la declaracion de clase"); }
     ;
 
 importacion_opcional
@@ -172,6 +152,18 @@ metodo_clase
         BEGIN sentencias_ejecutables END exportacion_opcional ';'
     | AUTO IDENTIFICADOR '(' lista_parametros_formales ')'
         BEGIN sentencias_ejecutables END exportacion_opcional ';'
+    |  tipo IDENTIFICADOR '(' lista_parametros_formales ')'
+        sentencias_declarativas
+        error sentencias_ejecutables END exportacion_opcional ';' {System.out.println(AnalizadorLexico.mostrarWarning("Falta el BEGIN"));}
+    |  tipo IDENTIFICADOR '(' lista_parametros_formales ')'
+        sentencias_declarativas
+        BEGIN sentencias_ejecutables error exportacion_opcional ';' {System.out.println(AnalizadorLexico.mostrarWarning("Falta el END"));}
+    |  AUTO IDENTIFICADOR '(' lista_parametros_formales ')'
+        sentencias_declarativas
+        error sentencias_ejecutables END exportacion_opcional ';' {System.out.println(AnalizadorLexico.mostrarWarning("Falta el BEGIN"));}
+    |  AUTO IDENTIFICADOR '(' lista_parametros_formales ')'
+        sentencias_declarativas
+        BEGIN sentencias_ejecutables error exportacion_opcional ';' {System.out.println(AnalizadorLexico.mostrarWarning("Falta el END"));}
     ;
 
 exportacion_opcional
@@ -183,16 +175,12 @@ exportacion_opcional
 
 declaracion_objeto
     : IDENTIFICADOR lista_identificadores ';'
-    | IDENTIFICADOR lista_identificadores
-        { yyerror("Falta ';' al final de la declaracion de objeto"); }
     ;
 
 /* COMPTIME (Tema 22) */
 
 declaracion_comptime
     : COMPTIME tipo lista_identificadores ';'
-    | COMPTIME tipo lista_identificadores
-        { yyerror("Falta ';' al final de la declaracion comptime"); }
     ;
 
 /* SENTENCIAS EJECUTABLES                                                    */
@@ -209,8 +197,6 @@ sentencia_ejecutable
     | sentencia_repeat_until
     | sentencia_pout ';'
     | sentencia_ret ';'
-    | error ';'
-        { yyerror("Sentencia ejecutable malformada o falta ';' previo"); }
     ;
 
 asignacion
@@ -317,9 +303,9 @@ comparador
 
 bloque
     : BEGIN sentencias_ejecutables END
-    | sentencia_ejecutable
-    | BEGIN sentencias_ejecutables
-        { yyerror("Falta el delimitador END en el bloque de sentencias"); }
+    | error sentencias_ejecutables END {System.out.println(AnalizadorLexico.mostrarWarning("Falta el BEGIN"));}
+    | BEGIN sentencias_ejecutables error {System.out.println(AnalizadorLexico.mostrarWarning("Falta el END"));}
+    | sentencia_ejecutable 
     ;
 
 /* Tema 12: Repeat-Until */
@@ -344,23 +330,16 @@ sentencia_ret
 
 static Parser parser;
 
-static int cant_errores = 0;
-
 public static void main(String[] args) {
     String ruta = "prueba_gramatica";
-    boolean debug = false;
     if (args.length > 0) {
         ruta = args[0];
-    }
-    if (args.length > 1 && args[1].equals("-v")) {
-        debug = true;
     }
     System.out.println("Compilando archivo: " + ruta);
     try {
         AnalizadorLexico.reader = new PushbackReader(new BufferedReader(new FileReader(ruta)));
-        parser = new Parser(debug);
-        parser.yyparse(); 
-        TablaSimbolos.imprimirTabla();
+        parser = new Parser(true);
+        parser.yyparse(); TablaSimbolos.imprimirTabla();
     } catch (Exception e) {
         e.printStackTrace();
     }
@@ -376,9 +355,5 @@ int yylex() {
 }
 
 void yyerror(String s) {
-    if (s.equals("syntax error")) {
-        return; // Se omite el mensaje generico de byacc/j para usar las descripciones especificas
-    }
-    cant_errores++;
     System.out.println("Error sintactico (linea " + AnalizadorLexico.getLineaActual() + "): " + s);
 }

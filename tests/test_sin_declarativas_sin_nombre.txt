@@ -1,0 +1,4 @@
+BEGIN
+  pout("Solo ejecutables sin nombre");
+END
+

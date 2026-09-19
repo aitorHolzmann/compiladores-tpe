@@ -1,0 +1,8 @@
+programa_decl
+
+shortint a, b
+singlef c;
+BEGIN
+  pout("Declaracion sin punto y coma");
+END
+
