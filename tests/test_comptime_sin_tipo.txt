@@ -1,0 +1,14 @@
+prog_comptime
+
+comptime shortint c1;
+comptime singlef c2, c3;
+
+// Error 17: Falta de tipo en comptime (con ';')
+comptime x, y;
+
+// Error 17: Falta de tipo en comptime (sin ';')
+comptime z
+
+BEGIN
+END
+

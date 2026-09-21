@@ -1,0 +1,17 @@
+programa_expr_errores
+
+shortint a, b, c, resultado;
+
+BEGIN
+  resultado := a + ;
+  resultado := a - ;
+  resultado := a * ;
+  resultado := a / ;
+  resultado := + a;
+  resultado := * a;
+  resultado := / a;
+  resultado := a + + b;
+  resultado := a b;
+  resultado := a 10$s;
+  resultado := a + b * c;
+END

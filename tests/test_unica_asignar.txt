@@ -1,0 +1,12 @@
+programa_test_unica
+
+shortint a, b, c, x, y;
+
+BEGIN
+  // Caso valido con '=' (Tema 17): asignacion de expresion a identificador con '='
+  a := b = (x);
+  c := a + b = (y);
+
+  // Caso con error: uso de ':=' en lugar de '='
+  a := b := (x);
+END

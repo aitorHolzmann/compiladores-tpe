@@ -24,8 +24,8 @@ public class AS8 extends Accion_Semantica{
             AnalizadorLexico.setReferenciaTablaSimbolos(id);
             return TablaPalabrasReservadas.obtenerIdentificador("SINGLEF");
         }
-        System.out.println("WARNING: El double "+ resultado + " esta fuera de rango");
-        return 0; // Manejar el error
+        AnalizadorLexico.mostrarWarning("El double "+ resultado + " esta fuera de rango");
+        return 0; 
     }
 }
 

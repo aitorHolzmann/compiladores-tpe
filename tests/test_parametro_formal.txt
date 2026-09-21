@@ -1,0 +1,14 @@
+programa_decl
+
+shortint a, b;
+singlef c;
+
+shortint FUNCTION sumar ( a, shortint )
+  shortint resultado;
+BEGIN
+  resultado := a + b;
+  RET(resultado);
+END;
+
+BEGIN
+END

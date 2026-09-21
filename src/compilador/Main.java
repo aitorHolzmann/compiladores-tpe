@@ -9,7 +9,7 @@ public class Main {
     var cant_estados = analizador.get_cant_estados();
     var cant_simbolos = analizador.get_cant_simbolos();
 
-    String PATH_PROGRAMA = "tests/prueba3.txt";
+    String PATH_PROGRAMA = "tests/test_parametro_formal.txt";
     System.out.println("Se inicia la compilacion del archivo: " + PATH_PROGRAMA);
     try {
         AnalizadorLexico.reader = new PushbackReader(new BufferedReader(new FileReader(PATH_PROGRAMA)));

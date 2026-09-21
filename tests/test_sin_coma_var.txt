@@ -1,0 +1,6 @@
+programa_coma
+shortint a b;
+singlef x, y z;
+BEGIN
+  pout("Test falta de coma");
+END

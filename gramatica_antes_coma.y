@@ -85,20 +85,16 @@ sentencia_declarativa
 
 
 declaracion_variables
-    : tipo lista_variables ';'
-    | tipo error ';'
+    : tipo lista_identificadores ';'
+    | tipo lista_identificadores
         { yyerror("Falta ';' al final de la declaracion de variables"); }
-    ;
-
-lista_variables
-    : IDENTIFICADOR
-    | lista_variables ',' IDENTIFICADOR
-    | lista_variables IDENTIFICADOR   { yyerror("Falta ',' entre los identificadores"); }
     ;
 
 lista_identificadores
     : IDENTIFICADOR
     | lista_identificadores ',' IDENTIFICADOR
+    | lista_identificadores IDENTIFICADOR   { yyerror("Falta ',' entre los identificadores"); }
+
     ;
 
 tipo
@@ -112,7 +108,6 @@ declaracion_funciones
     : tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
         sentencias_declarativas
         BEGIN sentencias_ejecutables END ';'
-
     | tipo FUNCTION error { yyerror("Falta nombre de funcion"); } '(' lista_parametros_formales ')'
         sentencias_declarativas
         BEGIN sentencias_ejecutables END ';'
@@ -120,30 +115,17 @@ declaracion_funciones
         sentencias_declarativas
         BEGIN sentencias_ejecutables END
         { yyerror("Falta ';' al final de la declaracion de funcion"); }
-    | encabezado_auto_funcion BEGIN sentencias_ejecutables END ';'
-        {
-            if (cant_retornos_auto == 0) {
-                yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
-            }
-            cant_retornos_auto = -1;
-        }
+    | AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
+        BEGIN sentencias_ejecutables END ';'
     | AUTO FUNCTION error { yyerror("Falta nombre de funcion"); } '(' lista_parametros_formales ')'
         sentencias_declarativas
         BEGIN sentencias_ejecutables END ';'
-    | encabezado_auto_funcion BEGIN sentencias_ejecutables END
-        {
-            if (cant_retornos_auto == 0) {
-                yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
-            }
-            cant_retornos_auto = -1;
-            yyerror("Falta ';' al final de la declaracion de funcion");
-        }
+    | AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
+        BEGIN sentencias_ejecutables END
+        { yyerror("Falta ';' al final de la declaracion de funcion"); }
     ;
 
-encabezado_auto_funcion
-    : AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
-        { cant_retornos_auto = 0; }
-    ;
+FUNCTION saludar (SHORTIN pepe, SINGLEF , hola)
 
 lista_parametros_formales
     : /* vacio */
@@ -153,10 +135,9 @@ lista_parametros_formales
 
 parametro_formal
     : tipo IDENTIFICADOR
-    | tipo error { yyerror("Falta de nombre de parametro formal en declaracion de funcion"); }
-    | error IDENTIFICADOR{ yyerror("Falta de tipo del parametro formal en declaracion de funcion"); } 
-    ;
-    
+    | tipo error { yyerror("Falta identificador luego de tipo"); }
+    | error IDENTIFICADOR { yyerror("Falta el tipo antes del identificador"); }
+    ; 
 
 /* CLASES (Temas 26, 29, 30) */
 
@@ -171,15 +152,11 @@ declaracion_clase
 importacion_opcional
     : /* vacio */
     | IMPORT FROM lista_identificadores
-    | IMPORT lista_identificadores
-        { yyerror("Falta la palabra clave 'FROM' en la declaracion IMPORT"); }
     ;
 
 herencia_opcional
     : /* vacio */
     | EXTENDS lista_identificadores ';'
-    | EXTENDS ';'
-        { yyerror("Falta nombre o lista de clases a heredar luego de 'EXTENDS'"); }
     ;
 
 miembros_clase
@@ -207,8 +184,6 @@ metodo_clase
 exportacion_opcional
     : /* vacio */
     | EXPORT TO lista_identificadores
-    | EXPORT lista_identificadores
-        { yyerror("Falta la palabra clave 'TO' en la declaracion EXPORT"); }
     ;
 
 /* OBJETOS */
@@ -225,13 +200,6 @@ declaracion_comptime
     : COMPTIME tipo lista_identificadores ';'
     | COMPTIME tipo lista_identificadores
         { yyerror("Falta ';' al final de la declaracion comptime"); }
-    | COMPTIME lista_identificadores ';'
-        { yyerror("Falta el tipo de dato en la declaracion comptime"); }
-    | COMPTIME lista_identificadores
-        {
-            yyerror("Falta el tipo de dato en la declaracion comptime");
-            yyerror("Falta ';' al final de la declaracion comptime");
-        }
     ;
 
 /* SENTENCIAS EJECUTABLES                                                    */
@@ -263,24 +231,17 @@ acceso_posicional
     ;
 
 /* EXPRESIONES                                                               */
+
 expresion
     : termino
     | expresion '+' termino
     | expresion '-' termino
-    | expresion '+' error { yyerror("Falta un operando en la expresion"); }
-    | expresion '-' error { yyerror("Falta un operando en la expresion"); }
-    | '+' termino { yyerror("Falta un operando en la expresion"); }
     ;
+
 termino
     : factor
     | termino '*' factor
     | termino '/' factor
-    | termino '*' error { yyerror("Falta un operando en la expresion"); }
-    | termino '/' error { yyerror("Falta un operando en la expresion"); }
-    | '*' factor { yyerror("Falta un operando en la expresion"); }
-    | '/' factor { yyerror("Falta un operando en la expresion"); }
-    | termino IDENTIFICADOR { yyerror("Falta operador en la expresion"); }
-    | termino CONSTANTE { yyerror("Falta operador en la expresion"); }
     ;
 
 factor
@@ -324,8 +285,6 @@ lista_expresiones
 /* Tema 17: Asignacion en expresion */
 unica
     : IDENTIFICADOR '=' '(' expresion ')'
-    | IDENTIFICADOR ASIGNAR '(' expresion ')'
-        { yyerror("Uso del simbolo ':=' donde debe usarse '=' en asignacion dentro de expresion"); }
     ;
 
 numero_negativo
@@ -344,21 +303,10 @@ conversion_tos
     ;
 
 /* SENTENCIAS DE CONTROL                                                     */
-sentencia_if
-    : IF '(' condicion ')' bloque resto_if
-    | IF condicion ')' bloque resto_if
-        { yyerror("Falta '(' de apertura en condicion de seleccion"); }
-    | IF error bloque resto_if
-        { yyerror("Condicion de seleccion malformada o error en parentesis"); }
-    ;
 
-resto_if
-    : END_IF ';'
-    | ELSE bloque END_IF ';'
-    | ';'
-        { yyerror("Falta palabra clave END_IF al final de la sentencia IF"); }
-    | ELSE bloque ';'
-        { yyerror("Falta palabra clave END_IF al final de la sentencia IF"); }
+sentencia_if
+    : IF '(' condicion ')' bloque ELSE bloque END_IF ';'
+    | IF '(' condicion ')' bloque END_IF ';'
     ;
 
 condicion
@@ -383,44 +331,18 @@ bloque
 
 /* Tema 12: Repeat-Until */
 sentencia_repeat_until
-    : REPEAT bloque UNTIL condicion_iteracion ';'
-    | REPEAT UNTIL condicion_iteracion ';'
-        { yyerror("Falta el cuerpo de la iteracion REPEAT"); }
-    | REPEAT bloque '(' condicion ')' ';'
-        { yyerror("Falta palabra clave UNTIL en la iteracion REPEAT"); }
-    | REPEAT '(' condicion ')' ';'
-        { yyerror("Falta palabra clave UNTIL y cuerpo en la iteracion REPEAT"); }
-    | REPEAT bloque '(' condicion ';'
-        { yyerror("Falta palabra clave UNTIL y ')' en la iteracion REPEAT"); }
-    | REPEAT '(' condicion ';'
-        { yyerror("Falta palabra clave UNTIL, cuerpo y ')' en la iteracion REPEAT"); }
+    : REPEAT bloque UNTIL '(' condicion ')' ';'
     ;
 
-condicion_iteracion
-    : '(' condicion ')'
-    | condicion ')'
-        { yyerror("Falta '(' de apertura en condicion de iteracion"); }
-    | '(' condicion
-        { yyerror("Falta ')' de cierre en condicion de iteracion"); }
-    | condicion
-        { yyerror("Faltan parentesis en condicion de iteracion"); }
-    ;
 /* ENTRADA / SALIDA                                                          */
 
 sentencia_pout
     : POUT '(' CADENA ')'
     | POUT '(' expresion ')'
-    | POUT '(' ')'
-        { yyerror("Falta argumento en sentencia pout"); }
     ;
 
 sentencia_ret
     : RET '(' expresion ')'
-        {
-            if (cant_retornos_auto >= 0) {
-                cant_retornos_auto++;
-            }
-        }
     ;
 
 %%
@@ -430,7 +352,6 @@ sentencia_ret
 static Parser parser;
 
 static int cant_errores = 0;
-static int cant_retornos_auto = -1;
 
 public static void main(String[] args) {
     String ruta = "prueba_gramatica";

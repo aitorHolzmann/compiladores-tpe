@@ -1,0 +1,35 @@
+programa_test_end_until
+
+shortint x, y, z, b;
+
+BEGIN
+  IF (x > y)
+  BEGIN
+    x := y;
+  END;
+
+  IF (x > y)
+    x := y;
+  ELSE
+    x := z;
+  ;
+
+  REPEAT
+    x := y;
+  (x > b);
+
+  REPEAT
+  (x > b);
+
+  REPEAT
+    x := y;
+  (x > b;
+
+  REPEAT
+    x := y;
+  UNTIL (x > b);
+
+  IF (x > y)
+    x := y;
+  END_IF;
+END

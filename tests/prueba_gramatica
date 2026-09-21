@@ -64,7 +64,7 @@ BEGIN
   IF (x > y)
     x := 1$s;
   END_IF;
-
+  
   IF (x >= y)
   BEGIN
     x := 2$s;

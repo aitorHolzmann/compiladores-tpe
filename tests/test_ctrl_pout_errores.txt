@@ -1,0 +1,34 @@
+programa_ctrl_pout
+
+shortint x, y, z;
+
+BEGIN
+  pout();
+  pout("Mensaje correcto");
+
+  IF x > y)
+    x := y;
+  END_IF;
+
+  IF x > y)
+    x := y;
+  ELSE
+    x := z;
+  END_IF;
+
+  REPEAT
+    x := y;
+  UNTIL x > y);
+
+  REPEAT
+    x := y;
+  UNTIL (x > y;
+
+  REPEAT
+    x := y;
+  UNTIL x > y;
+
+  REPEAT
+    x := y;
+  UNTIL (x > y);
+END

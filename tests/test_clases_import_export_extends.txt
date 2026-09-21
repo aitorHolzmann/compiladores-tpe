@@ -1,0 +1,44 @@
+prog_clases
+
+// 1. Clases validas con import from, export to y extends
+class base
+BEGIN
+  shortint val export to hija;
+  shortint getval()
+  BEGIN
+    RET(val);
+  END export to hija;
+END;
+
+class hija import from base
+BEGIN
+  extends base;
+  shortint extra;
+END;
+
+// 2. Error 18: Ausencia de FROM en declaracion IMPORT
+class errimport import base
+BEGIN
+  shortint a;
+END;
+
+// 3. Error 19: Ausencia de nombre o lista de clases en EXTENDS
+class errextends
+BEGIN
+  extends;
+  shortint b;
+END;
+
+// 4. Error 18: Ausencia de TO en declaracion EXPORT (atributo y metodo)
+class errexport
+BEGIN
+  shortint c export hija;
+  shortint test()
+  BEGIN
+    RET(c);
+  END export hija;
+END;
+
+BEGIN
+END
+

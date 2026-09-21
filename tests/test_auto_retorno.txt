@@ -1,0 +1,56 @@
+programa_test_auto_retorno
+
+shortint a, b;
+
+// 1. AUTO FUNCTION valida con retorno en la raiz
+AUTO FUNCTION f_raiz(shortint x)
+BEGIN
+  x := a;
+  RET(x);
+END;
+
+// 2. AUTO FUNCTION valida con retorno dentro de IF-ELSE
+AUTO FUNCTION f_if_else(shortint x)
+BEGIN
+  IF (x > a)
+    RET(x);
+  ELSE
+    RET(b);
+  END_IF;
+END;
+
+// 3. AUTO FUNCTION valida con retorno dentro de bloque BEGIN END
+AUTO FUNCTION f_bloque(shortint x)
+BEGIN
+  IF (x > a)
+  BEGIN
+    x := b;
+    RET(x);
+  END
+  END_IF;
+END;
+
+// 4. Funcion ordinaria SIN retorno (permitida segun la consigna para funciones con tipo explicito)
+shortint FUNCTION f_normal_sin_ret(shortint x)
+BEGIN
+  x := a;
+END;
+
+// 5. AUTO FUNCTION con ERROR: Ausencia de retorno en la raiz
+AUTO FUNCTION f_error_sin_ret(shortint x)
+BEGIN
+  x := a;
+END;
+
+// 6. AUTO FUNCTION con ERROR: Ausencia de retorno con IF sin retornos
+AUTO FUNCTION f_error_if_sin_ret(shortint x)
+BEGIN
+  IF (x > a)
+    x := b;
+  END_IF;
+END;
+
+BEGIN
+  a := b;
+END
+

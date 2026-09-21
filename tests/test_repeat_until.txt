@@ -1,0 +1,15 @@
+programa
+SHORTINT x;
+BEGIN
+
+  REPEAT
+  UNTIL (x > b);
+
+  REPEAT
+  BEGIN
+    x := x - bloque;
+    y := y + bloque;
+  END
+  UNTIL (x <= bloque);
+
+END
