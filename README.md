@@ -1,32 +1,12 @@
-# TPE - Diseño de Compiladores I
+# TPE - Compiladores
 
 Compilador hecho en Java. El analizador léxico lo armamos a mano y el sintáctico lo generamos con byacc/j a partir de `gram.y`.
 
 El parser ya viene generado (`src/compilador/Parser.java` y `ParserVal.java`), así que para correr las pruebas no hace falta tener byacc/j ni compilar la gramática. Alcanza con Java y `make`.
 
-## Qué hace falta tener instalado
+
 
 ### Linux
-
-- Un JDK, versión 11 o más nueva (nosotros trabajamos con la 21). Tiene que estar `javac`, no alcanza solo con `java`.
-- `make`
-
-En Ubuntu/Debian se instala todo con:
-
-```
-sudo apt install openjdk-21-jdk make
-```
-
-Para verificar que quedó bien:
-
-```
-java -version
-javac -version
-make --version
-```
-
-Con eso ya se puede ir directo a [Cómo correr las pruebas](#cómo-correr-las-pruebas).
-
 ### Con Docker (sin instalar Java)
 
 Si en la máquina no está Java pero sí Docker, se puede correr todo adentro de un contenedor. Solo hace falta tener `docker` y `make`, y que el usuario pueda usar Docker sin `sudo` (o sea, que esté en el grupo `docker`).
@@ -82,25 +62,3 @@ Algunas cosas a tener en cuenta:
 - Las pruebas se ejecutan en orden alfabético.
 - Los `.java` y `.md` de esa carpeta se ignoran (hay un test unitario del léxico y un README).
 
-## Organización del proyecto
-
-```
-gram.y                  gramática de byacc/j (de acá sale el Parser)
-Makefile
-src/
-  compilador/           léxico, parser generado, tabla de símbolos y Main
-  accion_semantica/     acciones semánticas del léxico (AS1, AS2, ...)
-  estructuras/          matriz de transición, matriz de acciones y palabras reservadas
-tests/                  programas de prueba
-```
-
-## Regenerar el parser (solo si se cambia `gram.y`)
-
-Esto no hace falta para correr las pruebas. Lo usamos nosotros cuando tocamos la gramática, y necesita tener `byaccj` instalado (viene en el devcontainer):
-
-```
-make parser
-make test
-```
-
-`make parser` genera de nuevo `Parser.java` y `ParserVal.java`, los deja en `src/compilador/` y escribe `y.output`, donde se pueden ver los estados y si hay conflictos.
