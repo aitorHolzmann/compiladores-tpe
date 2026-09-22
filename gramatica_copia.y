@@ -111,24 +111,38 @@ tipo
 declaracion_funciones
     : tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
         sentencias_declarativas
-        BEGIN sentencias_ejecutables END ';'
+        BEGIN sentencias_ejecutables END ';' {System.out.println("declaracion_funciones en linea "+AnalizadorLexico.getLineaActual() );}
 
     | tipo FUNCTION error { yyerror("Falta nombre de funcion"); } '(' lista_parametros_formales ')'
         sentencias_declarativas
-        BEGIN sentencias_ejecutables END ';'
+        BEGIN sentencias_ejecutables END ';' {System.out.println("declaracion_funciones en linea "+AnalizadorLexico.getLineaActual() );}
     | tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
         sentencias_declarativas
         BEGIN sentencias_ejecutables END
-        { yyerror("Falta ';' al final de la declaracion de funcion"); }
-    | AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
-        BEGIN sentencias_ejecutables END ';'
+        { yyerror("Falta ';' al final de la declaracion de funcion"); } {System.out.println("declaracion_funciones en linea "+AnalizadorLexico.getLineaActual() );}
+    | encabezado_auto_funcion BEGIN sentencias_ejecutables END ';'
+        {
+            if (cant_retornos_auto == 0) {
+                yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
+            }
+            cant_retornos_auto = -1;
+        } {System.out.println("declaracion_funciones en linea "+AnalizadorLexico.getLineaActual() );}
     | AUTO FUNCTION error { yyerror("Falta nombre de funcion"); } '(' lista_parametros_formales ')'
         sentencias_declarativas
-        BEGIN sentencias_ejecutables END ';'
-    | AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
-        BEGIN sentencias_ejecutables END
-        { yyerror("Falta ';' al final de la declaracion de funcion"); }
-    
+        BEGIN sentencias_ejecutables END ';' {System.out.println("declaracion_funciones en linea "+AnalizadorLexico.getLineaActual() );}
+    | encabezado_auto_funcion BEGIN sentencias_ejecutables END
+        {
+            if (cant_retornos_auto == 0) {
+                yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
+            }
+            cant_retornos_auto = -1;
+            yyerror("Falta ';' al final de la declaracion de funcion");
+        } {System.out.println("declaracion_funciones en linea "+AnalizadorLexico.getLineaActual() );}
+    ;
+
+encabezado_auto_funcion
+    : AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
+        { cant_retornos_auto = 0; }
     ;
 
 lista_parametros_formales
@@ -157,11 +171,15 @@ declaracion_clase
 importacion_opcional
     : /* vacio */
     | IMPORT FROM lista_identificadores
+    | IMPORT lista_identificadores
+        { yyerror("Falta la palabra clave 'FROM' en la declaracion IMPORT"); }
     ;
 
 herencia_opcional
     : /* vacio */
     | EXTENDS lista_identificadores ';'
+    | EXTENDS ';'
+        { yyerror("Falta nombre o lista de clases a heredar luego de 'EXTENDS'"); }
     ;
 
 miembros_clase
@@ -189,6 +207,8 @@ metodo_clase
 exportacion_opcional
     : /* vacio */
     | EXPORT TO lista_identificadores
+    | EXPORT lista_identificadores
+        { yyerror("Falta la palabra clave 'TO' en la declaracion EXPORT"); }
     ;
 
 /* OBJETOS */
@@ -205,6 +225,13 @@ declaracion_comptime
     : COMPTIME tipo lista_identificadores ';'
     | COMPTIME tipo lista_identificadores
         { yyerror("Falta ';' al final de la declaracion comptime"); }
+    | COMPTIME lista_identificadores ';'
+        { yyerror("Falta el tipo de dato en la declaracion comptime"); }
+    | COMPTIME lista_identificadores
+        {
+            yyerror("Falta el tipo de dato en la declaracion comptime");
+            yyerror("Falta ';' al final de la declaracion comptime");
+        }
     ;
 
 /* SENTENCIAS EJECUTABLES                                                    */
@@ -389,6 +416,11 @@ sentencia_pout
 
 sentencia_ret
     : RET '(' expresion ')'
+        {
+            if (cant_retornos_auto >= 0) {
+                cant_retornos_auto++;
+            }
+        }
     ;
 
 %%
@@ -398,6 +430,7 @@ sentencia_ret
 static Parser parser;
 
 static int cant_errores = 0;
+static int cant_retornos_auto = -1;
 
 public static void main(String[] args) {
     String ruta = "prueba_gramatica";

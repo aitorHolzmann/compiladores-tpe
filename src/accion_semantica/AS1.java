@@ -1,12 +1,11 @@
 package src.accion_semantica;
 import java.io.*;
-import src.compilador.AnalizadorLexico;
 import src.compilador.TablaPalabrasReservadas;
 
 public class AS1 extends Accion_Semantica{
 
     @Override 
-    //TODO: la AS1 tambien se ejecuta al cerrar los mensajes multilinea con " " ", o al terminar un comentario. Que hacemos? 
+    
     public int ejecutar(StringBuilder token_actual, PushbackReader reader, char caracter_actual){
 
         token_actual.append(caracter_actual);

@@ -76,11 +76,11 @@ sentencias_declarativas
     ;
 
 sentencia_declarativa
-    : declaracion_variables
-    | declaracion_funciones
-    | declaracion_clase
-    | declaracion_objeto
-    | declaracion_comptime
+    : declaracion_variables { imprimirRegla("declaracion_variables"); }
+    | declaracion_funciones { imprimirRegla("declaracion_funciones"); }
+    | declaracion_clase { imprimirRegla("declaracion_clase"); }
+    | declaracion_objeto { imprimirRegla("declaracion_objeto"); }
+    | declaracion_comptime { imprimirRegla("declaracion_comptime"); }
     ;
 
 
@@ -115,21 +115,21 @@ declaracion_funciones
 
     | tipo FUNCTION error { yyerror("Falta nombre de funcion"); } '(' lista_parametros_formales ')'
         sentencias_declarativas
-        BEGIN sentencias_ejecutables END ';'
+        BEGIN sentencias_ejecutables END ';' 
     | tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
         sentencias_declarativas
         BEGIN sentencias_ejecutables END
-        { yyerror("Falta ';' al final de la declaracion de funcion"); }
+        { yyerror("Falta ';' al final de la declaracion de funcion"); } 
     | encabezado_auto_funcion BEGIN sentencias_ejecutables END ';'
         {
             if (cant_retornos_auto == 0) {
                 yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
             }
             cant_retornos_auto = -1;
-        }
+        } 
     | AUTO FUNCTION error { yyerror("Falta nombre de funcion"); } '(' lista_parametros_formales ')'
         sentencias_declarativas
-        BEGIN sentencias_ejecutables END ';'
+        BEGIN sentencias_ejecutables END ';' 
     | encabezado_auto_funcion BEGIN sentencias_ejecutables END
         {
             if (cant_retornos_auto == 0) {
@@ -137,7 +137,7 @@ declaracion_funciones
             }
             cant_retornos_auto = -1;
             yyerror("Falta ';' al final de la declaracion de funcion");
-        }
+        } 
     ;
 
 encabezado_auto_funcion
@@ -152,7 +152,7 @@ lista_parametros_formales
     ;
 
 parametro_formal
-    : tipo IDENTIFICADOR
+    : tipo IDENTIFICADOR { imprimirRegla("parametro_formal"); }
     | tipo error { yyerror("Falta de nombre de parametro formal en declaracion de funcion"); }
     | error IDENTIFICADOR{ yyerror("Falta de tipo del parametro formal en declaracion de funcion"); } 
     ;
@@ -170,14 +170,14 @@ declaracion_clase
 
 importacion_opcional
     : /* vacio */
-    | IMPORT FROM lista_identificadores
+    | IMPORT FROM lista_identificadores { imprimirRegla("importacion_opcional"); }
     | IMPORT lista_identificadores
         { yyerror("Falta la palabra clave 'FROM' en la declaracion IMPORT"); }
     ;
 
 herencia_opcional
     : /* vacio */
-    | EXTENDS lista_identificadores ';'
+    | EXTENDS lista_identificadores ';' { imprimirRegla("herencia_opcional"); }
     | EXTENDS ';'
         { yyerror("Falta nombre o lista de clases a heredar luego de 'EXTENDS'"); }
     ;
@@ -206,7 +206,7 @@ metodo_clase
 
 exportacion_opcional
     : /* vacio */
-    | EXPORT TO lista_identificadores
+    | EXPORT TO lista_identificadores { imprimirRegla("exportacion_opcional"); }
     | EXPORT lista_identificadores
         { yyerror("Falta la palabra clave 'TO' en la declaracion EXPORT"); }
     ;
@@ -214,7 +214,7 @@ exportacion_opcional
 /* OBJETOS */
 
 declaracion_objeto
-    : IDENTIFICADOR lista_identificadores ';'
+    : IDENTIFICADOR lista_identificadores ';' { imprimirRegla("declaracion_de_objeto"); }
     | IDENTIFICADOR lista_identificadores
         { yyerror("Falta ';' al final de la declaracion de objeto"); }
     ;
@@ -238,7 +238,7 @@ declaracion_comptime
 
 sentencias_ejecutables
     : /* vacio */
-    | sentencias_ejecutables sentencia_ejecutable
+    | sentencias_ejecutables sentencia_ejecutable { imprimirRegla("sentencia_ejecutable"); }
     ;
 
 sentencia_ejecutable
@@ -312,8 +312,8 @@ factor
     ;
 
 invocacion_metodo
-    : IDENTIFICADOR '.' IDENTIFICADOR '(' ')'
-    | IDENTIFICADOR '.' IDENTIFICADOR '(' lista_expresiones ')'
+    : IDENTIFICADOR '.' IDENTIFICADOR '(' ')' { imprimirRegla("invocacion_metodo"); }
+    | IDENTIFICADOR '.' IDENTIFICADOR '(' lista_expresiones ')' { imprimirRegla("invocacion_metodo"); }
     ;
 
 lista_expresiones
@@ -431,6 +431,11 @@ static Parser parser;
 
 static int cant_errores = 0;
 static int cant_retornos_auto = -1;
+
+// Muestra por pantalla la regla reconocida y la linea donde termino (al reducir)
+static void imprimirRegla(String regla) {
+    System.out.println("Regla " + regla + " en linea " + AnalizadorLexico.getLineaActual());
+}
 
 public static void main(String[] args) {
     String ruta = "prueba_gramatica";

@@ -1,68 +1,106 @@
-# Dev Container - Diseño de Compiladores I
+# TPE - Diseño de Compiladores I
 
-Este contenedor trae instalado todo lo que necesitás para las materias de
-compiladores basadas en Java + **byacc/j** (la variante de YACC que genera
-parsers en Java en vez de C):
+Compilador hecho en Java. El analizador léxico lo armamos a mano y el sintáctico lo generamos con byacc/j a partir de `gram.y`.
 
-- JDK 21 (`java`, `javac`)
-- **byacc/j** (comando `byaccj`) — genera `Parser.java` y `ParserVal.java`
-  a partir de un archivo de gramática `.y`
-- Extension Pack for Java en VS Code, ya preconfigurado
+El parser ya viene generado (`src/compilador/Parser.java` y `ParserVal.java`), así que para correr las pruebas no hace falta tener byacc/j ni compilar la gramática. Alcanza con Java y `make`.
 
-## Cómo abrir el proyecto
+## Qué hace falta tener instalado
 
-1. Necesitás **Docker Desktop** instalado y corriendo, y la extensión de
-   VS Code **Dev Containers** (`ms-vscode-remote.remote-containers`).
-2. Abrí esta carpeta en VS Code.
-3. Apretá `Ctrl+Shift+P` → escribí **"Dev Containers: Reopen in Container"**.
-4. La primera vez va a tardar un par de minutos: arma la imagen y instala
-   `byacc-j` dentro. Las siguientes veces es instantáneo.
-5. Al terminar, la terminal integrada de VS Code ya corre *adentro* del
-   contenedor — `java -version`, `javac -version` y `byaccj -V` van a
-   andar sin que tengas que instalar nada en tu Windows.
+### Linux
 
-## Flujo de trabajo típico (gramática → parser → compilado)
+- Un JDK, versión 11 o más nueva (nosotros trabajamos con la 21). Tiene que estar `javac`, no alcanza solo con `java`.
+- `make`
 
-1. Escribís o editás tu archivo de gramática, por ejemplo `gramatica.y`
-   (reglas yacc + acciones semánticas en Java entre `%{ %}`).
-2. Generás el parser:
-   ```
-   byaccj -J gramatica.y
-   ```
-   Esto crea `Parser.java` y `ParserVal.java` en la carpeta actual. **No se
-   editan a mano** — si cambiás la gramática, se regeneran.
-3. Movés esos dos archivos generados a tu paquete (en el ejemplo,
-   `src/compilador/`), junto con el resto de tus clases (`AnalizadorLexico`,
-   `FileHelper`, tus acciones semánticas `AS0`, `AS1`, etc.).
-4. Compilás todo el proyecto:
-   ```
-   javac -d bin $(find src -name "*.java")
-   ```
-5. Corrés el analizador (el prefijo del paquete depende de tu código,
-   en el ejemplo es `compilador`):
-   ```
-   cd bin && java compilador.Parser
-   ```
-   Ojo con las rutas relativas: si tu código lee archivos como
-   `src/matrizEstados.txt` (como en `FileHelper.java` del ejemplo), tenés
-   que ejecutar `java` parado en la **raíz del proyecto**, no adentro de
-   `bin`, para que esa ruta relativa exista.
+En Ubuntu/Debian se instala todo con:
 
-## Carpeta `ejemplo-2021/`
+```
+sudo apt install openjdk-21-jdk make
+```
 
-Es el trabajo de un grupo de años anteriores que me pasaste, ya reorganizado
-en la estructura estándar de un proyecto Java (`src/compilador`,
-`src/accion_semantica`) para que puedas mirarlo como referencia de cómo se
-arma un analizador léxico + sintáctico con esta herramienta. Dos cosas a
-tener en cuenta:
+Para verificar que quedó bien:
 
-- **No está completo**: solo subiste 3 de las clases de acción semántica
-  (`AS0`, `AS1`, `AS6`) y falta la interfaz `AccionSemantica` — no va a
-  compilar tal cual. Sirve para leer el enfoque, no para correrlo entero.
-- `Parser.java` y `ParserVal.java` ya están generados (los generó
-  `byaccj -J gramatica.y` — lo verifiqué regenerándolos yo mismo a partir
-  de `gramatica.y` y el resultado es *idéntico* al que subiste, así que es
-  exactamente el comando que necesitás para tu propia gramática).
-- El informe (`Informe_tp_1_y_2_-_Compiladores_2021.docx`) explica las
-  consignas y decisiones de diseño de ese grupo, útil para entender el
-  criterio general de la materia.
+```
+java -version
+javac -version
+make --version
+```
+
+Con eso ya se puede ir directo a [Cómo correr las pruebas](#cómo-correr-las-pruebas).
+
+### Con Docker (sin instalar Java)
+
+Si en la máquina no está Java pero sí Docker, se puede correr todo adentro de un contenedor. Solo hace falta tener `docker` y `make`, y que el usuario pueda usar Docker sin `sudo` (o sea, que esté en el grupo `docker`).
+
+Desde la raíz del proyecto:
+
+```
+make docker-test
+```
+
+La primera vez tarda unos minutos porque arma la imagen (usa el mismo `Dockerfile` de la carpeta `.devcontainer`, que ya trae Java y make) y necesita internet. Las veces siguientes arranca enseguida. Hace exactamente lo mismo que `make test`, así que todo lo que se explica más abajo sobre la carpeta `tests/` vale igual.
+
+### Con VS Code
+
+Nosotros trabajamos con VS Code y la extensión **Dev Containers**. Si la tiene instalada, puede abrir la carpeta, hacer `Ctrl+Shift+P` → **Dev Containers: Reopen in Container**, y en la terminal que se abre (ya adentro del contenedor) correr `make test` normalmente. En Windows hace falta Docker Desktop abierto.
+
+## Cómo correr las pruebas
+
+Parada en la carpeta raíz del proyecto (donde está el `Makefile`):
+
+```
+make test
+```
+
+Eso compila todo el proyecto y después pasa uno por uno todos los archivos de la carpeta `tests/` por el compilador. Para cada archivo se muestra:
+
+- el nombre de la prueba
+- el código fuente de la prueba
+- la salida del compilador: errores léxicos y sintácticos con su número de línea, las reglas que se van reconociendo y al final la tabla de símbolos
+
+(Si se usa Docker, lo mismo pero con `make docker-test`.)
+
+Como la salida es larga, a veces conviene mandarla a un archivo y leerla con calma:
+
+```
+make test > salida.txt
+```
+
+Hay que correrlo sí o sí desde la raíz, porque el compilador lee las tablas del léxico (`src/estructuras/...`) con rutas relativas.
+
+`make clean` borra la carpeta `bin/` con las clases compiladas, por si quiere compilar todo de cero.
+
+## Cómo agregar o sacar pruebas
+
+Todas las pruebas están en la carpeta **`tests/`**. `make test` toma todo lo que haya ahí adentro, así que:
+
+- **Para probar un código nuevo:** crear un archivo en `tests/` (por ejemplo `tests/mi_prueba.txt`) con el programa y volver a correr `make test`. No hay que tocar el Makefile.
+- **Para no correr una prueba:** sacar el archivo de `tests/` o moverlo a otra carpeta.
+
+Algunas cosas a tener en cuenta:
+
+- Los nombres de archivo no pueden tener espacios (`mi_prueba.txt` anda, `mi prueba.txt` no).
+- Las pruebas se ejecutan en orden alfabético.
+- Los `.java` y `.md` de esa carpeta se ignoran (hay un test unitario del léxico y un README).
+
+## Organización del proyecto
+
+```
+gram.y                  gramática de byacc/j (de acá sale el Parser)
+Makefile
+src/
+  compilador/           léxico, parser generado, tabla de símbolos y Main
+  accion_semantica/     acciones semánticas del léxico (AS1, AS2, ...)
+  estructuras/          matriz de transición, matriz de acciones y palabras reservadas
+tests/                  programas de prueba
+```
+
+## Regenerar el parser (solo si se cambia `gram.y`)
+
+Esto no hace falta para correr las pruebas. Lo usamos nosotros cuando tocamos la gramática, y necesita tener `byaccj` instalado (viene en el devcontainer):
+
+```
+make parser
+make test
+```
+
+`make parser` genera de nuevo `Parser.java` y `ParserVal.java`, los deja en `src/compilador/` y escribe `y.output`, donde se pueden ver los estados y si hay conflictos.

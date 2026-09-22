@@ -17,9 +17,10 @@ package src.compilador;
 
 
 
-//#line 2 "gram.y"
+//#line 1 "gram.y"
+
 import java.io.*;
-//#line 19 "Parser.java"
+//#line 20 "Parser.java"
 
 
 
@@ -668,7 +669,8 @@ final static String yyrule[] = {
 "sentencia_ret : RET '(' expresion ')'",
 };
 
-//#line 427 "gram.y"
+//#line 426 "gram.y"
+
 
 /* CODIGO DE SOPORTE                                                         */
 
@@ -676,6 +678,11 @@ static Parser parser;
 
 static int cant_errores = 0;
 static int cant_retornos_auto = -1;
+
+// Muestra por pantalla la regla reconocida y la linea donde termino (al reducir)
+static void imprimirRegla(String regla) {
+    System.out.println("Regla " + regla + " en linea " + AnalizadorLexico.getLineaActual());
+}
 
 public static void main(String[] args) {
     String ruta = "prueba_gramatica";
@@ -713,7 +720,7 @@ void yyerror(String s) {
     cant_errores++;
     System.out.println("Error sintactico (linea " + AnalizadorLexico.getLineaActual() + "): " + s);
 }
-//#line 644 "Parser.java"
+//#line 651 "Parser.java"
 //###############################################################
 // method: yylexdebug : check lexer state
 //###############################################################
@@ -904,6 +911,26 @@ case 6:
             System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s)");
         }
 break;
+case 9:
+//#line 79 "gram.y"
+{ imprimirRegla("declaracion_variables"); }
+break;
+case 10:
+//#line 80 "gram.y"
+{ imprimirRegla("declaracion_funciones"); }
+break;
+case 11:
+//#line 81 "gram.y"
+{ imprimirRegla("declaracion_clase"); }
+break;
+case 12:
+//#line 82 "gram.y"
+{ imprimirRegla("declaracion_objeto"); }
+break;
+case 13:
+//#line 83 "gram.y"
+{ imprimirRegla("declaracion_comptime"); }
+break;
 case 15:
 //#line 90 "gram.y"
 { yyerror("Falta ';' al final de la declaracion de variables"); }
@@ -947,6 +974,10 @@ case 31:
 //#line 145 "gram.y"
 { cant_retornos_auto = 0; }
 break;
+case 35:
+//#line 155 "gram.y"
+{ imprimirRegla("parametro_formal"); }
+break;
 case 36:
 //#line 156 "gram.y"
 { yyerror("Falta de nombre de parametro formal en declaracion de funcion"); }
@@ -959,17 +990,33 @@ case 39:
 //#line 168 "gram.y"
 { yyerror("Falta ';' al final de la declaracion de clase"); }
 break;
+case 41:
+//#line 173 "gram.y"
+{ imprimirRegla("importacion_opcional"); }
+break;
 case 42:
 //#line 175 "gram.y"
 { yyerror("Falta la palabra clave 'FROM' en la declaracion IMPORT"); }
+break;
+case 44:
+//#line 180 "gram.y"
+{ imprimirRegla("herencia_opcional"); }
 break;
 case 45:
 //#line 182 "gram.y"
 { yyerror("Falta nombre o lista de clases a heredar luego de 'EXTENDS'"); }
 break;
+case 54:
+//#line 209 "gram.y"
+{ imprimirRegla("exportacion_opcional"); }
+break;
 case 55:
 //#line 211 "gram.y"
 { yyerror("Falta la palabra clave 'TO' en la declaracion EXPORT"); }
+break;
+case 56:
+//#line 217 "gram.y"
+{ imprimirRegla("declaracion_de_objeto"); }
 break;
 case 57:
 //#line 219 "gram.y"
@@ -989,6 +1036,10 @@ case 61:
             yyerror("Falta el tipo de dato en la declaracion comptime");
             yyerror("Falta ';' al final de la declaracion comptime");
         }
+break;
+case 63:
+//#line 241 "gram.y"
+{ imprimirRegla("sentencia_ejecutable"); }
 break;
 case 70:
 //#line 252 "gram.y"
@@ -1048,6 +1099,14 @@ case 91:
                 }
             }
         }
+break;
+case 99:
+//#line 315 "gram.y"
+{ imprimirRegla("invocacion_metodo"); }
+break;
+case 100:
+//#line 316 "gram.y"
+{ imprimirRegla("invocacion_metodo"); }
 break;
 case 104:
 //#line 328 "gram.y"
@@ -1126,7 +1185,7 @@ case 137:
             }
         }
 break;
-//#line 1052 "Parser.java"
+//#line 1111 "Parser.java"
 //########## END OF USER-SUPPLIED ACTIONS ##########
     }//switch
     //#### Now let's reduce... ####
