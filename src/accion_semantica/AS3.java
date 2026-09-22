@@ -23,7 +23,7 @@ public class AS3 extends Accion_Semantica{
         }
 
         int identificador = TablaPalabrasReservadas.obtenerIdentificador(token_entregado.toUpperCase());
-        //eLsA
+        
         if (identificador != TablaPalabrasReservadas.NOT_FOUND){ //es palabra reservada
             return identificador;
         }
@@ -35,13 +35,11 @@ public class AS3 extends Accion_Semantica{
         identificador = TablaSimbolos.obtenerSimbolo(token_entregado);
 
         if  (identificador != TablaSimbolos.LEXEMA_NO_ENCONTRADO){
-            // CORRECCION: guardamos la referencia para que yylex() arme yylval.
             AnalizadorLexico.setReferenciaTablaSimbolos(identificador);
             return TablaPalabrasReservadas.obtenerIdentificador("IDENTIFICADOR");
         }
 
-        // CORRECCION: antes se ignoraba el valor de retorno de
-        // agregarSimbolo (era void). Ahora usamos el id que devuelve.
+        
         int nuevo_identificador = TablaSimbolos.agregarSimbolo(token_entregado);
         AnalizadorLexico.setReferenciaTablaSimbolos(nuevo_identificador);
         return TablaPalabrasReservadas.obtenerIdentificador("IDENTIFICADOR");

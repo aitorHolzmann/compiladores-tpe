@@ -1,7 +1,6 @@
 package src.accion_semantica;
 
 import java.io.PushbackReader;
-import java.io.Reader;
 import src.compilador.*;
 
 public class AS8 extends Accion_Semantica{
@@ -13,7 +12,7 @@ public class AS8 extends Accion_Semantica{
         int posicionS = token_entregado.indexOf("s"); // Me fijo en que posicion esta la "s"
         String base = token_entregado.substring(0, posicionS); // Me quedo con "20.3"
         Double baseD = Double.parseDouble(base); // "20.3" -> 20.3 en double
-        Double resultado = Math.pow(baseD, 0); // Eleba la base a la potencia 0 -> 20.3^0
+        Double resultado = Math.pow(baseD, 1); // Eleba la base a la potencia 1 -> 20.3^1
         try{
             reader.unread(caracter_actual);
         } catch (Exception e){

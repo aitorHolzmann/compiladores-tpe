@@ -1,6 +1,5 @@
 package src.accion_semantica;
 import java.io.*;
-import src.compilador.AnalizadorLexico;
 import src.compilador.TablaPalabrasReservadas;
 
 public class AS13 extends Accion_Semantica{

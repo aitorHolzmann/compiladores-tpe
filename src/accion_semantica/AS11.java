@@ -1,13 +1,10 @@
 package src.accion_semantica;
 
 import java.io.PushbackReader;
-import java.io.Reader;
 import src.compilador.*;
 
 
 public class AS11 extends Accion_Semantica{
-    // Tenemos que buscar en la tabla de palabras reservadas si se encuentra la que estamos buscando. En este caso como la palabra va a ser "IF", "ELSE", o una de esas
-    // Estamos seguros de eso porque hay una letra Mayuscula en el medio. Entonces no puede ser identificador
     @Override 
     public int ejecutar(StringBuilder token_actual, PushbackReader reader, char caracter_actual){
         try{
