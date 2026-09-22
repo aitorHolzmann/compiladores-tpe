@@ -21,7 +21,8 @@ import java.io.*;
 %token SHORTINT 272
 %token SINGLEF 273
 %token CADENA 274
-%token CONSTANTE 275
+%token CTE_SHORTINT 286
+%token CTE_SINGLEF 287
 
 /* Temas particulares - palabras reservadas */
 %token REPEAT 276
@@ -258,8 +259,10 @@ asignacion
     ;
 
 acceso_posicional
-    : IDENTIFICADOR '[' CONSTANTE ']'
+    : IDENTIFICADOR '[' CTE_SHORTINT ']'
     | IDENTIFICADOR '[' IDENTIFICADOR ']'
+    | IDENTIFICADOR '[' CTE_SINGLEF ']'
+        { yyerror("Acceso posicional invalido: solo se permite constante SHORTINT positiva o identificador"); }
     ;
 
 /* EXPRESIONES                                                               */
@@ -280,26 +283,28 @@ termino
     | '*' factor { yyerror("Falta un operando en la expresion"); }
     | '/' factor { yyerror("Falta un operando en la expresion"); }
     | termino IDENTIFICADOR { yyerror("Falta operador en la expresion"); }
-    | termino CONSTANTE { yyerror("Falta operador en la expresion"); }
+    | termino CTE_SHORTINT  { yyerror("Falta operador en la expresion"); }
+    | termino CTE_SINGLEF   { yyerror("Falta operador en la expresion"); }
     ;
 
 factor
     : IDENTIFICADOR
-    | CONSTANTE
+    | CTE_SHORTINT
         {
             int id = $1.ival;
             String lexema = TablaSimbolos.obtenerAtributo(id, TablaSimbolos.LEXEMA);
-            String tipo = TablaSimbolos.obtenerAtributo(id, "TIPO");
-            if (tipo.equals("SHORTINT")) {
-                int valor = Integer.parseInt(lexema);
-                if (valor > AnalizadorLexico.ValorMaximoInt) {
-                    yyerror("Constante shortint positiva fuera de rango (" + lexema + "). Rango permitido: [-128, 127]");
-                }
-            } else if (tipo.equals("SINGLEF")) {
-                double valor = Double.parseDouble(lexema);
-                if (valor != 0.0 && (valor < AnalizadorLexico.ValorMinimoFloat || valor > AnalizadorLexico.ValorMaximoFloat)) {
-                    yyerror("Constante singlef fuera de rango (" + lexema + ")");
-                }
+            int valor = Integer.parseInt(lexema);
+            if (valor > AnalizadorLexico.ValorMaximoInt) {
+                yyerror("Constante shortint positiva fuera de rango (" + lexema + "). Rango permitido: [-128, 127]");
+            }
+        }
+    | CTE_SINGLEF
+        {
+            int id = $1.ival;
+            String lexema = TablaSimbolos.obtenerAtributo(id, TablaSimbolos.LEXEMA);
+            double valor = Double.parseDouble(lexema);
+            if (valor != 0.0 && (valor < AnalizadorLexico.ValorMinimoFloat || valor > AnalizadorLexico.ValorMaximoFloat)) {
+                yyerror("Constante singlef fuera de rango (" + lexema + ")");
             }
         }
     | IDENTIFICADOR '(' ')'
@@ -329,7 +334,14 @@ unica
     ;
 
 numero_negativo
-    : '-' CONSTANTE
+    : '-' CTE_SHORTINT
+        {
+            int id_pos = $2.ival;
+            String lexema_pos = TablaSimbolos.obtenerAtributo(id_pos, TablaSimbolos.LEXEMA);
+            int id_neg = TablaSimbolos.convertirANegativo(lexema_pos);
+            $$.ival = id_neg;
+        }
+    | '-' CTE_SINGLEF
         {
             int id_pos = $2.ival;
             String lexema_pos = TablaSimbolos.obtenerAtributo(id_pos, TablaSimbolos.LEXEMA);

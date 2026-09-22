@@ -4,27 +4,25 @@ import java.io.PushbackReader;
 import src.compilador.*;
 
 public class AS8 extends Accion_Semantica{
-    // tenemos por ejemplo 20.3sa , estamos en la letra "a" es decir que hay que cerrar token float. poner exponente 0.
-    // Para esto tenemos que transformar el string "20.3s" a algo como 20.30^0 , Luego chequear rango y devolver token "SINGLEF"
+    // Cierra token float sin exponente explicito (ej: 20.3s -> 20.3^1)
     @Override 
     public int ejecutar(StringBuilder token_actual, PushbackReader reader, char caracter_actual){
-        String token_entregado = token_actual.toString(); //"20.3s" como string
-        int posicionS = token_entregado.indexOf("s"); // Me fijo en que posicion esta la "s"
-        String base = token_entregado.substring(0, posicionS); // Me quedo con "20.3"
-        Double baseD = Double.parseDouble(base); // "20.3" -> 20.3 en double
-        Double resultado = Math.pow(baseD, 1); // Eleba la base a la potencia 1 -> 20.3^1
+        String token_entregado = token_actual.toString(); // "20.3s"
+        int posicionS = token_entregado.indexOf("s");
+        String base = token_entregado.substring(0, posicionS); // "20.3"
+        Double baseD = Double.parseDouble(base);
+        Double resultado = Math.pow(baseD, 1);
         try{
             reader.unread(caracter_actual);
         } catch (Exception e){
             e.printStackTrace();
         }
         if ((resultado >= AnalizadorLexico.ValorMinimoFloat && resultado <= AnalizadorLexico.ValorMaximoFloat) || resultado == 0.0){
-            int id = TablaSimbolos.gestionarConstante("" + resultado, "SINGLEF");
+            int id = TablaSimbolos.agregarOBuscarConstante("" + resultado);
             AnalizadorLexico.setReferenciaTablaSimbolos(id);
-            return TablaPalabrasReservadas.obtenerIdentificador("SINGLEF");
+            return TablaPalabrasReservadas.obtenerIdentificador("CTE_SINGLEF");
         }
         AnalizadorLexico.mostrarWarning("El double "+ resultado + " esta fuera de rango");
         return 0; 
     }
 }
-

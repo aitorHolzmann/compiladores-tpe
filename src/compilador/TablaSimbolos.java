@@ -8,8 +8,8 @@ public class TablaSimbolos {
     public static final String ATRIBUTO_NO_ENCONTRADO = "NO ENCONTRADO";
     
     public static final String LEXEMA = "LEXEMA";
-    //La tabla de simbolos se accede con el numero de identifcador (despuse de ASCII ej 256).
-    //Y tiene mapa de atributos. Por ejemplo si es entero o flotante.
+    // La tabla se accede con el identificador numerico (>256).
+    // Solo guarda el lexema y las ocurrencias. El tipo lo da el token del lexico.
     private static final Map<Integer, Map<String, String>> tabla_simbolos = new HashMap<>();
     
     private static int siguiente_identificador = 1; 
@@ -37,8 +37,7 @@ public class TablaSimbolos {
 
     public static void agregarAtributo(int clave, String atributo, String valor) {
         if (tabla_simbolos.containsKey(clave)) {
-            Map<String, String> atributos = tabla_simbolos.get(clave);
-            atributos.put(atributo, valor);
+            tabla_simbolos.get(clave).put(atributo, valor);
         }  
     }
 
@@ -52,7 +51,6 @@ public class TablaSimbolos {
     public static String obtenerAtributo(int clave, String atributo) {
         if (tabla_simbolos.containsKey(clave)) {
             Map<String, String> atributos = tabla_simbolos.get(clave);
-
             if (atributos.containsKey(atributo)) {
                 return atributos.get(atributo);
             }
@@ -60,60 +58,52 @@ public class TablaSimbolos {
         return ATRIBUTO_NO_ENCONTRADO;
     }
 
-    public static int gestionarConstante(String lexema, String tipo) {
+    // Incrementa directamente el contador de ocurrencias de una entrada existente.
+    private static void incrementarOcurrencias(int id) {
+        Map<String, String> atributos = tabla_simbolos.get(id);
+        String ocs = atributos.get("OCURRENCIAS");
+        if (ocs != null) {
+            atributos.put("OCURRENCIAS", String.valueOf(Integer.parseInt(ocs) + 1));
+        } else {
+            atributos.put("OCURRENCIAS", "1");
+        }
+    }
+
+    // Agrega la constante si no existe, o incrementa su contador de ocurrencias.
+    // El tipo no se guarda: lo determina el token devuelto por el lexico.
+    public static int agregarOBuscarConstante(String lexema) {
         int id = obtenerSimbolo(lexema);
         if (id == LEXEMA_NO_ENCONTRADO) {
             id = agregarSimbolo(lexema);
-            agregarAtributo(id, "TIPO", tipo);
-            agregarAtributo(id, "OCURRENCIAS", "1");
+            tabla_simbolos.get(id).put("OCURRENCIAS", "1");
         } else {
-            String ocs = obtenerAtributo(id, "OCURRENCIAS");
-            if (!ocs.equals(ATRIBUTO_NO_ENCONTRADO)) {
-                int count = Integer.parseInt(ocs);
-                agregarAtributo(id, "OCURRENCIAS", String.valueOf(count + 1));
-            } else {
-                agregarAtributo(id, "OCURRENCIAS", "1");
-            }
+            incrementarOcurrencias(id);
         }
         return id;
     }
 
+    // Convierte una constante positiva a su version negativa en la tabla.
+    // No se valida rango: el lexico ya garantiza que el positivo es valido,
+    // por lo que su negado tambien lo es.
     public static int convertirANegativo(String lexema_positivo) {
-        System.out.println("convertirANegativo llamado con: '" + lexema_positivo + "'");
         int id_pos = obtenerSimbolo(lexema_positivo);
-        String tipo = "SINGLEF"; // Default
-        
+
         if (id_pos != LEXEMA_NO_ENCONTRADO) {
-            tipo = obtenerAtributo(id_pos, "TIPO");
-            String ocsStr = obtenerAtributo(id_pos, "OCURRENCIAS");
-            if (!ocsStr.equals(ATRIBUTO_NO_ENCONTRADO)) {
-                int ocs = Integer.parseInt(ocsStr);
-                ocs--;
+            Map<String, String> atributos = tabla_simbolos.get(id_pos);
+            String ocsStr = atributos.get("OCURRENCIAS");
+            if (ocsStr != null) {
+                int ocs = Integer.parseInt(ocsStr) - 1;
                 if (ocs <= 0) {
                     tabla_simbolos.remove(id_pos);
                 } else {
-                    agregarAtributo(id_pos, "OCURRENCIAS", String.valueOf(ocs));
+                    atributos.put("OCURRENCIAS", String.valueOf(ocs));
                 }
             }
         }
-        
-        String lexema_negativo = "-" + lexema_positivo;
-        
-        // Validación de rangos para negativos
-        if (tipo.equals("SHORTINT")) {
-            int valor = Integer.parseInt(lexema_negativo);
-            if (valor < AnalizadorLexico.ValorMinimoInt) {
-                System.out.println("ERROR - Linea " + AnalizadorLexico.getLineaActual() + ": Constante shortint fuera de rango (" + valor + ")");
-            }
-        } else if (tipo.equals("SINGLEF")) {
-            double valor = Double.parseDouble(lexema_negativo);
-            if (valor != 0.0 && (valor < -AnalizadorLexico.ValorMaximoFloat || valor > -AnalizadorLexico.ValorMinimoFloat)) {
-                System.out.println("ERROR - Linea " + AnalizadorLexico.getLineaActual() + ": Constante singlef fuera de rango (" + valor + ")");
-            }
-        }
 
-        return gestionarConstante(lexema_negativo, tipo);
+        return agregarOBuscarConstante("-" + lexema_positivo);
     }
+
     public static void imprimirTabla() {
         System.out.println("=== TABLA DE SIMBOLOS ===");
         for (Map.Entry<Integer, Map<String, String>> entry : tabla_simbolos.entrySet()) {
