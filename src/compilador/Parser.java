@@ -694,7 +694,7 @@ final static String yyrule[] = {
 "sentencia_ret : RET '(' expresion ')'",
 };
 
-//#line 456 "gram.y"
+//#line 504 "gram.y"
 
 
 /* CODIGO DE SOPORTE                                                         */
@@ -1091,8 +1091,14 @@ case 75:
 //#line 270 "gram.y"
 { yyerror("Acceso posicional invalido: solo se permite constante SHORTINT positiva o identificador"); }
 break;
+case 76:
+//#line 276 "gram.y"
+{
+            yyval = val_peek(0);
+        }
+break;
 case 77:
-//#line 277 "gram.y"
+//#line 280 "gram.y"
 {
             String op1 = val_peek(2).sval;
             String op2 = val_peek(0).sval;
@@ -1100,48 +1106,81 @@ case 77:
             yyval = new ParserVal("[" + idTerceto + "]");
         }
 break;
+case 78:
+//#line 287 "gram.y"
+{
+            String op1 = val_peek(2).sval;
+            String op2 = val_peek(0).sval;
+            int idTerceto = GeneradorTerceto.crearTerceto("-", op1, op2);
+            yyval = new ParserVal("[" + idTerceto + "]");
+        }
+break;
 case 79:
-//#line 284 "gram.y"
-{ yyerror("Falta un operando en la expresion"); }
-break;
-case 80:
-//#line 285 "gram.y"
-{ yyerror("Falta un operando en la expresion"); }
-break;
-case 81:
-//#line 286 "gram.y"
-{ yyerror("Falta un operando en la expresion"); }
-break;
-case 85:
-//#line 292 "gram.y"
-{ yyerror("Falta un operando en la expresion"); }
-break;
-case 86:
 //#line 293 "gram.y"
 { yyerror("Falta un operando en la expresion"); }
 break;
-case 87:
+case 80:
 //#line 294 "gram.y"
 { yyerror("Falta un operando en la expresion"); }
 break;
-case 88:
+case 81:
 //#line 295 "gram.y"
 { yyerror("Falta un operando en la expresion"); }
 break;
+case 82:
+//#line 299 "gram.y"
+{
+            yyval = val_peek(0);
+        }
+break;
+case 83:
+//#line 303 "gram.y"
+{
+            String op1 = val_peek(2).sval;
+            String op2 = val_peek(0).sval;
+            int idTerceto = GeneradorTerceto.crearTerceto("*", op1, op2);
+            yyval = new ParserVal("[" + idTerceto + "]");
+        }
+break;
+case 84:
+//#line 310 "gram.y"
+{
+            String op1 = val_peek(2).sval;
+            String op2 = val_peek(0).sval;
+            int idTerceto = GeneradorTerceto.crearTerceto("/", op1, op2);
+            yyval = new ParserVal("[" + idTerceto + "]");
+        }
+break;
+case 85:
+//#line 316 "gram.y"
+{ yyerror("Falta un operando en la expresion"); }
+break;
+case 86:
+//#line 317 "gram.y"
+{ yyerror("Falta un operando en la expresion"); }
+break;
+case 87:
+//#line 318 "gram.y"
+{ yyerror("Falta un operando en la expresion"); }
+break;
+case 88:
+//#line 319 "gram.y"
+{ yyerror("Falta un operando en la expresion"); }
+break;
 case 89:
-//#line 296 "gram.y"
+//#line 320 "gram.y"
 { yyerror("Falta operador en la expresion"); }
 break;
 case 90:
-//#line 297 "gram.y"
+//#line 321 "gram.y"
 { yyerror("Falta operador en la expresion"); }
 break;
 case 91:
-//#line 298 "gram.y"
+//#line 322 "gram.y"
 { yyerror("Falta operador en la expresion"); }
 break;
 case 92:
-//#line 303 "gram.y"
+//#line 327 "gram.y"
 {
             int ref = val_peek(0).ival;
             String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
@@ -1149,7 +1188,7 @@ case 92:
         }
 break;
 case 93:
-//#line 309 "gram.y"
+//#line 333 "gram.y"
 {
             int id = val_peek(0).ival;
             String lexema = TablaSimbolos.obtenerAtributo(id, TablaSimbolos.LEXEMA);
@@ -1161,7 +1200,7 @@ case 93:
         }
 break;
 case 94:
-//#line 319 "gram.y"
+//#line 343 "gram.y"
 {
             int id = val_peek(0).ival;
             String lexema = TablaSimbolos.obtenerAtributo(id, TablaSimbolos.LEXEMA);
@@ -1172,101 +1211,140 @@ case 94:
             yyval = new ParserVal(lexema);
         }
 break;
+case 98:
+//#line 356 "gram.y"
+{
+            yyval = val_peek(0);
+        }
+break;
+case 99:
+//#line 360 "gram.y"
+{
+            yyval = val_peek(0);
+        }
+break;
 case 102:
-//#line 338 "gram.y"
+//#line 368 "gram.y"
 { imprimirRegla("invocacion_metodo"); }
 break;
 case 103:
-//#line 339 "gram.y"
+//#line 369 "gram.y"
 { imprimirRegla("invocacion_metodo"); }
 break;
+case 106:
+//#line 380 "gram.y"
+{
+            int ref = val_peek(4).ival;
+            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            int idTerceto = GeneradorTerceto.crearTerceto(":=", lexema, val_peek(1).sval);
+            yyval = new ParserVal("[" + idTerceto + "]");
+        }
+break;
 case 107:
-//#line 351 "gram.y"
+//#line 387 "gram.y"
 { yyerror("Uso del simbolo ':=' donde debe usarse '=' en asignacion dentro de expresion"); }
 break;
 case 108:
-//#line 356 "gram.y"
+//#line 392 "gram.y"
 {
             int id_pos = val_peek(0).ival;
             String lexema_pos = TablaSimbolos.obtenerAtributo(id_pos, TablaSimbolos.LEXEMA);
             int id_neg = TablaSimbolos.convertirANegativo(lexema_pos);
-            yyval.ival = id_neg;
+            ParserVal pv = new ParserVal("-" + lexema_pos);
+            pv.ival = id_neg;
+            yyval = pv;
         }
 break;
 case 109:
-//#line 363 "gram.y"
+//#line 401 "gram.y"
 {
             int id_pos = val_peek(0).ival;
             String lexema_pos = TablaSimbolos.obtenerAtributo(id_pos, TablaSimbolos.LEXEMA);
             int id_neg = TablaSimbolos.convertirANegativo(lexema_pos);
-            yyval.ival = id_neg;
+            ParserVal pv = new ParserVal("-" + lexema_pos);
+            pv.ival = id_neg;
+            yyval = pv;
         }
 break;
 case 112:
-//#line 380 "gram.y"
+//#line 420 "gram.y"
 { yyerror("Falta '(' de apertura en condicion de seleccion"); }
 break;
 case 113:
-//#line 382 "gram.y"
+//#line 422 "gram.y"
 { yyerror("Condicion de seleccion malformada o error en parentesis"); }
 break;
 case 116:
-//#line 389 "gram.y"
+//#line 429 "gram.y"
 { yyerror("Falta palabra clave END_IF al final de la sentencia IF"); }
 break;
 case 117:
-//#line 391 "gram.y"
+//#line 431 "gram.y"
 { yyerror("Falta palabra clave END_IF al final de la sentencia IF"); }
 break;
 case 127:
-//#line 411 "gram.y"
+//#line 451 "gram.y"
 { yyerror("Falta el delimitador END en el bloque de sentencias"); }
 break;
 case 129:
-//#line 418 "gram.y"
+//#line 458 "gram.y"
 { yyerror("Falta el cuerpo de la iteracion REPEAT"); }
 break;
 case 130:
-//#line 420 "gram.y"
+//#line 460 "gram.y"
 { yyerror("Falta palabra clave UNTIL en la iteracion REPEAT"); }
 break;
 case 131:
-//#line 422 "gram.y"
+//#line 462 "gram.y"
 { yyerror("Falta palabra clave UNTIL y cuerpo en la iteracion REPEAT"); }
 break;
 case 132:
-//#line 424 "gram.y"
+//#line 464 "gram.y"
 { yyerror("Falta palabra clave UNTIL y ')' en la iteracion REPEAT"); }
 break;
 case 133:
-//#line 426 "gram.y"
+//#line 466 "gram.y"
 { yyerror("Falta palabra clave UNTIL, cuerpo y ')' en la iteracion REPEAT"); }
 break;
 case 135:
-//#line 432 "gram.y"
+//#line 472 "gram.y"
 { yyerror("Falta '(' de apertura en condicion de iteracion"); }
 break;
 case 136:
-//#line 434 "gram.y"
+//#line 474 "gram.y"
 { yyerror("Falta ')' de cierre en condicion de iteracion"); }
 break;
 case 137:
-//#line 436 "gram.y"
+//#line 476 "gram.y"
 { yyerror("Faltan parentesis en condicion de iteracion"); }
 break;
+case 138:
+//#line 482 "gram.y"
+{
+            int ref = val_peek(1).ival;
+            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            GeneradorTerceto.crearTerceto("POUT", lexema, "-");
+        }
+break;
+case 139:
+//#line 488 "gram.y"
+{
+            GeneradorTerceto.crearTerceto("POUT", val_peek(1).sval, "-");
+        }
+break;
 case 140:
-//#line 444 "gram.y"
+//#line 492 "gram.y"
 { yyerror("Falta argumento en sentencia pout"); }
 break;
 case 141:
-//#line 449 "gram.y"
+//#line 497 "gram.y"
 {
             if (cant_retornos_auto >= 0) {
                 cant_retornos_auto++;
             }
         }
 break;
-//#line 1192 "Parser.java"
+//#line 1270 "Parser.java"
 //########## END OF USER-SUPPLIED ACTIONS ##########
     }//switch
     //#### Now let's reduce... ####

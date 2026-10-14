@@ -1,0 +1,15 @@
+programa_asignaciones
+
+shortint a, b, res;
+singlef x;
+BEGIN
+  a := 10$s;
+  b := a + 5$s;
+  x := 3.14;
+  a := b = (2$s);
+  res := a + b = (4$s);
+  pout("Resultado calculado exitosamente");
+  pout(res);
+  pout(a + b * 2$s);
+END
+

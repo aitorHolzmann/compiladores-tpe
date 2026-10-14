@@ -154,3 +154,12 @@ java -cp bin src.compilador.Parser tests/prueba_gramatica
 - **Tema 26**: Chequeos de visibilidad `IMPORT FROM` / `EXPORT TO` entre clases.
 - **Tema 29**: Acceso posicional por orden de declaración de atributos.
 - **Tema 30**: Herencia múltiple — Desambiguado Opción 1: búsqueda en orden de la lista de `EXTENDS`.
+
+## 12. Bitácora Viva y Guía de Estudio para la Defensa (`GUIA_DEFENSA_ETAPA3.md`)
+- Se mantiene un documento vivo centralizado en la raíz del proyecto: `GUIA_DEFENSA_ETAPA3.md`.
+- **Obligación del asistente**: En cada avance de hito, duda planteada por los alumnos o decisión técnica adoptada, el asistente debe actualizar este archivo incorporando:
+  1. El desglose del hito y su fundamento conceptual.
+  2. Las preguntas formuladas por los alumnos y las respuestas pedagógicas detalladas listas para la defensa oral.
+  3. Las trazas del autómata LALR / BYacc/J (estados de pila y lookahead).
+  4. Los casos de prueba representativos y la salida de tercetos verificada.
+- El documento debe mantenerse riguroso, claro y redactado en tono de alumno de ingeniería preparado para defender cada línea de código ante la mesa evaluadora.

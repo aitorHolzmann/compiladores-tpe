@@ -252,7 +252,8 @@ sentencia_ejecutable
     | error ';'
         { yyerror("Sentencia ejecutable malformada o falta ';' previo"); }
     ;
-
+a := 4
+ + b
 asignacion
     : IDENTIFICADOR ASIGNAR expresion
         {
@@ -273,6 +274,9 @@ acceso_posicional
 /* EXPRESIONES                                                               */
 expresion
     : termino
+        {
+            $$ = $1;
+        }
     | expresion '+' termino
         {
             String op1 = $1.sval;
@@ -281,14 +285,35 @@ expresion
             $$ = new ParserVal("[" + idTerceto + "]");
         }
     | expresion '-' termino
+        {
+            String op1 = $1.sval;
+            String op2 = $3.sval;
+            int idTerceto = GeneradorTerceto.crearTerceto("-", op1, op2);
+            $$ = new ParserVal("[" + idTerceto + "]");
+        }
     | expresion '+' error { yyerror("Falta un operando en la expresion"); }
     | expresion '-' error { yyerror("Falta un operando en la expresion"); }
     | '+' termino { yyerror("Falta un operando en la expresion"); }
     ;
 termino
     : factor
+        {
+            $$ = $1;
+        }
     | termino '*' factor
+        {
+            String op1 = $1.sval;
+            String op2 = $3.sval;
+            int idTerceto = GeneradorTerceto.crearTerceto("*", op1, op2);
+            $$ = new ParserVal("[" + idTerceto + "]");
+        }
     | termino '/' factor
+        {
+            String op1 = $1.sval;
+            String op2 = $3.sval;
+            int idTerceto = GeneradorTerceto.crearTerceto("/", op1, op2);
+            $$ = new ParserVal("[" + idTerceto + "]");
+        }
     | termino '*' error { yyerror("Falta un operando en la expresion"); }
     | termino '/' error { yyerror("Falta un operando en la expresion"); }
     | '*' factor { yyerror("Falta un operando en la expresion"); }
@@ -299,7 +324,7 @@ termino
     ;
 
 factor
-    : IDENTIFICADOR
+    : IDENTIFICADOR 
         {
             int ref = $1.ival;
             String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
@@ -329,7 +354,13 @@ factor
     | IDENTIFICADOR '(' lista_expresiones ')'
     | invocacion_metodo
     | unica
+        {
+            $$ = $1;
+        }
     | numero_negativo
+        {
+            $$ = $1;
+        }
     | conversion_tos
     | acceso_posicional
     ;
@@ -347,6 +378,12 @@ lista_expresiones
 /* Tema 17: Asignacion en expresion */
 unica
     : IDENTIFICADOR '=' '(' expresion ')'
+        {
+            int ref = $1.ival;
+            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            int idTerceto = GeneradorTerceto.crearTerceto(":=", lexema, $4.sval);
+            $$ = new ParserVal("[" + idTerceto + "]");
+        }
     | IDENTIFICADOR ASIGNAR '(' expresion ')'
         { yyerror("Uso del simbolo ':=' donde debe usarse '=' en asignacion dentro de expresion"); }
     ;
@@ -357,14 +394,18 @@ numero_negativo
             int id_pos = $2.ival;
             String lexema_pos = TablaSimbolos.obtenerAtributo(id_pos, TablaSimbolos.LEXEMA);
             int id_neg = TablaSimbolos.convertirANegativo(lexema_pos);
-            $$.ival = id_neg;
+            ParserVal pv = new ParserVal("-" + lexema_pos);
+            pv.ival = id_neg;
+            $$ = pv;
         }
     | '-' CTE_SINGLEF
         {
             int id_pos = $2.ival;
             String lexema_pos = TablaSimbolos.obtenerAtributo(id_pos, TablaSimbolos.LEXEMA);
             int id_neg = TablaSimbolos.convertirANegativo(lexema_pos);
-            $$.ival = id_neg;
+            ParserVal pv = new ParserVal("-" + lexema_pos);
+            pv.ival = id_neg;
+            $$ = pv;
         }
     ;
 
@@ -439,7 +480,15 @@ condicion_iteracion
 
 sentencia_pout
     : POUT '(' CADENA ')'
+        {
+            int ref = $3.ival;
+            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            GeneradorTerceto.crearTerceto("POUT", lexema, "-");
+        }
     | POUT '(' expresion ')'
+        {
+            GeneradorTerceto.crearTerceto("POUT", $3.sval, "-");
+        }
     | POUT '(' ')'
         { yyerror("Falta argumento en sentencia pout"); }
     ;

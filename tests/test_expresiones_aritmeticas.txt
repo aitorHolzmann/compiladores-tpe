@@ -1,0 +1,12 @@
+programa_aritmetica
+
+shortint a, b, c, d, res;
+singlef x, y, z;
+BEGIN
+  res := a + b * c;
+  res := a * b - c / d;
+  res := a + -5$s;
+  z := x * 2.5 + y;
+  z := z - -1.0;
+END
+
