@@ -13,12 +13,13 @@ PRUEBAS := $(filter-out %.java %.md, $(wildcard tests/*))
 DESTINO := src/compilador
 IMAGEN  := compiladores-tpe
 
-.PHONY: test docker-test parser clean
+.PHONY: test jar docker-test parser clean
 
 test:
 	@command -v javac >/dev/null 2>&1 || { echo "No se encontro javac (hace falta un JDK). Instale uno o use: make docker-test"; exit 1; }
 	@mkdir -p bin
 	@javac -encoding UTF-8 -d bin $(FUENTES)
+	@cp -r src/estructuras bin/src/
 	@for archivo in $(PRUEBAS); do \
 		echo ""; \
 		echo "================ PRUEBA: $$archivo ================"; \
@@ -27,6 +28,13 @@ test:
 		echo "---------------- Salida del compilador ----------------"; \
 		java -cp bin src.compilador.Parser "$$archivo"; \
 	done
+
+jar:
+	@mkdir -p bin
+	@javac --release 11 -encoding UTF-8 -d bin $(FUENTES)
+	@cp -r src/estructuras bin/src/
+	@jar --create --file compilador.jar --main-class src.compilador.Parser -C bin .
+	@echo "Listo: compilador.jar"s
 
 docker-test:
 	docker build -t $(IMAGEN) .devcontainer
@@ -41,4 +49,4 @@ parser:
 	@echo "Parser.java y ParserVal.java actualizados en $(DESTINO)/ (conflictos: ver y.output)"
 
 clean:
-	rm -rf bin
+	rm -rf bin compilador.jar

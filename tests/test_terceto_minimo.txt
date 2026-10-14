@@ -1,0 +1,7 @@
+programa_prueba
+
+shortint a, b, c;
+BEGIN
+  a + b;
+  c := a + b;
+END

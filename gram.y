@@ -255,6 +255,11 @@ sentencia_ejecutable
 
 asignacion
     : IDENTIFICADOR ASIGNAR expresion
+        {
+            int ref = $1.ival;
+            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            GeneradorTerceto.crearTerceto(":=", lexema, $3.sval);
+        }
     | acceso_posicional ASIGNAR expresion
     ;
 
@@ -269,6 +274,12 @@ acceso_posicional
 expresion
     : termino
     | expresion '+' termino
+        {
+            String op1 = $1.sval;
+            String op2 = $3.sval;
+            int idTerceto = GeneradorTerceto.crearTerceto("+", op1, op2);
+            $$ = new ParserVal("[" + idTerceto + "]");
+        }
     | expresion '-' termino
     | expresion '+' error { yyerror("Falta un operando en la expresion"); }
     | expresion '-' error { yyerror("Falta un operando en la expresion"); }
@@ -289,6 +300,11 @@ termino
 
 factor
     : IDENTIFICADOR
+        {
+            int ref = $1.ival;
+            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            $$ = new ParserVal(lexema);
+        }
     | CTE_SHORTINT
         {
             int id = $1.ival;
@@ -297,6 +313,7 @@ factor
             if (valor > AnalizadorLexico.ValorMaximoInt) {
                 yyerror("Constante shortint positiva fuera de rango (" + lexema + "). Rango permitido: [-128, 127]");
             }
+            $$ = new ParserVal(lexema);
         }
     | CTE_SINGLEF
         {
@@ -306,6 +323,7 @@ factor
             if (valor != 0.0 && (valor < AnalizadorLexico.ValorMinimoFloat || valor > AnalizadorLexico.ValorMaximoFloat)) {
                 yyerror("Constante singlef fuera de rango (" + lexema + ")");
             }
+            $$ = new ParserVal(lexema);
         }
     | IDENTIFICADOR '(' ')'
     | IDENTIFICADOR '(' lista_expresiones ')'
@@ -450,20 +468,29 @@ static void imprimirRegla(String regla) {
 }
 
 public static void main(String[] args) {
-    String ruta = "prueba_gramatica";
-    boolean debug = false;
-    if (args.length > 0) {
-        ruta = args[0];
+    boolean argumentosValidos = args.length == 1 || (args.length == 2 && args[1].equals("-v"));
+    if (!argumentosValidos) {
+        System.out.println("Uso: java -jar compilador.jar <archivo_a_compilar> [-v]");
+        System.out.println("Se compila un solo archivo por ejecucion.");
+        System.exit(1);
     }
-    if (args.length > 1 && args[1].equals("-v")) {
-        debug = true;
+
+    String ruta = args[0];
+    boolean debug = args.length == 2;
+
+    if (!new File(ruta).isFile()) {
+        System.out.println("No se encontro el archivo a compilar: " + ruta);
+        System.exit(1);
     }
+
     System.out.println("Compilando archivo: " + ruta);
     try {
-        AnalizadorLexico.reader = new PushbackReader(new BufferedReader(new FileReader(ruta)));
+        AnalizadorLexico.reader = new PushbackReader(new BufferedReader(
+                new InputStreamReader(new FileInputStream(ruta), java.nio.charset.StandardCharsets.UTF_8)));
         parser = new Parser(debug);
         parser.yyparse(); 
         TablaSimbolos.imprimirTabla();
+        GeneradorTerceto.imprimirTercetos();
     } catch (Exception e) {
         e.printStackTrace();
     }

@@ -2,63 +2,64 @@
 
 Compilador hecho en Java. El analizador léxico lo armamos a mano y el sintáctico lo generamos con byacc/j a partir de `gram.y`.
 
-El parser ya viene generado (`src/compilador/Parser.java` y `ParserVal.java`), así que para correr las pruebas no hace falta tener byacc/j ni compilar la gramática. Alcanza con Java y `make`.
+## Cómo ejecutarlo
 
-
-
-### Linux
-### Con Docker (sin instalar Java)
-
-Si en la máquina no está Java pero sí Docker, se puede correr todo adentro de un contenedor. Solo hace falta tener `docker` y `make`, y que el usuario pueda usar Docker sin `sudo` (o sea, que esté en el grupo `docker`).
-
-Desde la raíz del proyecto:
+Requisito: Java 11 o superior.
 
 ```
-make docker-test
+java -jar compilador.jar <archivo_a_compilar>
 ```
 
-La primera vez tarda unos minutos porque arma la imagen (usa el mismo `Dockerfile` de la carpeta `.devcontainer`, que ya trae Java y make) y necesita internet. Las veces siguientes arranca enseguida. Hace exactamente lo mismo que `make test`, así que todo lo que se explica más abajo sobre la carpeta `tests/` vale igual.
-
-### Con VS Code
-
-Nosotros trabajamos con VS Code y la extensión **Dev Containers**. Si la tiene instalada, puede abrir la carpeta, hacer `Ctrl+Shift+P` → **Dev Containers: Reopen in Container**, y en la terminal que se abre (ya adentro del contenedor) correr `make test` normalmente. En Windows hace falta Docker Desktop abierto.
-
-## Cómo correr las pruebas
-
-Parada en la carpeta raíz del proyecto (donde está el `Makefile`):
+Por ejemplo:
 
 ```
-make test
+java -jar compilador.jar tests/test_con_nombre.txt
 ```
 
-Eso compila todo el proyecto y después pasa uno por uno todos los archivos de la carpeta `tests/` por el compilador. Para cada archivo se muestra:
+- Se compila **un archivo por ejecución**, pasado como parámetro.
+- El `.jar` es autocontenido: las tablas del analizador léxico (matriz de transición de estados, matriz de acciones semánticas y palabras reservadas) están empaquetadas adentro como *resources*. Se puede ejecutar desde cualquier carpeta, sin ningún otro archivo.
+- Si el nombre del archivo tiene espacios, va entre comillas: `java -jar compilador.jar "mi prueba.txt"`.
+- Opcional: agregando `-v` al final se muestra la traza interna del parser (`java -jar compilador.jar archivo.txt -v`).
 
-- el nombre de la prueba
-- el código fuente de la prueba
-- la salida del compilador: errores léxicos y sintácticos con su número de línea, las reglas que se van reconociendo y al final la tabla de símbolos
+Si no se pasa ningún archivo, o se pasa más de uno, el compilador muestra cómo se usa y termina.
 
-(Si se usa Docker, lo mismo pero con `make docker-test`.)
+## Qué muestra la salida
 
-Como la salida es larga, a veces conviene mandarla a un archivo y leerla con calma:
+- Errores léxicos y sintácticos, con su número de línea.
+- Las reglas de la gramática que se van reconociendo.
+- Al final, la tabla de símbolos.
+
+## Pruebas incluidas
+
+En la carpeta `tests/` hay archivos de prueba. Cada uno se ejecuta por separado:
 
 ```
-make test > salida.txt
+java -jar compilador.jar tests/prueba1.txt
+java -jar compilador.jar tests/test_sin_end_prog.txt
 ```
 
-Hay que correrlo sí o sí desde la raíz, porque el compilador lee las tablas del léxico (`src/estructuras/...`) con rutas relativas.
+## Generar el .jar desde el código fuente (opcional)
 
-`make clean` borra la carpeta `bin/` con las clases compiladas, por si quiere compilar todo de cero.
+Solo hace falta si se quiere recompilar. Requiere un JDK 11 o superior.
 
-## Cómo agregar o sacar pruebas
+Con `make`:
 
-Todas las pruebas están en la carpeta **`tests/`**. `make test` toma todo lo que haya ahí adentro, así que:
+```
+make jar
+```
 
-- **Para probar un código nuevo:** crear un archivo en `tests/` (por ejemplo `tests/mi_prueba.txt`) con el programa y volver a correr `make test`. No hay que tocar el Makefile.
-- **Para no correr una prueba:** sacar el archivo de `tests/` o moverlo a otra carpeta.
+Sin `make` (por ejemplo, en PowerShell de Windows), desde la raíz del proyecto:
 
-Algunas cosas a tener en cuenta:
+```
+javac --release 11 -encoding UTF-8 -d bin (Get-ChildItem src\compilador\*.java, src\accion_semantica\*.java).FullName
+Copy-Item -Recurse src\estructuras bin\src\
+jar --create --file compilador.jar --main-class src.compilador.Parser -C bin .
+```
 
-- Los nombres de archivo no pueden tener espacios (`mi_prueba.txt` anda, `mi prueba.txt` no).
-- Las pruebas se ejecutan en orden alfabético.
-- Los `.java` y `.md` de esa carpeta se ignoran (hay un test unitario del léxico y un README).
+## Estructura del proyecto
 
+- `src/compilador/`: analizador léxico, parser (generado con byacc/j), tabla de símbolos.
+- `src/accion_semantica/`: acciones semánticas del analizador léxico.
+- `src/estructuras/`: tablas del léxico (se empaquetan dentro del `.jar`).
+- `gram.y`: gramática de byacc/j. `make parser` regenera `Parser.java` y `ParserVal.java` (requiere byacc/j).
+- `tests/`: programas de prueba.

@@ -1,6 +1,7 @@
 package src.compilador;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 import src.accion_semantica.*;
 
@@ -51,8 +52,8 @@ public class AnalizadorLexico {
 
 
     //Estructuras
-    private static final String PATH_TABLA_TRANSICION_ESTADO = "src/estructuras/tabla_transicion_estados";
-    private static final String PATH_TABLA_ACCIONES_SEMANTICAS = "src/estructuras/tabla_acciones_semanticas";
+    private static final String PATH_TABLA_TRANSICION_ESTADO = "/src/estructuras/tabla_transicion_estados";
+    private static final String PATH_TABLA_ACCIONES_SEMANTICAS = "/src/estructuras/tabla_acciones_semanticas";
     private static final int[][]tabla_transicion_estado = leerMatriz(PATH_TABLA_TRANSICION_ESTADO, CANT_ESTADOS, CANT_SIMBOLOS);
     public static final int[][]tabla_acciones_semanticas = leerMatriz(PATH_TABLA_ACCIONES_SEMANTICAS, CANT_ESTADOS, CANT_SIMBOLOS);
     
@@ -229,20 +230,18 @@ public class AnalizadorLexico {
     public static int[][] leerMatriz(String path, int filas, int columnas) {
         int[][] matriz = new int[filas][columnas];
 
-        try {
-            File archivo = new File(path);
-            Scanner scanner = new Scanner(archivo);
+        InputStream recurso = AnalizadorLexico.class.getResourceAsStream(path);
+        if (recurso == null) {
+            System.out.println("No se encontro la tabla " + path + " dentro del programa");
+            return matriz;
+        }
 
+        try (Scanner scanner = new Scanner(recurso, StandardCharsets.UTF_8)) {
             for (int i = 0; i < filas; ++i) {
                 for (int j = 0; j < columnas; ++j) {
-                    matriz[i][j] = Integer.parseInt(scanner.nextLine());
+                    matriz[i][j] = Integer.parseInt(scanner.nextLine().trim());
                 }
             }
-
-            scanner.close();
-        } catch (FileNotFoundException excepcion) {
-            System.out.println("No se pudo leer el archivo " + path);  
-            excepcion.printStackTrace();
         }
 
         return matriz;

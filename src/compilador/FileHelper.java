@@ -1,8 +1,10 @@
 package src.compilador;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,7 +13,13 @@ public class FileHelper {
     public static Map<String, Integer> readMapFile(String path) {
         Map<String, Integer> map = new HashMap<>();
 
-        try (BufferedReader br = new BufferedReader(new FileReader(path))) {
+        InputStream recurso = FileHelper.class.getResourceAsStream(path);
+        if (recurso == null) {
+            System.out.println("No se encontro la tabla " + path + " dentro del programa");
+            return map;
+        }
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(recurso, StandardCharsets.UTF_8))) {
             String linea;
             int numero_linea = 0;
 
