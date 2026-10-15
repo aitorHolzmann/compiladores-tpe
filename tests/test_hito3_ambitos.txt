@@ -1,0 +1,18 @@
+programa_ambitos
+
+shortint a, b;
+
+shortint FUNCTION sumar(shortint x)
+  shortint a, res;
+BEGIN
+  a := 5$s;
+  res := a + x;
+  RET(res);
+END;
+
+BEGIN
+  a := 10$s;
+  b := a;
+  pout(b);
+END
+

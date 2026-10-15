@@ -1,6 +1,7 @@
 package src.compilador;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class TablaSimbolos {
@@ -8,11 +9,20 @@ public class TablaSimbolos {
     public static final String ATRIBUTO_NO_ENCONTRADO = "NO ENCONTRADO";
     
     public static final String LEXEMA = "LEXEMA";
+    public static final String MANGLING = "MANGLING";
+    public static final String TIPO = "TIPO";
+    public static final String USO = "USO";
+    public static final String AMBITO = "AMBITO";
+
     // La tabla se accede con el identificador numerico (>256).
-    // Solo guarda el lexema y las ocurrencias. El tipo lo da el token del lexico.
-    private static final Map<Integer, Map<String, String>> tabla_simbolos = new HashMap<>();
+    private static final Map<Integer, Map<String, String>> tabla_simbolos = new LinkedHashMap<>();
     
     private static int siguiente_identificador = 1; 
+
+    public static void reiniciar() {
+        tabla_simbolos.clear();
+        siguiente_identificador = 1;
+    }
     
     public static int agregarSimbolo(String nombre_lexema){
         Map<String, String> atributos = new HashMap<>();
@@ -102,6 +112,63 @@ public class TablaSimbolos {
         }
 
         return agregarOBuscarConstante("-" + lexema_positivo);
+    }
+
+    public static int declararVariable(String nombre, String tipo, String uso, String ambito, int linea) {
+        String mangling = nombre + ambito;
+
+        // 1. Chequeo de redeclaracion en el mismo ambito
+        for (Map.Entry<Integer, Map<String, String>> entrada : tabla_simbolos.entrySet()) {
+            Map<String, String> attrs = entrada.getValue();
+            String m = attrs.get(MANGLING);
+            if (m != null && m.equals(mangling)) {
+                Parser.agregarErrorSemantico("Redeclaracion de '" + nombre + "' en el ambito " + ambito);
+                return LEXEMA_NO_ENCONTRADO;
+            }
+        }
+
+        // 2. Buscar si existe una entrada cruda creada por el lexico sin ambito asignado
+        int idReusar = LEXEMA_NO_ENCONTRADO;
+        for (Map.Entry<Integer, Map<String, String>> entrada : tabla_simbolos.entrySet()) {
+            Map<String, String> attrs = entrada.getValue();
+            if (nombre.equals(attrs.get(LEXEMA)) && attrs.get(MANGLING) == null) {
+                idReusar = entrada.getKey();
+                break;
+            }
+        }
+
+        int id = (idReusar != LEXEMA_NO_ENCONTRADO) ? idReusar : siguiente_identificador++;
+        Map<String, String> atributos = (idReusar != LEXEMA_NO_ENCONTRADO) ? tabla_simbolos.get(id) : new HashMap<>();
+        atributos.put(LEXEMA, nombre);
+        atributos.put(MANGLING, mangling);
+        atributos.put(TIPO, tipo);
+        atributos.put(USO, uso);
+        atributos.put(AMBITO, ambito);
+        tabla_simbolos.put(id, atributos);
+        return id;
+    }
+
+    public static int buscarIdentificador(String nombre, String ambito) {
+        String ambitoBusqueda = ambito;
+        while (ambitoBusqueda != null && !ambitoBusqueda.isEmpty()) {
+            String manglingBuscado = nombre + ambitoBusqueda;
+            for (Map.Entry<Integer, Map<String, String>> entrada : tabla_simbolos.entrySet()) {
+                Map<String, String> attrs = entrada.getValue();
+                String m = attrs.get(MANGLING);
+                if (m != null && m.equals(manglingBuscado)) {
+                    return entrada.getKey();
+                }
+            }
+            if (ambitoBusqueda.equals(":main") || !ambitoBusqueda.contains(":")) {
+                break;
+            }
+            int ultimoSeparador = ambitoBusqueda.lastIndexOf(':');
+            if (ultimoSeparador <= 0) {
+                break;
+            }
+            ambitoBusqueda = ambitoBusqueda.substring(0, ultimoSeparador);
+        }
+        return LEXEMA_NO_ENCONTRADO;
     }
 
     public static void imprimirTabla() {

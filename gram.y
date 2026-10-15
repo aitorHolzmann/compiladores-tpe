@@ -1,5 +1,6 @@
 %{
 import java.io.*;
+import java.util.ArrayList;
 %}
 
 /* ===== TOKENS ===== */
@@ -45,27 +46,37 @@ import java.io.*;
 
 /* PROGRAMA PRINCIPAL                                                        */
 
+nombre_programa
+    : IDENTIFICADOR
+        {
+            int ref = $1.ival;
+            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            TablaSimbolos.declararVariable(nombre, "programa", "nombre_programa", ambitoActual, AnalizadorLexico.getLineaActual());
+            $$ = $1;
+        }
+    ;
+
 programa
-    : IDENTIFICADOR sentencias_declarativas BEGIN sentencias_ejecutables END
+    : nombre_programa sentencias_declarativas BEGIN sentencias_ejecutables END
         { 
-            if (cant_errores == 0) {
+            if (cant_errores == 0 && cant_errores_semanticos == 0) {
                 System.out.println("Programa reconocido correctamente"); 
             } else {
-                System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s)");
+                System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
             }
         }
     | error { yyerror("Falta el nombre del programa al inicio"); } sentencias_declarativas BEGIN sentencias_ejecutables END
         { 
-            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s)");
+            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
         }
-    | IDENTIFICADOR sentencias_declarativas error { yyerror("Falta el delimitador BEGIN de sentencias ejecutables"); } sentencias_ejecutables END
+    | nombre_programa sentencias_declarativas error { yyerror("Falta el delimitador BEGIN de sentencias ejecutables"); } sentencias_ejecutables END
         {
-            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s)");
+            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
         }
-    | IDENTIFICADOR sentencias_declarativas BEGIN sentencias_ejecutables
+    | nombre_programa sentencias_declarativas BEGIN sentencias_ejecutables
         {
             yyerror("Falta el delimitador END al final del programa");
-            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s)");
+            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
         }
     ;
 
@@ -87,46 +98,121 @@ sentencia_declarativa
 
 declaracion_variables
     : tipo lista_variables ';'
+        {
+            String tipoDato = $1.sval;
+            ArrayList<String> variables = (ArrayList<String>) $2.obj;
+            if (variables != null) {
+                for (int i = 0; i < variables.size(); i++) {
+                    String nombreVar = variables.get(i);
+                    TablaSimbolos.declararVariable(nombreVar, tipoDato, "variable", ambitoActual, AnalizadorLexico.getLineaActual());
+                }
+            }
+        }
     | tipo error ';'
         { yyerror("Falta ';' al final de la declaracion de variables"); }
     ;
 
 lista_variables
     : IDENTIFICADOR
+        {
+            ArrayList<String> lista = new ArrayList<>();
+            int ref = $1.ival;
+            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            lista.add(lexema);
+            ParserVal pv = new ParserVal();
+            pv.obj = lista;
+            $$ = pv;
+        }
     | lista_variables ',' IDENTIFICADOR
-    | lista_variables IDENTIFICADOR   { yyerror("Falta ',' entre los identificadores"); }
+        {
+            ArrayList<String> lista = (ArrayList<String>) $1.obj;
+            int ref = $3.ival;
+            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            lista.add(lexema);
+            $$ = $1;
+        }
+    | lista_variables IDENTIFICADOR   { yyerror("Falta ',' entre los identificadores"); $$ = $1; }
     ;
 
 lista_identificadores
     : IDENTIFICADOR
+        {
+            ArrayList<String> lista = new ArrayList<>();
+            int ref = $1.ival;
+            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            lista.add(lexema);
+            ParserVal pv = new ParserVal();
+            pv.obj = lista;
+            $$ = pv;
+        }
     | lista_identificadores ',' IDENTIFICADOR
+        {
+            ArrayList<String> lista = (ArrayList<String>) $1.obj;
+            int ref = $3.ival;
+            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            lista.add(lexema);
+            $$ = $1;
+        }
     ;
 
 tipo
-    : SHORTINT
-    | SINGLEF
+    : SHORTINT { $$ = new ParserVal("SHORTINT"); }
+    | SINGLEF  { $$ = new ParserVal("SINGLEF"); }
     ;
 
 /* FUNCIONES (Tema 21: AUTO FUNCTION) */
 
+encabezado_funcion
+    : tipo FUNCTION IDENTIFICADOR
+        {
+            int ref = $3.ival;
+            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            TablaSimbolos.declararVariable(nombre, $1.sval, "funcion", ambitoActual, AnalizadorLexico.getLineaActual());
+            entrarAmbito(nombre);
+            $$ = $3;
+        }
+    ;
+
+inicio_auto_funcion
+    : AUTO FUNCTION IDENTIFICADOR
+        {
+            int ref = $3.ival;
+            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            TablaSimbolos.declararVariable(nombre, "auto", "funcion", ambitoActual, AnalizadorLexico.getLineaActual());
+            entrarAmbito(nombre);
+            $$ = $3;
+        }
+    ;
+
+encabezado_auto_funcion
+    : inicio_auto_funcion '(' lista_parametros_formales ')'
+        { cant_retornos_auto = 0; }
+    ;
+
 declaracion_funciones
-    : tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
+    : encabezado_funcion '(' lista_parametros_formales ')'
         sentencias_declarativas
         BEGIN sentencias_ejecutables END ';'
-
+        {
+            salirAmbito();
+        }
     | tipo FUNCTION error { yyerror("Falta nombre de funcion"); } '(' lista_parametros_formales ')'
         sentencias_declarativas
         BEGIN sentencias_ejecutables END ';' 
-    | tipo FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
+    | encabezado_funcion '(' lista_parametros_formales ')'
         sentencias_declarativas
         BEGIN sentencias_ejecutables END
-        { yyerror("Falta ';' al final de la declaracion de funcion"); } 
+        {
+            yyerror("Falta ';' al final de la declaracion de funcion");
+            salirAmbito();
+        } 
     | encabezado_auto_funcion BEGIN sentencias_ejecutables END ';'
         {
             if (cant_retornos_auto == 0) {
                 yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
             }
             cant_retornos_auto = -1;
+            salirAmbito();
         } 
     | AUTO FUNCTION error { yyerror("Falta nombre de funcion"); } '(' lista_parametros_formales ')'
         sentencias_declarativas
@@ -138,12 +224,8 @@ declaracion_funciones
             }
             cant_retornos_auto = -1;
             yyerror("Falta ';' al final de la declaracion de funcion");
+            salirAmbito();
         } 
-    ;
-
-encabezado_auto_funcion
-    : AUTO FUNCTION IDENTIFICADOR '(' lista_parametros_formales ')'
-        { cant_retornos_auto = 0; }
     ;
 
 lista_parametros_formales
@@ -153,7 +235,13 @@ lista_parametros_formales
     ;
 
 parametro_formal
-    : tipo IDENTIFICADOR { imprimirRegla("parametro_formal"); }
+    : tipo IDENTIFICADOR
+        {
+            int ref = $2.ival;
+            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            TablaSimbolos.declararVariable(nombre, $1.sval, "parametro", ambitoActual, AnalizadorLexico.getLineaActual());
+            imprimirRegla("parametro_formal");
+        }
     | tipo error { yyerror("Falta de nombre de parametro formal en declaracion de funcion"); }
     | error IDENTIFICADOR{ yyerror("Falta de tipo del parametro formal en declaracion de funcion"); } 
     ;
@@ -161,12 +249,29 @@ parametro_formal
 
 /* CLASES (Temas 26, 29, 30) */
 
+encabezado_clase
+    : CLASS IDENTIFICADOR
+        {
+            int ref = $2.ival;
+            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            TablaSimbolos.declararVariable(nombre, "clase", "nombre_clase", ambitoActual, AnalizadorLexico.getLineaActual());
+            entrarAmbito(nombre);
+            $$ = $2;
+        }
+    ;
+
 declaracion_clase
-    : CLASS IDENTIFICADOR importacion_opcional
+    : encabezado_clase importacion_opcional
         BEGIN herencia_opcional miembros_clase END ';'
-    | CLASS IDENTIFICADOR importacion_opcional
+        {
+            salirAmbito();
+        }
+    | encabezado_clase importacion_opcional
         BEGIN herencia_opcional miembros_clase END
-        { yyerror("Falta ';' al final de la declaracion de clase"); }
+        {
+            yyerror("Falta ';' al final de la declaracion de clase");
+            salirAmbito();
+        }
     ;
 
 importacion_opcional
@@ -195,14 +300,52 @@ miembro_clase
 
 atributo_clase
     : tipo lista_identificadores exportacion_opcional ';'
+        {
+            String tipoDato = $1.sval;
+            ArrayList<String> variables = (ArrayList<String>) $2.obj;
+            if (variables != null) {
+                for (int i = 0; i < variables.size(); i++) {
+                    String nombreVar = variables.get(i);
+                    TablaSimbolos.declararVariable(nombreVar, tipoDato, "atributo", ambitoActual, AnalizadorLexico.getLineaActual());
+                }
+            }
+        }
     ;
 
 metodo_clase
-    : tipo IDENTIFICADOR '(' lista_parametros_formales ')'
+    : encabezado_metodo '(' lista_parametros_formales ')'
         sentencias_declarativas
         BEGIN sentencias_ejecutables END exportacion_opcional ';'
-    | AUTO IDENTIFICADOR '(' lista_parametros_formales ')'
+        {
+            salirAmbito();
+        }
+    | encabezado_metodo_auto '(' lista_parametros_formales ')'
         BEGIN sentencias_ejecutables END exportacion_opcional ';'
+        {
+            salirAmbito();
+        }
+    ;
+
+encabezado_metodo
+    : tipo IDENTIFICADOR
+        {
+            int ref = $2.ival;
+            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            TablaSimbolos.declararVariable(nombre, $1.sval, "metodo", ambitoActual, AnalizadorLexico.getLineaActual());
+            entrarAmbito(nombre);
+            $$ = $2;
+        }
+    ;
+
+encabezado_metodo_auto
+    : AUTO IDENTIFICADOR
+        {
+            int ref = $2.ival;
+            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            TablaSimbolos.declararVariable(nombre, "auto", "metodo", ambitoActual, AnalizadorLexico.getLineaActual());
+            entrarAmbito(nombre);
+            $$ = $2;
+        }
     ;
 
 exportacion_opcional
@@ -224,6 +367,19 @@ declaracion_objeto
 
 declaracion_comptime
     : COMPTIME tipo lista_identificadores ';'
+        {
+            String tipoDato = $2.sval;
+            ArrayList<String> variables = (ArrayList<String>) $3.obj;
+            if (variables != null) {
+                for (int i = 0; i < variables.size(); i++) {
+                    String nombreVar = variables.get(i);
+                    int id = TablaSimbolos.declararVariable(nombreVar, tipoDato, "variable", ambitoActual, AnalizadorLexico.getLineaActual());
+                    if (id != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                        TablaSimbolos.agregarAtributo(id, "COMPTIME", "true");
+                    }
+                }
+            }
+        }
     | COMPTIME tipo lista_identificadores
         { yyerror("Falta ';' al final de la declaracion comptime"); }
     | COMPTIME lista_identificadores ';'
@@ -252,14 +408,21 @@ sentencia_ejecutable
     | error ';'
         { yyerror("Sentencia ejecutable malformada o falta ';' previo"); }
     ;
-a := 4
- + b
+
 asignacion
     : IDENTIFICADOR ASIGNAR expresion
         {
-            int ref = $1.ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            GeneradorTerceto.crearTerceto(":=", lexema, $3.sval);
+            if ($3 != null && $3.sval != null) {
+                int ref = $1.ival;
+                String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+                int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+                if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                    String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
+                    GeneradorTerceto.crearTerceto(":=", mangling, $3.sval);
+                } else {
+                    agregarErrorSemantico("Variable '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
+                }
+            }
         }
     | acceso_posicional ASIGNAR expresion
     ;
@@ -279,17 +442,21 @@ expresion
         }
     | expresion '+' termino
         {
-            String op1 = $1.sval;
-            String op2 = $3.sval;
-            int idTerceto = GeneradorTerceto.crearTerceto("+", op1, op2);
-            $$ = new ParserVal("[" + idTerceto + "]");
+            if ($1 != null && $1.sval != null && $3 != null && $3.sval != null) {
+                String op1 = $1.sval;
+                String op2 = $3.sval;
+                int idTerceto = GeneradorTerceto.crearTerceto("+", op1, op2);
+                $$ = new ParserVal("[" + idTerceto + "]");
+            }
         }
     | expresion '-' termino
         {
-            String op1 = $1.sval;
-            String op2 = $3.sval;
-            int idTerceto = GeneradorTerceto.crearTerceto("-", op1, op2);
-            $$ = new ParserVal("[" + idTerceto + "]");
+            if ($1 != null && $1.sval != null && $3 != null && $3.sval != null) {
+                String op1 = $1.sval;
+                String op2 = $3.sval;
+                int idTerceto = GeneradorTerceto.crearTerceto("-", op1, op2);
+                $$ = new ParserVal("[" + idTerceto + "]");
+            }
         }
     | expresion '+' error { yyerror("Falta un operando en la expresion"); }
     | expresion '-' error { yyerror("Falta un operando en la expresion"); }
@@ -302,17 +469,21 @@ termino
         }
     | termino '*' factor
         {
-            String op1 = $1.sval;
-            String op2 = $3.sval;
-            int idTerceto = GeneradorTerceto.crearTerceto("*", op1, op2);
-            $$ = new ParserVal("[" + idTerceto + "]");
+            if ($1 != null && $1.sval != null && $3 != null && $3.sval != null) {
+                String op1 = $1.sval;
+                String op2 = $3.sval;
+                int idTerceto = GeneradorTerceto.crearTerceto("*", op1, op2);
+                $$ = new ParserVal("[" + idTerceto + "]");
+            }
         }
     | termino '/' factor
         {
-            String op1 = $1.sval;
-            String op2 = $3.sval;
-            int idTerceto = GeneradorTerceto.crearTerceto("/", op1, op2);
-            $$ = new ParserVal("[" + idTerceto + "]");
+            if ($1 != null && $1.sval != null && $3 != null && $3.sval != null) {
+                String op1 = $1.sval;
+                String op2 = $3.sval;
+                int idTerceto = GeneradorTerceto.crearTerceto("/", op1, op2);
+                $$ = new ParserVal("[" + idTerceto + "]");
+            }
         }
     | termino '*' error { yyerror("Falta un operando en la expresion"); }
     | termino '/' error { yyerror("Falta un operando en la expresion"); }
@@ -328,7 +499,18 @@ factor
         {
             int ref = $1.ival;
             String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            $$ = new ParserVal(lexema);
+            int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+            if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
+                ParserVal pv = new ParserVal(mangling);
+                pv.ival = idVar;
+                $$ = pv;
+            } else {
+                agregarErrorSemantico("Variable '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
+                ParserVal pv = new ParserVal(lexema);
+                pv.ival = ref;
+                $$ = pv;
+            }
         }
     | CTE_SHORTINT
         {
@@ -338,7 +520,9 @@ factor
             if (valor > AnalizadorLexico.ValorMaximoInt) {
                 yyerror("Constante shortint positiva fuera de rango (" + lexema + "). Rango permitido: [-128, 127]");
             }
-            $$ = new ParserVal(lexema);
+            ParserVal pv = new ParserVal(lexema);
+            pv.ival = id;
+            $$ = pv;
         }
     | CTE_SINGLEF
         {
@@ -348,7 +532,9 @@ factor
             if (valor != 0.0 && (valor < AnalizadorLexico.ValorMinimoFloat || valor > AnalizadorLexico.ValorMaximoFloat)) {
                 yyerror("Constante singlef fuera de rango (" + lexema + ")");
             }
-            $$ = new ParserVal(lexema);
+            ParserVal pv = new ParserVal(lexema);
+            pv.ival = id;
+            $$ = pv;
         }
     | IDENTIFICADOR '(' ')'
     | IDENTIFICADOR '(' lista_expresiones ')'
@@ -379,10 +565,18 @@ lista_expresiones
 unica
     : IDENTIFICADOR '=' '(' expresion ')'
         {
-            int ref = $1.ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            int idTerceto = GeneradorTerceto.crearTerceto(":=", lexema, $4.sval);
-            $$ = new ParserVal("[" + idTerceto + "]");
+            if ($4 != null && $4.sval != null) {
+                int ref = $1.ival;
+                String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+                int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+                if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                    String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
+                    int idTerceto = GeneradorTerceto.crearTerceto(":=", mangling, $4.sval);
+                    $$ = new ParserVal("[" + idTerceto + "]");
+                } else {
+                    agregarErrorSemantico("Variable '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
+                }
+            }
         }
     | IDENTIFICADOR ASIGNAR '(' expresion ')'
         { yyerror("Uso del simbolo ':=' donde debe usarse '=' en asignacion dentro de expresion"); }
@@ -487,7 +681,9 @@ sentencia_pout
         }
     | POUT '(' expresion ')'
         {
-            GeneradorTerceto.crearTerceto("POUT", $3.sval, "-");
+            if ($3 != null && $3.sval != null) {
+                GeneradorTerceto.crearTerceto("POUT", $3.sval, "-");
+            }
         }
     | POUT '(' ')'
         { yyerror("Falta argumento en sentencia pout"); }
@@ -509,7 +705,28 @@ sentencia_ret
 static Parser parser;
 
 static int cant_errores = 0;
+static int cant_errores_semanticos = 0;
 static int cant_retornos_auto = -1;
+
+public static String ambitoActual = ":main";
+
+public static void entrarAmbito(String nombre) {
+    ambitoActual = ambitoActual + ":" + nombre;
+}
+
+public static void salirAmbito() {
+    int index = ambitoActual.lastIndexOf(':');
+    if (index > 0) {
+        ambitoActual = ambitoActual.substring(0, index);
+    } else {
+        ambitoActual = ":main";
+    }
+}
+
+public static void agregarErrorSemantico(String s) {
+    cant_errores_semanticos++;
+    System.out.println("Error semantico (linea " + AnalizadorLexico.getLineaActual() + "): " + s);
+}
 
 // Muestra por pantalla la regla reconocida y la linea donde termino (al reducir)
 static void imprimirRegla(String regla) {
@@ -534,6 +751,9 @@ public static void main(String[] args) {
 
     System.out.println("Compilando archivo: " + ruta);
     try {
+        ambitoActual = ":main";
+        cant_errores = 0;
+        cant_errores_semanticos = 0;
         AnalizadorLexico.reader = new PushbackReader(new BufferedReader(
                 new InputStreamReader(new FileInputStream(ruta), java.nio.charset.StandardCharsets.UTF_8)));
         parser = new Parser(debug);

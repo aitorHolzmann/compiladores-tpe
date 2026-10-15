@@ -1,0 +1,11 @@
+programa_errores_semanticos
+
+shortint a, b;
+shortint a; // Error semantico: redeclaracion en el mismo ambito
+
+BEGIN
+  a := 10$s;
+  z := 20$s; // Error semantico: z no declarada
+  b := z + 5$s; // Error semantico: z no declarada
+END
+

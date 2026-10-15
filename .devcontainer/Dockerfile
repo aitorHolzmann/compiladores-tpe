@@ -13,3 +13,19 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends byacc-j make \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Integracion Gentle AI / Antigravity:
+# 1. Directorios precreados para bind-mounts limpios
+# 2. Symlink de compatibilidad: /home/facha -> /home/vscode para resolver rutas del host
+# 3. Inclusion de ~/.local/bin en PATH
+RUN mkdir -p /home/vscode/.config/Code/User \
+             /home/vscode/.local/bin \
+             /home/vscode/.gentle-ai \
+             /home/vscode/.engram \
+             /home/vscode/.gemini \
+             /home/vscode/.agents \
+             /home/vscode/.copilot \
+    && ln -s /home/vscode /home/facha \
+    && chown -R vscode:vscode /home/vscode
+
+ENV PATH="/home/vscode/.local/bin:${PATH}"

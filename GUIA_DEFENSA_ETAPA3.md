@@ -12,13 +12,13 @@
 [Hito 1] Aritmética Completa y Propagación (COMPLETADO)
     │
     ▼
-[Hito 2] Sentencia de Asignación, Tema 17 (a := b = (exp)) y pout (SIGUIENTE)
+[Hito 2] Sentencia de Asignación, Tema 17 (a := b = (exp)) y pout (COMPLETADO)
     │
     ▼
-[Hito 3] Ámbitos, Name Mangling con ":" y Tabla de Símbolos Enriquecida
+[Hito 3] Ámbitos, Name Mangling con ":" y Tabla de Símbolos Enriquecida (COMPLETADO)
     │
     ▼
-[Hito 4] Chequeo Estático de Tipos y Tema 34: Conversión Explícita tos()
+[Hito 4] Chequeo Estático de Tipos y Tema 34: Conversión Explícita tos() (SIGUIENTE)
     │
     ▼
 [Hito 5] Control de Flujo y Backpatching: IF, IF-ELSE y REPEAT UNTIL (Tema 12)
@@ -232,6 +232,20 @@ GeneradorTerceto.crearTerceto("POUT", argumento, "-");
 
 ---
 
+#### ❓ Pregunta 6: ¿Cómo evitamos generar tercetos corruptos con `null` cuando una expresión falla sintácticamente?
+* **Explicación para la defensa:**  
+  Cuando ocurre un error sintáctico (por ejemplo en `a := b := (x);` del Tema 17 donde se usa erróneamente `:=`), la regla de recuperación reporta el error con `yyerror(...)` pero no sintetiza ningún atributo en `$$`.  
+  Si la regla contenedora (`asignacion` o un operador binario) invocara ciegamente a `crearTerceto`, recibiría un operando en `null` y emitiría instrucciones inválidas como `( := , a , null )`.  
+  Para garantizar la premisa de la cátedra de **no emitir tercetos de sentencias erróneas**, las acciones semánticas incorporan guardas defensivas:
+  ```java
+  if ($3 != null && $3.sval != null) {
+      GeneradorTerceto.crearTerceto(":=", lexema, $3.sval);
+  }
+  ```
+  De este modo, el compilador continúa analizando el resto del archivo para encontrar más errores, pero descarta la emisión de código intermedio de las sentencias malformadas.
+
+---
+
 ### 2.3. Caso de Prueba Verificado
 Archivo de prueba: `tests/test_asignaciones_y_pout.txt`
 
@@ -273,52 +287,154 @@ END
 
 ---
 
-## 📌 Hito 3 (PENDIENTE PARA LA PRÓXIMA SESIÓN): Ámbitos, Name Mangling con `:` y Tabla de Símbolos Enriquecida
+## 📌 Hito 3: Ámbitos, Name Mangling con `:` y Tabla de Símbolos Enriquecida (COMPLETADO)
 
 ### 3.1. Objetivo Técnico
-1. Implementar la gestión de ámbitos jerárquicos durante el parseo (ámbito global `:main`, funciones `:main:f1`, funciones anidadas `:main:f1:f2`, etc.).
+1. Implementar la gestión de ámbitos jerárquicos durante el parseo (ámbito global `:main`, funciones `:main:f1`, clases `:main:ClaseA`, etc.).
 2. Implementar el esquema estricto de **Name Mangling** exigido por la cátedra (`Tp3.pdf`, pág. 2) utilizando exclusivamente el separador `:`.
 3. Registrar metadatos semánticos completos en la `TablaSimbolos`: `LEXEMA`, `MANGLING`, `TIPO`, `USO` y `AMBITO`.
 4. Implementar los dos primeros chequeos semánticos obligatorios:
    - Detección de variable **no declarada o no visible** en el ámbito actual.
    - Detección de variable **redeclarada en el mismo ámbito** (permitiendo *shadowing* en ámbitos diferentes).
+5. Emitir los tercetos utilizando los nombres mangledos (`a:main`, `a:main:sumar`) para eliminar cualquier ambigüedad en el código intermedio.
 
 ---
 
-### 3.2. Decisiones de Diseño Acordadas
+### 3.2. Decisiones de Diseño y Preguntas Conceptuales
 
-1. **Gestión de Ámbito en `gram.y`:**
-   - Variable de estado: `public static String ambitoActual = ":main";`.
-   - Método `entrarAmbito(String nombre)`: concatena `ambitoActual + ":" + nombre`.
-   - Método `salirAmbito()`: recorta el último segmento hasta el `:` anterior (volviendo al ámbito padre).
-
-2. **Estructura y Métodos en `TablaSimbolos.java`:**
-   - Entradas enriquecidas con atributos:
-     - `LEXEMA`: nombre original en el código fuente (ej. `"a"`).
-     - `MANGLING`: clave única con su contexto (ej. `"a:main"` o `"a:main:aa"`).
-     - `TIPO`: tipo semántico (`"SHORTINT"`, `"SINGLEF"`).
-     - `USO`: rol sintáctico (`"variable"`, `"parametro"`, `"funcion"`, `"nombre_programa"`).
-     - `AMBITO`: cadena del ámbito donde fue declarada (ej. `":main"`).
-   - `declararVariable(String nombre, String tipo, String uso, String ambito)`:
-     - Verifica si ya existe una entrada con la clave `nombre + ambito` y el mismo `USO`.
-     - Si ya existe: emite error semántico de redeclaración.
-     - Si no existe: la inserta con sus metadatos.
-   - `buscarIdentificador(String nombre, String ambito)`:
-     - Implementa la búsqueda jerárquica ascendente: prueba `nombre + ambito`.
-     - Si no la encuentra, recorta el último `:nombre` del ámbito y vuelve a buscar hacia afuera hasta agotar `:main`.
-     - Si no se encuentra en ningún nivel de la jerarquía: emite error semántico de variable no declarada.
-
-3. **Propagación en la Gramática (`gram.y`):**
-   - `lista_variables` sintetizará una lista `ArrayList<String>` en el campo `obj` de `ParserVal`.
-   - `declaracion_variables` tomará el tipo (`$1.sval`) y registrará cada variable de la lista con `ambitoActual`.
-   - En `factor : IDENTIFICADOR`, `asignacion` y `unica`: se resolverá el identificador con `buscarIdentificador(nombre, ambitoActual)` y se emitirá el terceto con su nombre mangled unívoco (ej. `a:main`), alimentando la generación de código sin ambigüedades.
+#### ❓ Pregunta 1: ¿Por qué la cátedra exige Name Mangling con `:` y cómo se estructuran las claves?
+* **Explicación para la defensa:**  
+  En un lenguaje con funciones, procedimientos o clases, dos identificadores pueden tener el mismo nombre léxico (por ejemplo, `a` global y `a` local a una función). Si el compilador usara solo `"a"` en el código intermedio o en el Assembler final, se producirían colisiones destructivas en memoria.  
+  El **Name Mangling** (decoración de nombres) transforma el identificador relativo en un nombre absoluto unívoco concatenando la ruta de ámbitos:
+  - En el programa principal: `a + :main` → `a:main`.
+  - En la función `sumar`: `a + :main:sumar` → `a:main:sumar`.
+  - En un método de clase: `a + :main:ClaseA:metodo1` → `a:main:ClaseA:metodo1`.  
+  El `Tp3.pdf` exige taxativamente utilizar `:` como separador.
 
 ---
 
-### 3.3. Casos de Prueba Planificados para Validar Hito 3
-1. **Caso Válido (Shadowing):** Declarar `shortint a;` en el main y `shortint a;` dentro de una función. Ambas deben coexistir como `a:main` y `a:main:funcion` sin error.
-2. **Caso Inválido (Redeclaración):** Declarar dos veces `shortint a;` en el main → debe reportar error semántico: `Variable 'a' ya declarada en este ambito`.
-3. **Caso Inválido (No declarada):** Usar una variable `z` sin haberla declarado previamente → debe reportar error semántico: `Variable 'z' no declarada o no visible en el ambito actual`.
+#### ❓ Pregunta 2: ¿Cómo funciona la resolución jerárquica ascendente de identificadores? ¿Qué pasa con el *shadowing*?
+* **Explicación para la defensa:**  
+  El método `TablaSimbolos.buscarIdentificador(nombre, ambitoActual)` implementa la regla de visibilidad estática (alcance léxico):
+  1. **Nivel local:** Primero busca el identificador con el ámbito más específico (ej. `x:main:sumar`). Si existe, lo retorna de inmediato. Esto garantiza el **shadowing**: la variable local oculta a la global con el mismo nombre.
+  2. **Ascenso jerárquico:** Si no lo encuentra, recorta el último segmento del ámbito (`:sumar`) mediante `ambito.lastIndexOf(':')` y vuelve a buscar en el ámbito contenedor (`x:main`).
+  3. **Límite superior:** El proceso continúa hasta agotar el ámbito raíz `:main`.
+  4. **Fallo semántico:** Si no se encuentra en ningún nivel, emite el error semántico:  
+     `Error semantico (linea X): Variable 'x' no declarada o no visible en el ambito actual (:main:sumar)`.
+
+---
+
+#### ❓ Pregunta 3: ¿Cómo interactúa el léxico con la Tabla de Símbolos enriquecida sin perder identificadores ni duplicar erróneamente?
+* **Explicación para la defensa:**  
+  1. En el análisis léxico (`AS3`), el autómata no conoce el contexto gramatical ni el ámbito. Solo sabe que leyó la cadena `"a"`. Si `"a"` no existe en la tabla, la inserta como entrada cruda (`{LEXEMA=a}`).
+  2. Al llegar a la producción de declaración (`declaracion_variables`), el sintáctico conoce el tipo (`SHORTINT`), el uso (`variable`) y el ámbito activo (`ambitoActual`).  
+     Llama a `TablaSimbolos.declararVariable(...)`:
+     - Si ya existe una entrada con ese mismo `MANGLING`, detecta y reporta **redeclaración**.
+     - Si no está redeclarada, busca si hay una entrada cruda del léxico para reusarla y enriquecerla con sus metadatos (`MANGLING`, `TIPO`, `USO`, `AMBITO`).
+     - Si una variable con el mismo lexema se declara en otro ámbito (shadowing), se crea una **nueva entrada independiente** en la tabla con su respectivo `MANGLING` único.
+
+---
+
+#### ❓ Pregunta 4: ¿Por qué en `lista_variables` usamos `ArrayList<String>` en el campo `obj` de `ParserVal`?
+* **Explicación para la defensa:**  
+  En gramáticas LALR como la nuestra, la regla es:
+  `declaracion_variables : tipo lista_variables ';'`
+  Debido a que el parsing es ascendente (bottom-up), `lista_variables` se reduce **antes** de que la regla de `declaracion_variables` conozca la lista completa de identificadores.  
+  Para transportar la lista de identificadores hacia arriba en el árbol:
+  - En `lista_variables : IDENTIFICADOR`, instanciamos una lista `ArrayList<String>` y la guardamos en `$$.obj`.
+  - En la recursión `lista_variables : lista_variables ',' IDENTIFICADOR`, agregamos cada identificador a esa misma lista.
+  - Al reducir `declaracion_variables`, tomamos el tipo desde `$1.sval` y recorremos la lista `$2.obj` con un bucle `for` tradicional, registrando cada variable con su tipo y ámbito correspondiente.
+
+---
+
+### 3.3. Casos de Prueba Verificados
+
+#### Caso 1: Ámbitos y Shadowing (`tests/test_hito3_ambitos.txt`)
+```pascal
+programa_ambitos
+
+shortint a, b;
+
+shortint FUNCTION sumar(shortint x)
+  shortint a, res;
+BEGIN
+  a := 5$s;
+  res := a + x;
+  RET(res);
+END;
+
+BEGIN
+  a := 10$s;
+  b := a;
+  pout(b);
+END
+```
+
+**Salida obtenida:**
+```text
+Programa reconocido correctamente
+=== TABLA DE SIMBOLOS ===
+1: {USO=nombre_programa, TIPO=programa, MANGLING=programa_ambitos:main, AMBITO=:main, LEXEMA=programa_ambitos}
+2: {USO=variable, TIPO=SHORTINT, MANGLING=a:main, AMBITO=:main, LEXEMA=a}
+3: {USO=variable, TIPO=SHORTINT, MANGLING=b:main, AMBITO=:main, LEXEMA=b}
+4: {USO=funcion, TIPO=SHORTINT, MANGLING=sumar:main, AMBITO=:main, LEXEMA=sumar}
+5: {USO=parametro, TIPO=SHORTINT, MANGLING=x:main:sumar, AMBITO=:main:sumar, LEXEMA=x}
+6: {USO=variable, TIPO=SHORTINT, MANGLING=res:main:sumar, AMBITO=:main:sumar, LEXEMA=res}
+7: {USO=variable, TIPO=SHORTINT, MANGLING=a:main:sumar, AMBITO=:main:sumar, LEXEMA=a}
+8: {LEXEMA=5, OCURRENCIAS=1}
+9: {LEXEMA=10, OCURRENCIAS=1}
+
+----------------------------------------
+         CODIGO INTERMEDIO (TERCETOS)   
+----------------------------------------
+0 ( := , a:main:sumar , 5 )
+1 ( + , a:main:sumar , x:main:sumar )
+2 ( := , res:main:sumar , [1] )
+3 ( := , a:main , 10 )
+4 ( := , b:main , a:main )
+5 ( POUT , b:main , - )
+----------------------------------------
+```
+*Validación:* Coexistencia de `a:main` y `a:main:sumar` sin colisión; tercetos emitidos con nombres mangledos exactos.
+
+---
+
+#### Caso 2: Chequeos Semánticos Obligatorios (`tests/test_hito3_errores_semanticos.txt`)
+```pascal
+programa_errores_semanticos
+
+shortint a, b;
+shortint a; // Error semantico: redeclaracion en el mismo ambito
+
+BEGIN
+  a := 10$s;
+  z := 20$s; // Error semantico: z no declarada
+  b := z + 5$s; // Error semantico: z no declarada
+END
+```
+
+**Salida obtenida:**
+```text
+Error semantico (linea 4): Redeclaracion de 'a' en el ambito :main
+Error semantico (linea 8): Variable 'z' no declarada o no visible en el ambito actual (:main)
+Error semantico (linea 9): Variable 'z' no declarada o no visible en el ambito actual (:main)
+Compilacion finalizada con 0 error(es) sintactico(s) y 3 error(es) semantico(s)
+```
+*Validación:* Detección taxativa de redeclaraciones en el mismo ámbito y variables no declaradas, reportando número de línea real y bloqueando la emisión de tercetos erróneos.
+
+---
+
+## 📌 Hito 4 (SIGUIENTE): Chequeo Estático de Tipos y Tema 34: Conversión Explícita `tos()`
+
+### 4.1. Objetivo Técnico
+1. Propagar el tipo (`SHORTINT` o `SINGLEF`) a través de atributos sintetizados (`$$.sval` y campo `tipo`) en `expresion`, `termino` y `factor`.
+2. Validar compatibilidad de tipos en operaciones aritméticas binarias (`+`, `-`, `*`, `/`):
+   - Prohibido operar `SHORTINT` con `SINGLEF` sin conversión explícita `tos()`.
+3. Validar compatibilidad en sentencias de asignación (`:=`):
+   - Asignar `SHORTINT` a `SINGLEF`: permitido mediante conversión implícita (generar terceto de conversión).
+   - Asignar `SINGLEF` a `SHORTINT`: prohibido sin conversión explícita `tos()` (error semántico).
+4. Implementar el **Tema 34**: función intrínseca `tos(expresion)` que convierte de `SINGLEF` a `SHORTINT` emitiendo el terceto `( tos , [i] , - )`.
+
 
 
 
