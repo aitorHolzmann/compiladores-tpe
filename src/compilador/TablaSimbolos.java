@@ -114,24 +114,24 @@ public class TablaSimbolos {
         return agregarOBuscarConstante("-" + lexema_positivo);
     }
 
-    public static int declararVariable(String nombre, String tipo, String uso, String ambito, int linea) {
+    public static int declararVariable(String nombre, String tipo, String uso, String ambito) {
         String mangling = nombre + ambito;
 
-        // 1. Chequeo de redeclaracion en el mismo ambito
+        //Chequeo de redeclaracion en el mismo ambito
         for (Map.Entry<Integer, Map<String, String>> entrada : tabla_simbolos.entrySet()) {
-            Map<String, String> attrs = entrada.getValue();
-            String m = attrs.get(MANGLING);
+            Map<String, String> atributos = entrada.getValue();
+            String m = atributos.get(MANGLING);
             if (m != null && m.equals(mangling)) {
                 Parser.agregarErrorSemantico("Redeclaracion de '" + nombre + "' en el ambito " + ambito);
                 return LEXEMA_NO_ENCONTRADO;
             }
         }
 
-        // 2. Buscar si existe una entrada cruda creada por el lexico sin ambito asignado
-        int idReusar = LEXEMA_NO_ENCONTRADO;
+        //Buscar si existe una entrada sin ambito asignado (Primera declaracion con ese ID)
+        int idReusar = LEXEMA_NO_ENCONTRADO; 
         for (Map.Entry<Integer, Map<String, String>> entrada : tabla_simbolos.entrySet()) {
-            Map<String, String> attrs = entrada.getValue();
-            if (nombre.equals(attrs.get(LEXEMA)) && attrs.get(MANGLING) == null) {
+            Map<String, String> atributos = entrada.getValue();
+            if (nombre.equals(atributos.get(LEXEMA)) && atributos.get(MANGLING) == null) {
                 idReusar = entrada.getKey();
                 break;
             }
@@ -150,22 +150,16 @@ public class TablaSimbolos {
 
     public static int buscarIdentificador(String nombre, String ambito) {
         String ambitoBusqueda = ambito;
-        while (ambitoBusqueda != null && !ambitoBusqueda.isEmpty()) {
+        while (ambitoBusqueda != null && ambitoBusqueda.contains(":")) {
             String manglingBuscado = nombre + ambitoBusqueda;
             for (Map.Entry<Integer, Map<String, String>> entrada : tabla_simbolos.entrySet()) {
-                Map<String, String> attrs = entrada.getValue();
-                String m = attrs.get(MANGLING);
+                Map<String, String> atributos = entrada.getValue();
+                String m = atributos.get(MANGLING);
                 if (m != null && m.equals(manglingBuscado)) {
                     return entrada.getKey();
                 }
             }
-            if (ambitoBusqueda.equals(":main") || !ambitoBusqueda.contains(":")) {
-                break;
-            }
             int ultimoSeparador = ambitoBusqueda.lastIndexOf(':');
-            if (ultimoSeparador <= 0) {
-                break;
-            }
             ambitoBusqueda = ambitoBusqueda.substring(0, ultimoSeparador);
         }
         return LEXEMA_NO_ENCONTRADO;

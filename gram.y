@@ -51,7 +51,7 @@ nombre_programa
         {
             int ref = $1.ival;
             String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, "programa", "nombre_programa", ambitoActual, AnalizadorLexico.getLineaActual());
+            TablaSimbolos.declararVariable(nombre, "programa", "nombre_programa", ambitoActual);
             $$ = $1;
         }
     ;
@@ -104,7 +104,7 @@ declaracion_variables
             if (variables != null) {
                 for (int i = 0; i < variables.size(); i++) {
                     String nombreVar = variables.get(i);
-                    TablaSimbolos.declararVariable(nombreVar, tipoDato, "variable", ambitoActual, AnalizadorLexico.getLineaActual());
+                    TablaSimbolos.declararVariable(nombreVar, tipoDato, "variable", ambitoActual);
                 }
             }
         }
@@ -167,7 +167,7 @@ encabezado_funcion
         {
             int ref = $3.ival;
             String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, $1.sval, "funcion", ambitoActual, AnalizadorLexico.getLineaActual());
+            TablaSimbolos.declararVariable(nombre, $1.sval, "funcion", ambitoActual);
             entrarAmbito(nombre);
             $$ = $3;
         }
@@ -178,7 +178,7 @@ inicio_auto_funcion
         {
             int ref = $3.ival;
             String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, "auto", "funcion", ambitoActual, AnalizadorLexico.getLineaActual());
+            TablaSimbolos.declararVariable(nombre, "auto", "funcion", ambitoActual);
             entrarAmbito(nombre);
             $$ = $3;
         }
@@ -239,7 +239,7 @@ parametro_formal
         {
             int ref = $2.ival;
             String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, $1.sval, "parametro", ambitoActual, AnalizadorLexico.getLineaActual());
+            TablaSimbolos.declararVariable(nombre, $1.sval, "parametro", ambitoActual);
             imprimirRegla("parametro_formal");
         }
     | tipo error { yyerror("Falta de nombre de parametro formal en declaracion de funcion"); }
@@ -254,7 +254,7 @@ encabezado_clase
         {
             int ref = $2.ival;
             String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, "clase", "nombre_clase", ambitoActual, AnalizadorLexico.getLineaActual());
+            TablaSimbolos.declararVariable(nombre, "clase", "nombre_clase", ambitoActual);
             entrarAmbito(nombre);
             $$ = $2;
         }
@@ -306,7 +306,7 @@ atributo_clase
             if (variables != null) {
                 for (int i = 0; i < variables.size(); i++) {
                     String nombreVar = variables.get(i);
-                    TablaSimbolos.declararVariable(nombreVar, tipoDato, "atributo", ambitoActual, AnalizadorLexico.getLineaActual());
+                    TablaSimbolos.declararVariable(nombreVar, tipoDato, "atributo", ambitoActual);
                 }
             }
         }
@@ -331,7 +331,7 @@ encabezado_metodo
         {
             int ref = $2.ival;
             String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, $1.sval, "metodo", ambitoActual, AnalizadorLexico.getLineaActual());
+            TablaSimbolos.declararVariable(nombre, $1.sval, "metodo", ambitoActual);
             entrarAmbito(nombre);
             $$ = $2;
         }
@@ -342,7 +342,7 @@ encabezado_metodo_auto
         {
             int ref = $2.ival;
             String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, "auto", "metodo", ambitoActual, AnalizadorLexico.getLineaActual());
+            TablaSimbolos.declararVariable(nombre, "auto", "metodo", ambitoActual);
             entrarAmbito(nombre);
             $$ = $2;
         }
@@ -373,7 +373,7 @@ declaracion_comptime
             if (variables != null) {
                 for (int i = 0; i < variables.size(); i++) {
                     String nombreVar = variables.get(i);
-                    int id = TablaSimbolos.declararVariable(nombreVar, tipoDato, "variable", ambitoActual, AnalizadorLexico.getLineaActual());
+                    int id = TablaSimbolos.declararVariable(nombreVar, tipoDato, "variable", ambitoActual);
                     if (id != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
                         TablaSimbolos.agregarAtributo(id, "COMPTIME", "true");
                     }
@@ -431,7 +431,7 @@ acceso_posicional
     : IDENTIFICADOR '[' CTE_SHORTINT ']'
     | IDENTIFICADOR '[' IDENTIFICADOR ']'
     | IDENTIFICADOR '[' CTE_SINGLEF ']'
-        { yyerror("Acceso posicional invalido: solo se permite constante SHORTINT positiva o identificador"); }
+        { yyerror("Acceso posicional invalido: solo se permite constante SHORTINT positiva o identificador"); $$ = new ParserVal(); }
     ;
 
 /* EXPRESIONES                                                               */
@@ -447,6 +447,8 @@ expresion
                 String op2 = $3.sval;
                 int idTerceto = GeneradorTerceto.crearTerceto("+", op1, op2);
                 $$ = new ParserVal("[" + idTerceto + "]");
+            } else {
+                $$ = new ParserVal();
             }
         }
     | expresion '-' termino
@@ -456,11 +458,13 @@ expresion
                 String op2 = $3.sval;
                 int idTerceto = GeneradorTerceto.crearTerceto("-", op1, op2);
                 $$ = new ParserVal("[" + idTerceto + "]");
+            } else {
+                $$ = new ParserVal();
             }
         }
-    | expresion '+' error { yyerror("Falta un operando en la expresion"); }
-    | expresion '-' error { yyerror("Falta un operando en la expresion"); }
-    | '+' termino { yyerror("Falta un operando en la expresion"); }
+    | expresion '+' error { yyerror("Falta un operando en la expresion"); $$ = new ParserVal(); }
+    | expresion '-' error { yyerror("Falta un operando en la expresion"); $$ = new ParserVal(); }
+    | '+' termino { yyerror("Falta un operando en la expresion"); $$ = new ParserVal(); }
     ;
 termino
     : factor
@@ -474,6 +478,8 @@ termino
                 String op2 = $3.sval;
                 int idTerceto = GeneradorTerceto.crearTerceto("*", op1, op2);
                 $$ = new ParserVal("[" + idTerceto + "]");
+            } else {
+                $$ = new ParserVal();
             }
         }
     | termino '/' factor
@@ -483,15 +489,17 @@ termino
                 String op2 = $3.sval;
                 int idTerceto = GeneradorTerceto.crearTerceto("/", op1, op2);
                 $$ = new ParserVal("[" + idTerceto + "]");
+            } else {
+                $$ = new ParserVal();
             }
         }
-    | termino '*' error { yyerror("Falta un operando en la expresion"); }
-    | termino '/' error { yyerror("Falta un operando en la expresion"); }
-    | '*' factor { yyerror("Falta un operando en la expresion"); }
-    | '/' factor { yyerror("Falta un operando en la expresion"); }
-    | termino IDENTIFICADOR { yyerror("Falta operador en la expresion"); }
-    | termino CTE_SHORTINT  { yyerror("Falta operador en la expresion"); }
-    | termino CTE_SINGLEF   { yyerror("Falta operador en la expresion"); }
+    | termino '*' error { yyerror("Falta un operando en la expresion"); $$ = new ParserVal(); }
+    | termino '/' error { yyerror("Falta un operando en la expresion"); $$ = new ParserVal(); }
+    | '*' factor { yyerror("Falta un operando en la expresion"); $$ = new ParserVal(); }
+    | '/' factor { yyerror("Falta un operando en la expresion"); $$ = new ParserVal(); }
+    | termino IDENTIFICADOR { yyerror("Falta operador en la expresion"); $$ = new ParserVal(); }
+    | termino CTE_SHORTINT  { yyerror("Falta operador en la expresion"); $$ = new ParserVal(); }
+    | termino CTE_SINGLEF   { yyerror("Falta operador en la expresion"); $$ = new ParserVal(); }
     ;
 
 factor
@@ -507,9 +515,7 @@ factor
                 $$ = pv;
             } else {
                 agregarErrorSemantico("Variable '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
-                ParserVal pv = new ParserVal(lexema);
-                pv.ival = ref;
-                $$ = pv;
+                $$ = new ParserVal();
             }
         }
     | CTE_SHORTINT
@@ -575,11 +581,17 @@ unica
                     $$ = new ParserVal("[" + idTerceto + "]");
                 } else {
                     agregarErrorSemantico("Variable '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
+                    $$ = new ParserVal();
                 }
+            } else {
+                $$ = new ParserVal();
             }
         }
     | IDENTIFICADOR ASIGNAR '(' expresion ')'
-        { yyerror("Uso del simbolo ':=' donde debe usarse '=' en asignacion dentro de expresion"); }
+        {
+            yyerror("Uso del simbolo ':=' donde debe usarse '=' en asignacion dentro de expresion");
+            $$ = new ParserVal();
+        }
     ;
 
 numero_negativo

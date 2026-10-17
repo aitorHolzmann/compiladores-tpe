@@ -347,6 +347,113 @@ END
 
 ---
 
+#### ❓ Pregunta 5: ¿Por qué usamos `LinkedHashMap` en `TablaSimbolos` en lugar de un `HashMap` común si ambos se iteran con un `for`?
+* **Explicación para la defensa:**  
+  Un `HashMap` común no garantiza el orden en que se devuelven los elementos al iterar su `entrySet()`, ya que la secuencia depende de los buckets de hash y de los rehashes dinámicos. En la arquitectura de compiladores, el orden de inserción determinístico es crítico por dos razones:
+  1. **Tema 29 (Acceso posicional a atributos de clases):** La cátedra exige acceder a los atributos de un objeto por su número ordinal (`obj[0$s]`, `obj[1$s]`), el cual mapea al **orden en que fueron declarados en el código fuente**. Con `LinkedHashMap`, los atributos se registran y consultan exactamente en su orden de declaración.
+  2. **Determinismo en correcciones automáticas:** La cátedra compara las salidas volcadas de la Tabla de Símbolos contra patrones esperados. `LinkedHashMap` garantiza una salida estable, secuencial y reproducible (`1, 2, 3...`) en todas las ejecuciones.
+
+---
+
+#### ❓ Pregunta 6: ¿Por qué se eliminó el parámetro `linea` de `declararVariable`?
+* **Explicación para la defensa:**  
+  Originalmente la firma era `declararVariable(String nombre, String tipo, String uso, String ambito, int linea)`.  
+  Sin embargo, el método `Parser.agregarErrorSemantico(String s)` consulta directamente la línea en curso llamando a `AnalizadorLexico.getLineaActual()`. Mantener el parámetro `linea` en la firma de `declararVariable` era código muerto y redundante. Al eliminarlo, simplificamos la interfaz pública y mantuvimos una única fuente de verdad para la línea actual.
+
+---
+
+#### ❓ Pregunta 7: ¿Está bien que en las clases la regla `miembros_clase` permita intercalar atributos y métodos en cualquier orden?
+* **Explicación para la defensa:**  
+  **Sí, es 100% intencional y está alineado con la especificación de la cátedra.**  
+  En la gramática oficial de referencia (`teoria/grupo20.y`, líneas 102-112), la regla está definida recursivamente:
+  ```yacc
+  miembros_clase : /* vacio */ | miembros_clase miembro_clase ;
+  miembro_clase  : atributo_clase | metodo_clase | herencia_opcional ;
+  ```
+  Al igual que en Java o C++, los atributos y métodos pueden declararse en cualquier secuencia según la necesidad del programador. La regla recursiva por izquierda en LALR(1) procesa cualquier intercalación con cero conflictos Shift/Reduce.
+
+---
+
+#### ❓ Pregunta 8: ¿Por qué en `declaracion_comptime` se chequea `if (id != LEXEMA_NO_ENCONTRADO)` si parece que nunca fallaría?
+* **Explicación para la defensa:**  
+  Es un **guard semántico indispensable**.  
+  Si el programador comete un error de redeclaración en el código fuente (por ejemplo: `SHORTINT x; COMPTIME SHORTINT x;`), la llamada a `declararVariable` detecta la colisión de mangling en el mismo ámbito, emite el error semántico de redeclaración y retorna `LEXEMA_NO_ENCONTRADO` (`-1`).  
+  El chequeo `if (id != TablaSimbolos.LEXEMA_NO_ENCONTRADO)` previene que el compilador intente ejecutar `TablaSimbolos.agregarAtributo(-1, "COMPTIME", "true")` sobre una declaración rechazada.
+
+---
+
+#### ❓ Pregunta 9: ¿Cómo se simplifica `buscarIdentificador` usando `contains(":")` en el `while` y por qué no hacen falta los `break`?
+* **Explicación para la defensa:**  
+  El método `buscarIdentificador` escala iterativamente en el árbol de ámbitos podando el último segmento con `lastIndexOf(':')`:
+  ```java
+  while (ambitoBusqueda != null && ambitoBusqueda.contains(":")) {
+      ...
+      int ultimoSeparador = ambitoBusqueda.lastIndexOf(':');
+      ambitoBusqueda = ambitoBusqueda.substring(0, ultimoSeparador);
+  }
+  ```
+  **El fundamento del invariante:** Todo ámbito válido en nuestra arquitectura comienza con `:` (la raíz es `:main`).  
+  Cuando la búsqueda llega a la raíz `:main`, el último `:` se encuentra en el índice `0`. La operación `substring(0, 0)` produce una cadena vacía `""`.  
+  En la siguiente evaluación del bucle, `"".contains(":")` evalúa a `false`, terminando el ciclo de forma totalmente natural sin requerir ningún `break` artificial ni condiciones duplicadas.
+
+---
+
+#### ❓ Pregunta 10: ¿Por qué guardamos `ival` en `ParserVal` en las reglas de `factor`? ¿Cuándo se usa?
+* **Explicación para la defensa:**  
+  En `factor : IDENTIFICADOR`, `CTE_SHORTINT`, `CTE_SINGLEF` y `numero_negativo`:
+  1. **Uso inmediato:** En `numero_negativo : '-' CTE_SHORTINT`, se utiliza `$2.ival` para consultar la Tabla de Símbolos y convertir la constante a su versión negativa con `convertirANegativo`.
+  2. **Cimiento para el Hito 4 (Chequeo Estático de Tipos):** En operaciones binarias (`expresion '+' termino`), el compilador necesita validar la compatibilidad de tipos entre operandos. Si `factor` descartara el `ival` y solo retornara el texto en `sval`, el analizador de tipos tendría que volver a iterar y buscar en toda la tabla. Al propagar `pv.ival = idVar;`, las reglas superiores tienen acceso directo en $O(1)$ a los metadatos semánticos (`TablaSimbolos.obtenerAtributo($1.ival, TablaSimbolos.TIPO)`).
+
+---
+
+#### ❓ Pregunta 11: ¿Por qué en `encabezado_funcion` se declara la función ANTES de invocar a `entrarAmbito`?
+* **Explicación para la defensa:**  
+  Si invocáramos `entrarAmbito("sumar")` antes de registrar la función en la Tabla de Símbolos:
+  - La función se declararía con el mangling `sumar:main:sumar` (dentro de su propio ámbito local).
+  - Como consecuencia, ¡la función viviría encerrada dentro de sí misma y desde el programa principal `:main` nadie podría verla ni invocarla!  
+  El orden estricto de una compilación de una pasada es:
+  1. Declarar el símbolo de la función en el ámbito contenedor actual (`:main`).
+  2. Descender al nuevo ámbito (`:main:sumar`) para que los parámetros formales y las variables locales queden contenidos en él.
+
+---
+
+#### ❓ Pregunta 12: ¿Por qué en `lista_variables` usamos recursión por izquierda y qué riesgo tendría escribirla por derecha?
+* **Explicación para la defensa:**  
+  - **Recursión por izquierda (`lista_variables ',' IDENTIFICADOR`):** En un autómata ascendente (bottom-up / LALR), cada vez que se lee una coma y un identificador, el parser ejecuta un `Reduce` inmediato. La pila del autómata se mantiene en tamaño constante $O(1)$ sin importar si se declaran 3 o 10.000 variables.
+  - **Recursión por derecha (`IDENTIFICADOR ',' lista_variables`):** El autómata no puede reducir hasta conocer el final de la lista. Está obligado a hacer `Shift` de todos los identificadores y comas, consumiendo memoria proporcional a la cantidad de variables ($O(N)$ en la pila). Si la lista es extensa, provoca un **desbordamiento de la pila del parser** (`StackOverflow`). Por eso en Yacc las listas siempre se definen por izquierda.
+
+---
+
+#### ❓ Pregunta 13: ¿Por qué en BYacc/J asignamos `$$ = new ParserVal();` en lugar de `$$ = null;` ante un error semántico o sintáctico?
+* **Explicación para la defensa:**  
+  1. **El peligro de propagar un `ParserVal` válido con el lexema crudo:** Si una variable no está declarada y se devuelve un `ParserVal` con el lexema crudo y referencia del léxico, las operaciones superiores (`expresion '+' termino`, `asignacion`) ven operandos no nulos y generan tercetos inválidos con variables inexistentes (ej. `( + , z , 5 )`).
+  2. **El motivo técnico de no usar `null` de Java:** En BYacc/J, antes de ejecutar la acción semántica de una regla con longitud mayor a cero, el autómata ejecuta:
+     ```java
+     yyval = dup_yyval(val_peek(yym - 1));
+     ```
+     Donde `dup_yyval(val)` accede directamente a `val.ival`, `val.sval`, etc. Si una acción semántica previa asignara `$$ = null;`, el valor apilado en la pila semántica sería `null`, provocando un `NullPointerException` en la siguiente reducción que intente duplicarlo.
+  3. **La solución canónica:** Asignar una instancia vacía: `$$ = new ParserVal();`. Un `ParserVal` instanciado por defecto tiene `sval = null`. De esta forma, la pila del autómata nunca contiene referencias nulas (evitando el fallo en `dup_yyval`), pero todas las guardas superiores (`if ($3 != null && $3.sval != null)`) detectan que el valor sintetizado no es computable y bloquean limpiamente la creación de tercetos corruptos.
+
+---
+
+#### ❓ Pregunta 14: En operaciones binarias (`+`, `-`, `*`, `/`), ¿por qué es indispensable el bloque `else { $$ = new ParserVal(); }`?
+* **Explicación para la defensa:**  
+  En BYacc/J, antes de ejecutar la acción semántica de una regla, el autómata asigna por defecto `$$ = $1;`.  
+  Si el bloque `if ($1 != null && $1.sval != null && $3 != null && $3.sval != null)` evalúa a `false` (porque `$3` o `$1` provinieron de un operando inválido o no declarado) y no colocamos un bloque `else`:
+  - `$$` conserva intacto el valor de `$1` (`expresion` o `termino`).
+  - Esto enmascara silenciosamente el fallo y transforma una operación rota (como `a + <error>`) en únicamente el operando izquierdo `a`.  
+  - En consecuencia, una asignación como `resultado := a + ;` reduciría a `resultado := a;` y emitiría un terceto espurio.  
+  Colocar explícitamente `else { $$ = new ParserVal(); }` (así como en las reglas de recuperación de error sintáctico) garantiza que la expresión resultante quede anulada (`sval = null`), impidiendo que la sentencia contenedora emita código intermedio.
+
+---
+
+#### ❓ Pregunta 15: En `CTE_SHORTINT`, ¿por qué se sigue ejecutando el resto de la acción tras el `if` de error de rango?
+* **Explicación para la defensa:**  
+  El bloque `if (valor > AnalizadorLexico.ValorMaximoInt) { yyerror(...); }` no contiene `return` ni `System.exit()`.  
+  Esto responde a la exigencia de **recuperación no fatal de errores** de la cátedra: el compilador debe informar el error sintáctico con su línea real, pero debe continuar analizando el resto del programa para descubrir y listar todos los errores del archivo en una sola pasada. Al continuar y sintetizar la constante, el parser puede seguir validando la estructura sintáctica de la sentencia sin abortar prematuramente.
+
+---
+
 ### 3.3. Casos de Prueba Verificados
 
 #### Caso 1: Ámbitos y Shadowing (`tests/test_hito3_ambitos.txt`)
@@ -399,7 +506,7 @@ Programa reconocido correctamente
 
 ---
 
-#### Caso 2: Chequeos Semánticos Obligatorios (`tests/test_hito3_errores_semanticos.txt`)
+#### Caso 2: Chequeos Semánticos Obligatorios y Supresión de Tercetos Inválidos (`tests/test_hito3_errores_semanticos.txt`)
 ```pascal
 programa_errores_semanticos
 
@@ -419,8 +526,14 @@ Error semantico (linea 4): Redeclaracion de 'a' en el ambito :main
 Error semantico (linea 8): Variable 'z' no declarada o no visible en el ambito actual (:main)
 Error semantico (linea 9): Variable 'z' no declarada o no visible en el ambito actual (:main)
 Compilacion finalizada con 0 error(es) sintactico(s) y 3 error(es) semantico(s)
+
+----------------------------------------
+         CODIGO INTERMEDIO (TERCETOS)   
+----------------------------------------
+0 ( := , a:main , 10 )
+----------------------------------------
 ```
-*Validación:* Detección taxativa de redeclaraciones en el mismo ámbito y variables no declaradas, reportando número de línea real y bloqueando la emisión de tercetos erróneos.
+*Validación:* Detección taxativa de redeclaraciones en el mismo ámbito y variables no declaradas. Se reportan los 3 errores con su número de línea real y **únicamente** se emite el terceto de la sentencia válida (`0 ( := , a:main , 10 )`), suprimiendo completamente la creación de tercetos para `z := 20$s` y `b := z + 5$s`.
 
 ---
 
