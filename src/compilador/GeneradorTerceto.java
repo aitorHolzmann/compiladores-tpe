@@ -19,6 +19,21 @@ public class GeneradorTerceto {
         return codigoIntermedio.get(indice);
     }
 
+    public static int getProximoIndice() {
+        return codigoIntermedio.size();
+    }
+
+    public static void completarSalto(int indiceTerceto, int destino) {
+        if (indiceTerceto >= 0 && indiceTerceto < codigoIntermedio.size()) {
+            Terceto t = codigoIntermedio.get(indiceTerceto);
+            if (t.getOperador().equals("BF")) {
+                t.setOperando2("[" + destino + "]");
+            } else if (t.getOperador().equals("BI")) {
+                t.setOperando1("[" + destino + "]");
+            }
+        }
+    }
+
     public static void imprimirTercetos() {
         System.out.println("\n----------------------------------------");
         System.out.println("         CODIGO INTERMEDIO (TERCETOS)   ");

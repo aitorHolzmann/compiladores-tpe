@@ -21,10 +21,10 @@
 [Hito 4] Chequeo Estático de Tipos y Tema 34: Conversión Explícita tos() (COMPLETADO)
     │
     ▼
-[Hito 5] Control de Flujo y Backpatching: IF, IF-ELSE y REPEAT UNTIL (Tema 12) (SIGUIENTE)
+[Hito 5] Control de Flujo y Backpatching: IF, IF-ELSE y REPEAT UNTIL (Tema 12) (COMPLETADO)
     │
     ▼
-[Hito 6] Funciones, Clases y Temas Avanzados (AUTO FUNCTION, COMPTIME, IMPORT/EXPORT, Herencia Múltiple)
+[Hito 6] Funciones, Clases y Temas Avanzados (AUTO FUNCTION, COMPTIME, IMPORT/EXPORT, Herencia Múltiple) (SIGUIENTE)
 ```
 
 ---
@@ -810,20 +810,268 @@ Compilacion finalizada con 0 error(es) sintactico(s) y 6 error(es) semantico(s)
 
 ---
 
-## 📌 Hito 5 (SIGUIENTE): Control de Flujo y Backpatching: IF, IF-ELSE y REPEAT UNTIL (Tema 12)
+## 📌 Hito 5: Control de Flujo y Backpatching: IF, IF-ELSE y REPEAT UNTIL (Tema 12)
 
 ### 5.1. Objetivo Técnico
-1. **Tercetos de comparación:** Emitir el terceto `( CMP , op1 , op2 )` al reducir la regla `condicion`.
-2. **Backpatching con pilas de saltos (`Stack<Integer>`):**
-   - Para `IF (condicion) bloque`:
-     - Al finalizar la condición: emitir terceto incompleto `( BF , [cond] , [?] )` y apilar su número.
-     - Al finalizar el bloque: desapilar y completar el destino del salto con la dirección actual.
-   - Para `IF (condicion) bloque ELSE bloque END_IF`:
-     - Al finalizar el primer bloque: emitir salto incondicional incompleto `( BI , [?] , - )`, apilarlo, desapilar el `BF` y completarlo apuntando a la primera instrucción del `ELSE`.
-     - Al finalizar el `ELSE`: desapilar el `BI` y completarlo apuntando a la instrucción posterior al `END_IF`.
-   - Para `REPEAT bloque UNTIL (condicion);` (Tema 12):
-     - Marcar la dirección de inicio del cuerpo del bucle.
-     - Al reducir la condición de cierre: emitir `( BF , [cond] , [dir_inicio] )` (itera mientras la condición sea falsa hasta que se vuelva verdadera).
+Dotar al compilador de la capacidad de traducir estructuras de control de bifurcación (`IF`, `IF-ELSE`) y de iteración (`REPEAT UNTIL` - Tema 12) a código intermedio en tercetos con resolución automática de saltos hacia adelante y hacia atrás.
+1. **Emisión de comparaciones:** Generar tercetos con el operador relacional exacto (`>`, `<`, `>=`, `<=`, `==`, `!=`) al reducir la regla `condicion`.
+2. **Bifurcaciones condicionales e incondicionales:** Emitir `BF` (Branch False) y `BI` (Branch Incondicional).
+3. **Backpatching sistemático:** Resolver destinos futuros de bifurcaciones mediante una pila de saltos LIFO (`Stack<Integer>`) y acciones semánticas intermedias en BYacc/J garantizando 0 conflictos Shift/Reduce y Reduce/Reduce.
+4. **Semántica de REPEAT UNTIL:** Salto condicional `BF` hacia atrás a la primera instrucción del cuerpo del ciclo mientras la condición permanezca falsa.
+
+---
+
+### 5.2. Decisiones de Diseño y Preguntas Conceptuales para la Defensa Oral
+
+#### ❓ Pregunta 1: ¿Por qué utilizamos una pila LIFO (`Stack<Integer>`) para almacenar las direcciones de salto en lugar de simples variables enteras?
+* **Explicación para la defensa:**  
+  Las estructuras de control en cualquier lenguaje estructurado admiten **anidamiento arbitrario** (un `IF` dentro de otro `IF`, un `REPEAT` dentro de un `IF`, o un `IF-ELSE` dentro del `ELSE` de otro `IF`).
+  - Si usáramos variables escalares (como `int ultimoSalto`), un `IF` interno sobrescribiría la dirección del `IF` contenedor, haciendo imposible completar el salto exterior cuando se cierre el bloque externo.
+  - Al emplear una estructura **LIFO (Last-In, First-Out)** con `Stack<Integer>`, cada bloque apila su propio terceto incompleto (`BF` o `BI`) y, al cerrarse, desapila exactamente la referencia que le corresponde a su nivel sintáctico.
+  - Gracias a la pila, el anidamiento se resuelve de manera limpia, predecible y sin interferencias entre ámbitos o estructuras de control adyacentes.
+
+---
+
+#### ❓ Pregunta 2: ¿Cómo funciona el algoritmo de Backpatching paso a paso en un `IF-ELSE`?
+```pascal
+IF (condicion)
+  bloque_then;
+ELSE
+  bloque_else;
+END_IF;
+```
+* **Explicación para la defensa (alineada con las diapositivas 46 a 55 de `sentencias-control.pdf`):**  
+  1. **Fin de la condición:** Se reduce la regla `encabezado_if : IF '(' condicion ')'`. En este punto no sabemos cuántas instrucciones tendrá `bloque_then`, por lo que emitimos un salto condicional con destino desconocido:  
+     `idBF = GeneradorTerceto.crearTerceto("BF", [cond], "?");`  
+     Se apila `idBF` en `pilaSaltos`.
+  2. **Lectura del token `ELSE`:** El autómata reduce la regla auxiliar `inicio_else : ELSE`. En este instante:
+     - El `bloque_then` ya terminó de emitir sus tercetos.
+     - Para que el flujo que ejecutó el `THEN` no ingrese al `ELSE`, debemos emitir un salto incondicional:  
+       `idBI = GeneradorTerceto.crearTerceto("BI", "?", "-");`
+     - Desapilamos el `idBF` anterior de la pila. Como la siguiente instrucción a generar será la primera del `bloque_else`, el destino del `BF` es exactamente `GeneradorTerceto.getProximoIndice()`.
+     - Ejecutamos `completarSalto(idBF, getProximoIndice())`, parchando el operando 2 del `BF`.
+     - Finalmente, apilamos `idBI` en `pilaSaltos`.
+  3. **Cierre con `END_IF ';'`:** Al reducir `resto_if : inicio_else bloque END_IF ';'`:
+     - El `bloque_else` ya culminó.
+     - Desapilamos `idBI` de `pilaSaltos`.
+     - Completamos el operando 1 del `BI` con `getProximoIndice()` (la primera instrucción que sigue fuera del `IF-ELSE`).
+     - ¡El parcheo queda completado en una sola pasada!
+
+---
+
+#### ❓ Pregunta 3: ¿Por qué en la sentencia `REPEAT UNTIL` (Tema 12) la bifurcación es `BF` y NO requiere backpatching diferido?
+* **Explicación para la defensa:**  
+  1. **Semántica de REPEAT UNTIL:** La especificación de la cátedra dice textualmente: *"El bloque de sentencias ejecutables se ejecutará hasta que la condición sea verdadera"*. Por lo tanto, el ciclo debe iterar mientras la condición sea **FALSA**, y salir cuando sea **VERDADERA**.
+  2. **Bifurcación por falso:** El terceto a emitir al evaluar la condición al final del ciclo es:  
+     `( BF , [cond] , [dir_inicio] )`
+  3. **Cero backpatching diferido:** A diferencia del `IF` (cuyo salto es hacia adelante hacia código no generado aún), en `REPEAT UNTIL` el salto es **hacia atrás**. La dirección del inicio del bloque fue registrada previamente al leer la palabra clave `REPEAT` (`dirInicio = getProximoIndice()`). Cuando el parser alcanza el `UNTIL (condicion);`, ya conoce perfectamente el índice de destino `[dirInicio]`, por lo que emite el terceto completo inmediatamente sin dejar huecos pendientes.
+
+---
+
+#### ❓ Pregunta 4: ¿Por qué definimos reglas explícitas como `encabezado_if`, `inicio_else` e `inicio_repeat` en lugar de incrustar acciones semánticas en medio de las producciones existentes?
+* **Explicación para la defensa:**  
+  En Yacc / BYacc/J, colocar una acción semántica en medio de una regla:
+  ```yacc
+  // Acción incrustada (antipatrón riesgoso)
+  sentencia_if : IF '(' condicion ')' { accion; } bloque resto_if ;
+  ```
+  fuerza al generador LALR a inventar una producción epsilon anónima oculta (`$$1 : /* vacio */ { accion; }`).
+  - Si existen reglas de error o producciones que comparten prefijos con la regla (por ejemplo `IF condicion ')'` o `REPEAT UNTIL`), las producciones vacías anónimas son la causa número uno de **conflictos Shift/Reduce y Reduce/Reduce**.
+  - Al crear no terminales explícitos (`encabezado_if`, `inicio_else`, `inicio_repeat`), controlamos conscientemente el autómata de estados finitos, permitiendo que `byaccj -J -v gram.y` mantenga **0 conflictos** en `y.output` de manera determinista.
+
+---
+
+#### ❓ Pregunta 5: ¿Qué sucede ante un error sintáctico o semántico dentro de una condición o bloque?
+* **Explicación para la defensa:**  
+  1. **Condición con error de tipos:** Si se intenta comparar tipos incompatibles (ej. `IF (a > x)` donde `a` es `SHORTINT` y `x` es `SINGLEF`), la regla `condicion` emite el error semántico correspondiente y sintetiza un `ParserVal()` vacío (`.sval == null`). La regla `encabezado_if` comprueba `$3 != null && $3.sval != null` antes de crear el `BF` y antes de apilar nada.
+  2. **Pilas a salvo de EmptyStackException:** En `resto_if` y en las reglas de error de `REPEAT`, siempre se valida `if (!pilaSaltos.isEmpty())` antes de hacer `pop()`. Si hubo un error sintáctico que impidió apilar el inicio, el compilador reporta el error sintáctico, absorbe el fallo y jamás se cuelga por excepción en tiempo de compilación.
+
+---
+
+### 5.3. Casos de Prueba Verificados
+
+#### Caso 1: Estructuras de Control y Anidamiento Válidos (`tests/test_hito5_control_ok.txt`)
+```pascal
+programa_control_ok
+
+shortint a, b, c;
+singlef x, y, z;
+
+BEGIN
+  a := 5$s;
+  b := 10$s;
+  c := 0$s;
+  x := 1.0;
+  y := 2.0;
+  z := 0.0;
+
+  // 1. IF simple
+  IF (a > 10$s)
+    c := a + 1$s;
+  END_IF;
+
+  // 2. IF-ELSE
+  IF (x <= y)
+    z := x * 2.0;
+  ELSE
+    z := y * 3.0;
+  END_IF;
+
+  // 3. IF anidados dentro de IF-ELSE
+  IF (a == b)
+    IF (c != 0$s)
+      a := 1$s;
+    ELSE
+      a := 2$s;
+    END_IF;
+  ELSE
+    a := 3$s;
+  END_IF;
+
+  // 4. REPEAT UNTIL sentencia simple
+  REPEAT
+    a := a + 1$s;
+  UNTIL (a >= 20$s);
+
+  // 5. REPEAT UNTIL con BEGIN ... END
+  REPEAT
+  BEGIN
+    x := x + 1.0;
+    z := z - 1.0;
+  END
+  UNTIL (x > 10.0);
+
+  // 6. REPEAT conteniendo IF anidado
+  REPEAT
+    IF (a < 30$s)
+      a := a + 2$s;
+    END_IF;
+  UNTIL (a == 30$s);
+
+  pout("Fin de control de flujo ok");
+END
+```
+
+**Salida obtenida:**
+```text
+Programa reconocido correctamente
+----------------------------------------
+         CODIGO INTERMEDIO (TERCETOS)   
+----------------------------------------
+0 ( := , a:main , 5 )
+1 ( := , b:main , 10 )
+2 ( := , c:main , 0 )
+3 ( := , x:main , 1.0 )
+4 ( := , y:main , 2.0 )
+5 ( := , z:main , 0.0 )
+6 ( > , a:main , 10 )
+7 ( BF , [6] , [10] )
+8 ( + , a:main , 1 )
+9 ( := , c:main , [8] )
+10 ( <= , x:main , y:main )
+11 ( BF , [10] , [15] )
+12 ( * , x:main , 2.0 )
+13 ( := , z:main , [12] )
+14 ( BI , [17] , - )
+15 ( * , y:main , 3.0 )
+16 ( := , z:main , [15] )
+17 ( == , a:main , b:main )
+18 ( BF , [17] , [25] )
+19 ( != , c:main , 0 )
+20 ( BF , [19] , [23] )
+21 ( := , a:main , 1 )
+22 ( BI , [24] , - )
+23 ( := , a:main , 2 )
+24 ( BI , [26] , - )
+25 ( := , a:main , 3 )
+26 ( + , a:main , 1 )
+27 ( := , a:main , [26] )
+28 ( >= , a:main , 20 )
+29 ( BF , [28] , [26] )
+30 ( + , x:main , 1.0 )
+31 ( := , x:main , [30] )
+32 ( - , z:main , 1.0 )
+33 ( := , z:main , [32] )
+34 ( > , x:main , 10.0 )
+35 ( BF , [34] , [30] )
+36 ( < , a:main , 30 )
+37 ( BF , [36] , [40] )
+38 ( + , a:main , 2 )
+39 ( := , a:main , [38] )
+40 ( == , a:main , 30 )
+41 ( BF , [40] , [36] )
+42 ( POUT , "Fin de control de flujo ok" , - )
+----------------------------------------
+```
+*Validación:*
+- Terceto 7 (`BF`) salta a `[10]` (fin del IF simple).
+- Terceto 11 (`BF`) salta a `[15]` (inicio de la rama ELSE).
+- Terceto 14 (`BI`) salta a `[17]` (salida del IF-ELSE).
+- Tercetos 18, 20, 22 y 24 resuelven a la perfección el doble anidamiento de `IF-ELSE` anidado.
+- Tercetos 29 y 35 (`BF`) saltan hacia atrás a `[26]` y `[30]` respectivamente.
+- Tercetos 36 a 41 resuelven el bucle `REPEAT` conteniendo un `IF` anidado, saltando hacia atrás a `[36]`.
+
+---
+
+#### Caso 2: Manejo de Errores y Recuperación Sintáctica/Semántica (`tests/test_hito5_control_error.txt`)
+```pascal
+programa_control_error
+
+shortint a, b;
+singlef x, y;
+
+BEGIN
+  // Error 1: Incompatibilidad de tipos en condicion IF
+  IF (a > x)
+    a := 1$s;
+  END_IF;
+
+  // Error 2: Falta '(' en condicion IF
+  IF a == b)
+    a := 2$s;
+  END_IF;
+
+  // Error 3: Falta END_IF en IF-ELSE
+  IF (a == b)
+    a := 3$s;
+  ELSE
+    a := 4$s;
+  ;
+
+  // Error 4: Falta cuerpo en REPEAT UNTIL
+  REPEAT
+  UNTIL (a == 0$s);
+
+  // Error 5: Incompatibilidad de tipos en condicion REPEAT UNTIL
+  REPEAT
+    a := a + 1$s;
+  UNTIL (a == y);
+
+  pout("Fin de control con errores");
+END
+```
+
+**Salida obtenida:**
+```text
+Error semantico (linea 8): Incompatibilidad de tipos en comparacion: no se puede comparar SHORTINT con SINGLEF (requiere conversion explicita 'tos')
+Error sintactico (linea 15): Falta '(' de apertura en condicion de seleccion
+Error sintactico (linea 22): Falta palabra clave END_IF al final de la sentencia IF
+Error sintactico (linea 26): Falta el cuerpo de la iteracion REPEAT
+Error semantico (linea 31): Incompatibilidad de tipos en comparacion: no se puede comparar SHORTINT con SINGLEF (requiere conversion explicita 'tos')
+Compilacion finalizada con 3 error(es) sintactico(s) y 2 error(es) semantico(s)
+```
+*Validación:* Cero excepciones `EmptyStackException`, detección taxativa con número de línea real y recuperación de sincronización limpia.
+
+---
+
+## 📌 Hito 6 (SIGUIENTE): Funciones, Clases y Temas Avanzados
+### 6.1. Alcance
+- **Tema 21:** Funciones inferidas `AUTO FUNCTION` (verificación de al menos un `RET` sintáctico, inferencia del tipo de retorno a partir del terceto sintetizado por `RET`).
+- **Tema 22:** Variables `COMPTIME` evaluadas estáticamente (supresión de tercetos en tiempo de ejecución).
+- **Tema 26:** Modificadores `IMPORT FROM` y `EXPORT TO` en clases (chequeo de visibilidad semántica de miembros).
+- **Tema 29:** Acceso posicional a atributos de clases (`obj[0$s]`).
+- **Tema 30:** Herencia múltiple de clases (`EXTENDS` múltiple con desambiguación por orden de declaración).
+
 
 
 

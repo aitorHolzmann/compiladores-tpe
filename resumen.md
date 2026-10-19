@@ -38,39 +38,30 @@ facto
 unica
 
 
-Chequeo de Tipos y Tema 34 (tos)
-Para este hito la idea principal es validar que las operaciones y asignaciones se hagan entre tipos compatibles, y permitir la conversión explícita de flotante a entero corto mediante la función tos(). En nuestro compilador solo existen dos tipos primitivos: SHORTINT y SINGLEF.
+Chequeo de Tipos
 
-Infraestructura:
-1. En Terceto.java se agregó el atributo tipo (con getter y setter), y en GeneradorTerceto se agregó la sobrecarga crearTerceto(op, arg1, arg2, tipo). El toString() del terceto sigue imprimiendo igual (op, arg1, arg2) para respetar la salida exacta de la cátedra.
-2. Para transportar el tipo hacia arriba en el árbol sintáctico usamos el campo obj de ParserVal. En cada reducción de factor, termino y expresion guardamos ahí el string del tipo ("SHORTINT" o "SINGLEF").
-3. En la tabla de símbolos, nos aseguramos de que las constantes (CTE_SHORTINT, CTE_SINGLEF y las constantes negativas) tengan seteado su atributo TIPO. Los identificadores ya lo tenían guardado desde que se ejecutó declararVariable en las sentencias declarativas.
+La semantica tiene que hacer las verificaciones de tipo. Cuando se hacen asignaciones, operaciones, y en nuestro caso tambien cuando se hace la conversion de SINGLEF a SHORTINT. El tipo se guarda tanto en la tabla de simbolos con las acciones semanticas, como desde la gramatica como informacion del terceto. 
 
-¿Cómo se propaga el tipo desde las hojas (factor)?
-- IDENTIFICADOR: se busca la variable en la tabla con buscarIdentificador y se saca su atributo TIPO. Se setea pv.obj = tipo.
-- CTE_SHORTINT y negativo shortint: se agrega TIPO="SHORTINT" en la tabla y pv.obj = "SHORTINT".
-- CTE_SINGLEF y negativo singlef: se agrega TIPO="SINGLEF" en la tabla y pv.obj = "SINGLEF".
-- Reglas unitarias (termino : factor, expresion : termino): como hacen $$ = $1, el ParserVal pasa hacia arriba intacto con su sval, ival y obj.
+En la regla **factor** y **numero negativo** guardamos el tipo en **pv.obj**. En el caso de las variables sabemos el tipo porque en la declaracion lo guardamos en la tabla de simbolos. Pero luego cuando hacemos operaciones y generamos tercetos, debemos verificar y conservar el tipo de la operacion, almacenandolo tambien en el pv.obj. 
 
-Casos que se presentan en las operaciones y asignaciones:
+Las asignaciones y comparaciones verifican que se realicen entre elementos del mismo tipo. La funcion TOS() verifica que reciba un SINGLEF.
 
-1. Operaciones binarias (+, -, *, /)
-Se recupera tipo1 de $1.obj y tipo2 de $3.obj.
-- Caso tipos iguales (SHORTINT con SHORTINT, o SINGLEF con SINGLEF): es válido. Se crea el terceto con la operación y el tipo resultante, y se sintetiza el nuevo terceto [i] con pv.obj = tipo.
-- Caso tipos distintos (SHORTINT con SINGLEF o al revés): es inválido. La cátedra exige que los tipos coincidan. Se emite un error semántico avisando la incompatibilidad y que se requiere conversión explícita 'tos'. En $$ se asigna new ParserVal() (con sval y obj en null) para que las reglas de arriba no generen tercetos con operaciones rotas.
-- Caso alguno es null: significa que el operando ya falló previamente más abajo (por ejemplo una variable no declarada). No se genera terceto ni se emite un nuevo error para evitar errores en cascada.
 
-2. Conversión explícita tos(expresion) (Tema 34)
-La función intrínseca tos convierte una expresión de punto flotante a entero corto.
-- Si la expresión interna es SINGLEF: es válido. Se genera el terceto ( tos , op , - ) con tipo SHORTINT. Hacia arriba sintetiza el terceto [i] y pv.obj = "SHORTINT", por lo que a partir de ahí se comporta como un entero corto y puede sumarse o asignarse a un shortint.
-- Si la expresión interna NO es SINGLEF (por ejemplo si le pasás un SHORTINT): se emite un error semántico avisando que tos requiere una expresión de tipo SINGLEF, y se devuelve new ParserVal().
+Control de Flujo y Backpatching
 
-3. Asignación (variable := expresion y Tema 17: variable = (expresion))
-Se busca la variable receptora en la tabla de símbolos y se obtiene su tipoVar. Luego se mira el tipoExp de la expresión del lado derecho:
-- Caso tipos iguales: la asignación es válida y se genera el terceto :=.
-- Caso variable SHORTINT y expresión SINGLEF: da error semántico avisando que no se puede asignar SINGLEF a SHORTINT sin la conversión explícita tos.
-- Caso variable SINGLEF y expresión SHORTINT: da error semántico avisando que son incompatibles. Hay que recordar que nuestro grupo tiene el Tema 34 (conversión explícita) y no el Tema 35 (conversión implícita), por lo que el compilador no convierte automáticamente de entero a flotante.
-- Caso tipoExp es null o hubo error en la expresión: no se genera el terceto de asignación y no se emiten errores redundantes.
+Para las estructuras de control (IF, IF-ELSE y REPEAT UNTIL) se implementó la técnica de backpatching usando una pila `Stack<Integer> pilaSaltos`.
 
-4. Comparaciones (condicion: expresion comparador expresion)
-Se comprueba que ambos operandos tengan el mismo tipo. Si se intenta comparar un SHORTINT con un SINGLEF directamente sin usar tos, se emite error semántico de incompatibilidad de tipos en la comparación.
+En `condicion` se emite el terceto con el operador de comparación (`>`, `<`, `<=`, etc.) siempre que ambos operandos tengan el mismo tipo.
+
+IF simple:
+1. `encabezado_if : IF '(' condicion ')'`: crea un terceto incompleto `( BF , [cond] , ? )` y apila su índice en `pilaSaltos`.
+2. Al llegar a `END_IF ';'`: se desapila el índice del `BF` y se completa su destino con el próximo terceto a generar (`GeneradorTerceto.getProximoIndice()`).
+
+IF-ELSE:
+1. `encabezado_if`: crea el `BF` y lo apila.
+2. `inicio_else : ELSE`: al terminar el bloque THEN, se emite un salto incondicional `( BI , ? , - )` para saltear el ELSE. Se desapila el `BF` anterior y se completa su destino con la primera instrucción del ELSE. Luego se apila el índice del `BI`.
+3. Al llegar a `END_IF ';'`: se desapila el `BI` y se completa su destino con `GeneradorTerceto.getProximoIndice()`.
+
+REPEAT UNTIL (Tema 12):
+1. `inicio_repeat : REPEAT`: apila la dirección de inicio del cuerpo del ciclo (`getProximoIndice()`).
+2. Al llegar a `UNTIL condicion_iteracion ';'`: como la especificación de la cátedra dice que itera hasta que la condición sea verdadera, debe volver a saltar al inicio mientras sea falsa. Se desapila la dirección de inicio y se emite `( BF , [cond] , [dir_inicio] )`. No requiere backpatching diferido porque el salto es hacia atrás y la dirección inicial ya es conocida.

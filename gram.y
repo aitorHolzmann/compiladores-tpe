@@ -1,6 +1,7 @@
 %{
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Stack;
 %}
 
 /* ===== TOKENS ===== */
@@ -727,21 +728,67 @@ conversion_tos
     ;
 
 /* SENTENCIAS DE CONTROL                                                     */
+encabezado_if
+    : IF '(' condicion ')'
+        {
+            if ($3 != null && $3.sval != null) {
+                int idBF = GeneradorTerceto.crearTerceto("BF", $3.sval, "?");
+                pilaSaltos.push(idBF);
+            }
+        }
+    ;
+
 sentencia_if
-    : IF '(' condicion ')' bloque resto_if
+    : encabezado_if bloque resto_if
     | IF condicion ')' bloque resto_if
         { yyerror("Falta '(' de apertura en condicion de seleccion"); }
     | IF error bloque resto_if
         { yyerror("Condicion de seleccion malformada o error en parentesis"); }
     ;
 
+inicio_else
+    : ELSE
+        {
+            if (!pilaSaltos.isEmpty()) {
+                int idBF = pilaSaltos.pop();
+                int idBI = GeneradorTerceto.crearTerceto("BI", "?", "-");
+                GeneradorTerceto.completarSalto(idBF, GeneradorTerceto.getProximoIndice());
+                pilaSaltos.push(idBI);
+            }
+        }
+    ;
+
 resto_if
     : END_IF ';'
-    | ELSE bloque END_IF ';'
+        {
+            if (!pilaSaltos.isEmpty()) {
+                int idSalto = pilaSaltos.pop();
+                GeneradorTerceto.completarSalto(idSalto, GeneradorTerceto.getProximoIndice());
+            }
+        }
+    | inicio_else bloque END_IF ';'
+        {
+            if (!pilaSaltos.isEmpty()) {
+                int idBI = pilaSaltos.pop();
+                GeneradorTerceto.completarSalto(idBI, GeneradorTerceto.getProximoIndice());
+            }
+        }
     | ';'
-        { yyerror("Falta palabra clave END_IF al final de la sentencia IF"); }
-    | ELSE bloque ';'
-        { yyerror("Falta palabra clave END_IF al final de la sentencia IF"); }
+        {
+            if (!pilaSaltos.isEmpty()) {
+                int idSalto = pilaSaltos.pop();
+                GeneradorTerceto.completarSalto(idSalto, GeneradorTerceto.getProximoIndice());
+            }
+            yyerror("Falta palabra clave END_IF al final de la sentencia IF");
+        }
+    | inicio_else bloque ';'
+        {
+            if (!pilaSaltos.isEmpty()) {
+                int idBI = pilaSaltos.pop();
+                GeneradorTerceto.completarSalto(idBI, GeneradorTerceto.getProximoIndice());
+            }
+            yyerror("Falta palabra clave END_IF al final de la sentencia IF");
+        }
     ;
 
 condicion
@@ -750,20 +797,30 @@ condicion
             if ($1 != null && $1.sval != null && $3 != null && $3.sval != null) {
                 String tipo1 = (String) $1.obj;
                 String tipo2 = (String) $3.obj;
-                if (tipo1 != null && tipo2 != null && !tipo1.equals(tipo2)) {
-                    agregarErrorSemantico("Incompatibilidad de tipos en comparacion: no se puede comparar " + tipo1 + " con " + tipo2 + " (requiere conversion explicita 'tos')");
+                if (tipo1 != null && tipo2 != null) {
+                    if (tipo1.equals(tipo2)) {
+                        int idTerceto = GeneradorTerceto.crearTerceto($2.sval, $1.sval, $3.sval);
+                        $$ = new ParserVal("[" + idTerceto + "]");
+                    } else {
+                        agregarErrorSemantico("Incompatibilidad de tipos en comparacion: no se puede comparar " + tipo1 + " con " + tipo2 + " (requiere conversion explicita 'tos')");
+                        $$ = new ParserVal();
+                    }
+                } else {
+                    $$ = new ParserVal();
                 }
+            } else {
+                $$ = new ParserVal();
             }
         }
     ;
 
 comparador
-    : MAYORIGUAL
-    | MENORIGUAL
-    | IGUALIGUAL
-    | DISTINTO
-    | '>'
-    | '<'
+    : MAYORIGUAL { $$ = new ParserVal(">="); }
+    | MENORIGUAL { $$ = new ParserVal("<="); }
+    | IGUALIGUAL { $$ = new ParserVal("=="); }
+    | DISTINTO   { $$ = new ParserVal("!="); }
+    | '>'        { $$ = new ParserVal(">"); }
+    | '<'        { $$ = new ParserVal("<"); }
     ;
 
 bloque
@@ -774,28 +831,70 @@ bloque
     ;
 
 /* Tema 12: Repeat-Until */
+inicio_repeat
+    : REPEAT
+        {
+            pilaSaltos.push(GeneradorTerceto.getProximoIndice());
+        }
+    ;
+
 sentencia_repeat_until
-    : REPEAT bloque UNTIL condicion_iteracion ';'
-    | REPEAT UNTIL condicion_iteracion ';'
-        { yyerror("Falta el cuerpo de la iteracion REPEAT"); }
-    | REPEAT bloque '(' condicion ')' ';'
-        { yyerror("Falta palabra clave UNTIL en la iteracion REPEAT"); }
-    | REPEAT '(' condicion ')' ';'
-        { yyerror("Falta palabra clave UNTIL y cuerpo en la iteracion REPEAT"); }
-    | REPEAT bloque '(' condicion ';'
-        { yyerror("Falta palabra clave UNTIL y ')' en la iteracion REPEAT"); }
-    | REPEAT '(' condicion ';'
-        { yyerror("Falta palabra clave UNTIL, cuerpo y ')' en la iteracion REPEAT"); }
+    : inicio_repeat bloque UNTIL condicion_iteracion ';'
+        {
+            if (!pilaSaltos.isEmpty()) {
+                int dirInicio = pilaSaltos.pop();
+                if ($4 != null && $4.sval != null) {
+                    GeneradorTerceto.crearTerceto("BF", $4.sval, "[" + dirInicio + "]");
+                }
+            }
+        }
+    | inicio_repeat UNTIL condicion_iteracion ';'
+        {
+            if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
+            yyerror("Falta el cuerpo de la iteracion REPEAT");
+        }
+    | inicio_repeat bloque '(' condicion ')' ';'
+        {
+            if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
+            yyerror("Falta palabra clave UNTIL en la iteracion REPEAT");
+        }
+    | inicio_repeat '(' condicion ')' ';'
+        {
+            if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
+            yyerror("Falta palabra clave UNTIL y cuerpo en la iteracion REPEAT");
+        }
+    | inicio_repeat bloque '(' condicion ';'
+        {
+            if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
+            yyerror("Falta palabra clave UNTIL y ')' en la iteracion REPEAT");
+        }
+    | inicio_repeat '(' condicion ';'
+        {
+            if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
+            yyerror("Falta palabra clave UNTIL, cuerpo y ')' en la iteracion REPEAT");
+        }
     ;
 
 condicion_iteracion
     : '(' condicion ')'
+        {
+            $$ = $2;
+        }
     | condicion ')'
-        { yyerror("Falta '(' de apertura en condicion de iteracion"); }
+        {
+            $$ = $1;
+            yyerror("Falta '(' de apertura en condicion de iteracion");
+        }
     | '(' condicion
-        { yyerror("Falta ')' de cierre en condicion de iteracion"); }
+        {
+            $$ = $2;
+            yyerror("Falta ')' de cierre en condicion de iteracion");
+        }
     | condicion
-        { yyerror("Faltan parentesis en condicion de iteracion"); }
+        {
+            $$ = $1;
+            yyerror("Faltan parentesis en condicion de iteracion");
+        }
     ;
 /* ENTRADA / SALIDA                                                          */
 
@@ -836,6 +935,7 @@ static int cant_errores_semanticos = 0;
 static int cant_retornos_auto = -1;
 
 public static String ambitoActual = ":main";
+public static Stack<Integer> pilaSaltos = new Stack<>();
 
 public static void entrarAmbito(String nombre) {
     ambitoActual = ambitoActual + ":" + nombre;
@@ -879,6 +979,7 @@ public static void main(String[] args) {
     System.out.println("Compilando archivo: " + ruta);
     try {
         ambitoActual = ":main";
+        pilaSaltos.clear();
         cant_errores = 0;
         cant_errores_semanticos = 0;
         AnalizadorLexico.reader = new PushbackReader(new BufferedReader(

@@ -163,45 +163,51 @@
 
  116  conversion_tos : TOS '(' expresion ')'
 
- 117  sentencia_if : IF '(' condicion ')' bloque resto_if
- 118               | IF condicion ')' bloque resto_if
- 119               | IF error bloque resto_if
+ 117  encabezado_if : IF '(' condicion ')'
 
- 120  resto_if : END_IF ';'
- 121           | ELSE bloque END_IF ';'
- 122           | ';'
- 123           | ELSE bloque ';'
+ 118  sentencia_if : encabezado_if bloque resto_if
+ 119               | IF condicion ')' bloque resto_if
+ 120               | IF error bloque resto_if
 
- 124  condicion : expresion comparador expresion
+ 121  inicio_else : ELSE
 
- 125  comparador : MAYORIGUAL
- 126             | MENORIGUAL
- 127             | IGUALIGUAL
- 128             | DISTINTO
- 129             | '>'
- 130             | '<'
+ 122  resto_if : END_IF ';'
+ 123           | inicio_else bloque END_IF ';'
+ 124           | ';'
+ 125           | inicio_else bloque ';'
 
- 131  bloque : BEGIN sentencias_ejecutables END
- 132         | sentencia_ejecutable
- 133         | BEGIN sentencias_ejecutables
+ 126  condicion : expresion comparador expresion
 
- 134  sentencia_repeat_until : REPEAT bloque UNTIL condicion_iteracion ';'
- 135                         | REPEAT UNTIL condicion_iteracion ';'
- 136                         | REPEAT bloque '(' condicion ')' ';'
- 137                         | REPEAT '(' condicion ')' ';'
- 138                         | REPEAT bloque '(' condicion ';'
- 139                         | REPEAT '(' condicion ';'
+ 127  comparador : MAYORIGUAL
+ 128             | MENORIGUAL
+ 129             | IGUALIGUAL
+ 130             | DISTINTO
+ 131             | '>'
+ 132             | '<'
 
- 140  condicion_iteracion : '(' condicion ')'
- 141                      | condicion ')'
- 142                      | '(' condicion
- 143                      | condicion
+ 133  bloque : BEGIN sentencias_ejecutables END
+ 134         | sentencia_ejecutable
+ 135         | BEGIN sentencias_ejecutables
 
- 144  sentencia_pout : POUT '(' CADENA ')'
- 145                 | POUT '(' expresion ')'
- 146                 | POUT '(' ')'
+ 136  inicio_repeat : REPEAT
 
- 147  sentencia_ret : RET '(' expresion ')'
+ 137  sentencia_repeat_until : inicio_repeat bloque UNTIL condicion_iteracion ';'
+ 138                         | inicio_repeat UNTIL condicion_iteracion ';'
+ 139                         | inicio_repeat bloque '(' condicion ')' ';'
+ 140                         | inicio_repeat '(' condicion ')' ';'
+ 141                         | inicio_repeat bloque '(' condicion ';'
+ 142                         | inicio_repeat '(' condicion ';'
+
+ 143  condicion_iteracion : '(' condicion ')'
+ 144                      | condicion ')'
+ 145                      | '(' condicion
+ 146                      | condicion
+
+ 147  sentencia_pout : POUT '(' CADENA ')'
+ 148                 | POUT '(' expresion ')'
+ 149                 | POUT '(' ')'
+
+ 150  sentencia_ret : RET '(' expresion ')'
 
 state 0
 	$accept : . programa $end  (0)
@@ -541,6 +547,8 @@ state 31
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
+	encabezado_if  goto 77
+	inicio_repeat  goto 78
 
 
 state 32
@@ -553,8 +561,8 @@ state 33
 	inicio_auto_funcion : AUTO FUNCTION . IDENTIFICADOR  (25)
 	declaracion_funciones : AUTO FUNCTION . error $$4 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (33)
 
-	error  shift 77
-	IDENTIFICADOR  shift 78
+	error  shift 79
+	IDENTIFICADOR  shift 80
 	.  error
 
 
@@ -565,7 +573,7 @@ state 34
 	IDENTIFICADOR  shift 29
 	.  error
 
-	lista_identificadores  goto 79
+	lista_identificadores  goto 81
 
 
 state 35
@@ -573,7 +581,7 @@ state 35
 	declaracion_comptime : COMPTIME lista_identificadores . ';'  (66)
 	declaracion_comptime : COMPTIME lista_identificadores .  (67)
 
-	';'  shift 80
+	';'  shift 82
 	','  shift 48
 	error  reduce 67
 	IDENTIFICADOR  reduce 67
@@ -588,7 +596,7 @@ state 35
 state 36
 	declaracion_variables : tipo error . ';'  (16)
 
-	';'  shift 81
+	';'  shift 83
 	.  error
 
 
@@ -602,8 +610,8 @@ state 38
 	encabezado_funcion : tipo FUNCTION . IDENTIFICADOR  (24)
 	declaracion_funciones : tipo FUNCTION . error $$3 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (29)
 
-	error  shift 82
-	IDENTIFICADOR  shift 83
+	error  shift 84
+	IDENTIFICADOR  shift 85
 	.  error
 
 
@@ -612,9 +620,9 @@ state 39
 	lista_variables : lista_variables . ',' IDENTIFICADOR  (18)
 	lista_variables : lista_variables . IDENTIFICADOR  (19)
 
-	IDENTIFICADOR  shift 84
-	';'  shift 85
-	','  shift 86
+	IDENTIFICADOR  shift 86
+	';'  shift 87
+	','  shift 88
 	.  error
 
 
@@ -623,30 +631,30 @@ state 40
 	declaracion_funciones : encabezado_funcion '(' . lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END  (30)
 	lista_parametros_formales : .  (35)
 
-	error  shift 87
+	error  shift 89
 	SHORTINT  shift 12
 	SINGLEF  shift 13
 	','  reduce 35
 	')'  reduce 35
 
-	tipo  goto 88
-	lista_parametros_formales  goto 89
-	parametro_formal  goto 90
+	tipo  goto 90
+	lista_parametros_formales  goto 91
+	parametro_formal  goto 92
 
 
 state 41
 	encabezado_auto_funcion : inicio_auto_funcion '(' . lista_parametros_formales ')'  (26)
 	lista_parametros_formales : .  (35)
 
-	error  shift 87
+	error  shift 89
 	SHORTINT  shift 12
 	SINGLEF  shift 13
 	','  reduce 35
 	')'  reduce 35
 
-	tipo  goto 88
-	lista_parametros_formales  goto 91
-	parametro_formal  goto 90
+	tipo  goto 90
+	lista_parametros_formales  goto 93
+	parametro_formal  goto 92
 
 
 state 42
@@ -656,7 +664,7 @@ state 42
 
 	.  reduce 68
 
-	sentencias_ejecutables  goto 92
+	sentencias_ejecutables  goto 94
 
 
 state 43
@@ -664,17 +672,17 @@ state 43
 	importacion_opcional : IMPORT . lista_identificadores  (46)
 
 	IDENTIFICADOR  shift 29
-	FROM  shift 93
+	FROM  shift 95
 	.  error
 
-	lista_identificadores  goto 94
+	lista_identificadores  goto 96
 
 
 state 44
 	declaracion_clase : encabezado_clase importacion_opcional . BEGIN herencia_opcional miembros_clase END ';'  (42)
 	declaracion_clase : encabezado_clase importacion_opcional . BEGIN herencia_opcional miembros_clase END  (43)
 
-	BEGIN  shift 95
+	BEGIN  shift 97
 	.  error
 
 
@@ -685,7 +693,7 @@ state 45
 	error  shift 49
 	IDENTIFICADOR  shift 50
 	IF  shift 51
-	END  shift 96
+	END  shift 98
 	POUT  shift 53
 	RET  shift 54
 	CTE_SHORTINT  shift 55
@@ -712,6 +720,8 @@ state 45
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
+	encabezado_if  goto 77
+	inicio_repeat  goto 78
 
 
 state 46
@@ -721,7 +731,7 @@ state 46
 	error  shift 49
 	IDENTIFICADOR  shift 50
 	IF  shift 51
-	END  shift 97
+	END  shift 99
 	POUT  shift 53
 	RET  shift 54
 	CTE_SHORTINT  shift 55
@@ -748,6 +758,8 @@ state 46
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
+	encabezado_if  goto 77
+	inicio_repeat  goto 78
 
 
 state 47
@@ -759,14 +771,14 @@ state 47
 state 48
 	lista_identificadores : lista_identificadores ',' . IDENTIFICADOR  (21)
 
-	IDENTIFICADOR  shift 98
+	IDENTIFICADOR  shift 100
 	.  error
 
 
 state 49
 	sentencia_ejecutable : error . ';'  (76)
 
-	';'  shift 99
+	';'  shift 101
 	.  error
 
 
@@ -783,11 +795,11 @@ state 50
 	unica : IDENTIFICADOR . '=' '(' expresion ')'  (112)
 	unica : IDENTIFICADOR . ASIGNAR '(' expresion ')'  (113)
 
-	ASIGNAR  shift 100
-	'('  shift 101
-	'['  shift 102
-	'.'  shift 103
-	'='  shift 104
+	ASIGNAR  shift 102
+	'('  shift 103
+	'['  shift 104
+	'.'  shift 105
+	'='  shift 106
 	IDENTIFICADOR  reduce 98
 	CTE_SHORTINT  reduce 98
 	CTE_SINGLEF  reduce 98
@@ -799,12 +811,12 @@ state 50
 
 
 state 51
-	sentencia_if : IF . '(' condicion ')' bloque resto_if  (117)
-	sentencia_if : IF . condicion ')' bloque resto_if  (118)
-	sentencia_if : IF . error bloque resto_if  (119)
+	encabezado_if : IF . '(' condicion ')'  (117)
+	sentencia_if : IF . condicion ')' bloque resto_if  (119)
+	sentencia_if : IF . error bloque resto_if  (120)
 
-	error  shift 105
-	IDENTIFICADOR  shift 106
+	error  shift 107
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
@@ -812,18 +824,18 @@ state 51
 	'-'  shift 60
 	'*'  shift 61
 	'/'  shift 62
-	'('  shift 107
+	'('  shift 109
 	.  error
 
-	expresion  goto 108
-	acceso_posicional  goto 109
+	expresion  goto 110
+	acceso_posicional  goto 111
 	termino  goto 71
 	factor  goto 72
 	invocacion_metodo  goto 73
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
-	condicion  goto 110
+	condicion  goto 112
 
 
 state 52
@@ -833,18 +845,18 @@ state 52
 
 
 state 53
-	sentencia_pout : POUT . '(' CADENA ')'  (144)
-	sentencia_pout : POUT . '(' expresion ')'  (145)
-	sentencia_pout : POUT . '(' ')'  (146)
+	sentencia_pout : POUT . '(' CADENA ')'  (147)
+	sentencia_pout : POUT . '(' expresion ')'  (148)
+	sentencia_pout : POUT . '(' ')'  (149)
 
-	'('  shift 111
+	'('  shift 113
 	.  error
 
 
 state 54
-	sentencia_ret : RET . '(' expresion ')'  (147)
+	sentencia_ret : RET . '(' expresion ')'  (150)
 
-	'('  shift 112
+	'('  shift 114
 	.  error
 
 
@@ -861,59 +873,22 @@ state 56
 
 
 state 57
-	sentencia_repeat_until : REPEAT . bloque UNTIL condicion_iteracion ';'  (134)
-	sentencia_repeat_until : REPEAT . UNTIL condicion_iteracion ';'  (135)
-	sentencia_repeat_until : REPEAT . bloque '(' condicion ')' ';'  (136)
-	sentencia_repeat_until : REPEAT . '(' condicion ')' ';'  (137)
-	sentencia_repeat_until : REPEAT . bloque '(' condicion ';'  (138)
-	sentencia_repeat_until : REPEAT . '(' condicion ';'  (139)
+	inicio_repeat : REPEAT .  (136)
 
-	error  shift 49
-	IDENTIFICADOR  shift 50
-	IF  shift 51
-	BEGIN  shift 113
-	POUT  shift 53
-	RET  shift 54
-	CTE_SHORTINT  shift 55
-	CTE_SINGLEF  shift 56
-	REPEAT  shift 57
-	UNTIL  shift 114
-	TOS  shift 58
-	'+'  shift 59
-	'-'  shift 60
-	'*'  shift 61
-	'/'  shift 62
-	'('  shift 115
-	.  error
-
-	sentencia_ejecutable  goto 116
-	asignacion  goto 64
-	expresion  goto 65
-	sentencia_if  goto 66
-	sentencia_repeat_until  goto 67
-	sentencia_pout  goto 68
-	sentencia_ret  goto 69
-	acceso_posicional  goto 70
-	termino  goto 71
-	factor  goto 72
-	invocacion_metodo  goto 73
-	unica  goto 74
-	numero_negativo  goto 75
-	conversion_tos  goto 76
-	bloque  goto 117
+	.  reduce 136
 
 
 state 58
 	conversion_tos : TOS . '(' expresion ')'  (116)
 
-	'('  shift 118
+	'('  shift 115
 	.  error
 
 
 state 59
 	expresion : '+' . termino  (87)
 
-	IDENTIFICADOR  shift 106
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
@@ -922,8 +897,8 @@ state 59
 	'/'  shift 62
 	.  error
 
-	acceso_posicional  goto 109
-	termino  goto 119
+	acceso_posicional  goto 111
+	termino  goto 116
 	factor  goto 72
 	invocacion_metodo  goto 73
 	unica  goto 74
@@ -935,23 +910,23 @@ state 60
 	numero_negativo : '-' . CTE_SHORTINT  (114)
 	numero_negativo : '-' . CTE_SINGLEF  (115)
 
-	CTE_SHORTINT  shift 120
-	CTE_SINGLEF  shift 121
+	CTE_SHORTINT  shift 117
+	CTE_SINGLEF  shift 118
 	.  error
 
 
 state 61
 	termino : '*' . factor  (93)
 
-	IDENTIFICADOR  shift 106
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
 	'-'  shift 60
 	.  error
 
-	acceso_posicional  goto 109
-	factor  goto 122
+	acceso_posicional  goto 111
+	factor  goto 119
 	invocacion_metodo  goto 73
 	unica  goto 74
 	numero_negativo  goto 75
@@ -961,15 +936,15 @@ state 61
 state 62
 	termino : '/' . factor  (94)
 
-	IDENTIFICADOR  shift 106
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
 	'-'  shift 60
 	.  error
 
-	acceso_posicional  goto 109
-	factor  goto 123
+	acceso_posicional  goto 111
+	factor  goto 120
 	invocacion_metodo  goto 73
 	unica  goto 74
 	numero_negativo  goto 75
@@ -985,7 +960,7 @@ state 63
 state 64
 	sentencia_ejecutable : asignacion . ';'  (70)
 
-	';'  shift 124
+	';'  shift 121
 	.  error
 
 
@@ -996,9 +971,9 @@ state 65
 	expresion : expresion . '+' error  (85)
 	expresion : expresion . '-' error  (86)
 
-	'+'  shift 125
-	'-'  shift 126
-	';'  shift 127
+	'+'  shift 122
+	'-'  shift 123
+	';'  shift 124
 	.  error
 
 
@@ -1017,14 +992,14 @@ state 67
 state 68
 	sentencia_ejecutable : sentencia_pout . ';'  (74)
 
-	';'  shift 128
+	';'  shift 125
 	.  error
 
 
 state 69
 	sentencia_ejecutable : sentencia_ret . ';'  (75)
 
-	';'  shift 129
+	';'  shift 126
 	.  error
 
 
@@ -1032,7 +1007,7 @@ state 70
 	asignacion : acceso_posicional . ASIGNAR expresion  (78)
 	factor : acceso_posicional .  (107)
 
-	ASIGNAR  shift 130
+	ASIGNAR  shift 127
 	IDENTIFICADOR  reduce 107
 	CTE_SHORTINT  reduce 107
 	CTE_SINGLEF  reduce 107
@@ -1053,11 +1028,11 @@ state 71
 	termino : termino . CTE_SHORTINT  (96)
 	termino : termino . CTE_SINGLEF  (97)
 
-	IDENTIFICADOR  shift 131
-	CTE_SHORTINT  shift 132
-	CTE_SINGLEF  shift 133
-	'*'  shift 134
-	'/'  shift 135
+	IDENTIFICADOR  shift 128
+	CTE_SHORTINT  shift 129
+	CTE_SINGLEF  shift 130
+	'*'  shift 131
+	'/'  shift 132
 	MAYORIGUAL  reduce 82
 	MENORIGUAL  reduce 82
 	IGUALIGUAL  reduce 82
@@ -1102,26 +1077,109 @@ state 76
 
 
 state 77
+	sentencia_if : encabezado_if . bloque resto_if  (118)
+
+	error  shift 49
+	IDENTIFICADOR  shift 50
+	IF  shift 51
+	BEGIN  shift 133
+	POUT  shift 53
+	RET  shift 54
+	CTE_SHORTINT  shift 55
+	CTE_SINGLEF  shift 56
+	REPEAT  shift 57
+	TOS  shift 58
+	'+'  shift 59
+	'-'  shift 60
+	'*'  shift 61
+	'/'  shift 62
+	.  error
+
+	sentencia_ejecutable  goto 134
+	asignacion  goto 64
+	expresion  goto 65
+	sentencia_if  goto 66
+	sentencia_repeat_until  goto 67
+	sentencia_pout  goto 68
+	sentencia_ret  goto 69
+	acceso_posicional  goto 70
+	termino  goto 71
+	factor  goto 72
+	invocacion_metodo  goto 73
+	unica  goto 74
+	numero_negativo  goto 75
+	conversion_tos  goto 76
+	encabezado_if  goto 77
+	bloque  goto 135
+	inicio_repeat  goto 78
+
+
+state 78
+	sentencia_repeat_until : inicio_repeat . bloque UNTIL condicion_iteracion ';'  (137)
+	sentencia_repeat_until : inicio_repeat . UNTIL condicion_iteracion ';'  (138)
+	sentencia_repeat_until : inicio_repeat . bloque '(' condicion ')' ';'  (139)
+	sentencia_repeat_until : inicio_repeat . '(' condicion ')' ';'  (140)
+	sentencia_repeat_until : inicio_repeat . bloque '(' condicion ';'  (141)
+	sentencia_repeat_until : inicio_repeat . '(' condicion ';'  (142)
+
+	error  shift 49
+	IDENTIFICADOR  shift 50
+	IF  shift 51
+	BEGIN  shift 133
+	POUT  shift 53
+	RET  shift 54
+	CTE_SHORTINT  shift 55
+	CTE_SINGLEF  shift 56
+	REPEAT  shift 57
+	UNTIL  shift 136
+	TOS  shift 58
+	'+'  shift 59
+	'-'  shift 60
+	'*'  shift 61
+	'/'  shift 62
+	'('  shift 137
+	.  error
+
+	sentencia_ejecutable  goto 134
+	asignacion  goto 64
+	expresion  goto 65
+	sentencia_if  goto 66
+	sentencia_repeat_until  goto 67
+	sentencia_pout  goto 68
+	sentencia_ret  goto 69
+	acceso_posicional  goto 70
+	termino  goto 71
+	factor  goto 72
+	invocacion_metodo  goto 73
+	unica  goto 74
+	numero_negativo  goto 75
+	conversion_tos  goto 76
+	encabezado_if  goto 77
+	bloque  goto 138
+	inicio_repeat  goto 78
+
+
+state 79
 	declaracion_funciones : AUTO FUNCTION error . $$4 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (33)
 	$$4 : .  (32)
 
 	.  reduce 32
 
-	$$4  goto 136
+	$$4  goto 139
 
 
-state 78
+state 80
 	inicio_auto_funcion : AUTO FUNCTION IDENTIFICADOR .  (25)
 
 	.  reduce 25
 
 
-state 79
+state 81
 	lista_identificadores : lista_identificadores . ',' IDENTIFICADOR  (21)
 	declaracion_comptime : COMPTIME tipo lista_identificadores . ';'  (64)
 	declaracion_comptime : COMPTIME tipo lista_identificadores .  (65)
 
-	';'  shift 137
+	';'  shift 140
 	','  shift 48
 	error  reduce 65
 	IDENTIFICADOR  reduce 65
@@ -1133,94 +1191,94 @@ state 79
 	COMPTIME  reduce 65
 
 
-state 80
+state 82
 	declaracion_comptime : COMPTIME lista_identificadores ';' .  (66)
 
 	.  reduce 66
 
 
-state 81
+state 83
 	declaracion_variables : tipo error ';' .  (16)
 
 	.  reduce 16
 
 
-state 82
+state 84
 	declaracion_funciones : tipo FUNCTION error . $$3 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (29)
 	$$3 : .  (28)
 
 	.  reduce 28
 
-	$$3  goto 138
+	$$3  goto 141
 
 
-state 83
+state 85
 	encabezado_funcion : tipo FUNCTION IDENTIFICADOR .  (24)
 
 	.  reduce 24
 
 
-state 84
+state 86
 	lista_variables : lista_variables IDENTIFICADOR .  (19)
 
 	.  reduce 19
 
 
-state 85
+state 87
 	declaracion_variables : tipo lista_variables ';' .  (15)
 
 	.  reduce 15
 
 
-state 86
+state 88
 	lista_variables : lista_variables ',' . IDENTIFICADOR  (18)
 
-	IDENTIFICADOR  shift 139
-	.  error
-
-
-state 87
-	parametro_formal : error . IDENTIFICADOR  (40)
-
-	IDENTIFICADOR  shift 140
-	.  error
-
-
-state 88
-	parametro_formal : tipo . IDENTIFICADOR  (38)
-	parametro_formal : tipo . error  (39)
-
-	error  shift 141
 	IDENTIFICADOR  shift 142
 	.  error
 
 
 state 89
-	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales . ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (27)
-	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales . ')' sentencias_declarativas BEGIN sentencias_ejecutables END  (30)
-	lista_parametros_formales : lista_parametros_formales . ',' parametro_formal  (37)
+	parametro_formal : error . IDENTIFICADOR  (40)
 
-	','  shift 143
-	')'  shift 144
+	IDENTIFICADOR  shift 143
 	.  error
 
 
 state 90
+	parametro_formal : tipo . IDENTIFICADOR  (38)
+	parametro_formal : tipo . error  (39)
+
+	error  shift 144
+	IDENTIFICADOR  shift 145
+	.  error
+
+
+state 91
+	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales . ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (27)
+	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales . ')' sentencias_declarativas BEGIN sentencias_ejecutables END  (30)
+	lista_parametros_formales : lista_parametros_formales . ',' parametro_formal  (37)
+
+	','  shift 146
+	')'  shift 147
+	.  error
+
+
+state 92
 	lista_parametros_formales : parametro_formal .  (36)
 
 	.  reduce 36
 
 
-state 91
+state 93
 	encabezado_auto_funcion : inicio_auto_funcion '(' lista_parametros_formales . ')'  (26)
 	lista_parametros_formales : lista_parametros_formales . ',' parametro_formal  (37)
 
-	','  shift 143
-	')'  shift 145
+	','  shift 146
+	')'  shift 148
 	.  error
 
 
-state 92
+state 94
 	declaracion_funciones : encabezado_auto_funcion BEGIN sentencias_ejecutables . END ';'  (31)
 	declaracion_funciones : encabezado_auto_funcion BEGIN sentencias_ejecutables . END  (34)
 	sentencias_ejecutables : sentencias_ejecutables . sentencia_ejecutable  (69)
@@ -1228,7 +1286,7 @@ state 92
 	error  shift 49
 	IDENTIFICADOR  shift 50
 	IF  shift 51
-	END  shift 146
+	END  shift 149
 	POUT  shift 53
 	RET  shift 54
 	CTE_SHORTINT  shift 55
@@ -1255,18 +1313,20 @@ state 92
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
+	encabezado_if  goto 77
+	inicio_repeat  goto 78
 
 
-state 93
+state 95
 	importacion_opcional : IMPORT FROM . lista_identificadores  (45)
 
 	IDENTIFICADOR  shift 29
 	.  error
 
-	lista_identificadores  goto 147
+	lista_identificadores  goto 150
 
 
-state 94
+state 96
 	lista_identificadores : lista_identificadores . ',' IDENTIFICADOR  (21)
 	importacion_opcional : IMPORT lista_identificadores .  (46)
 
@@ -1274,49 +1334,49 @@ state 94
 	BEGIN  reduce 46
 
 
-state 95
+state 97
 	declaracion_clase : encabezado_clase importacion_opcional BEGIN . herencia_opcional miembros_clase END ';'  (42)
 	declaracion_clase : encabezado_clase importacion_opcional BEGIN . herencia_opcional miembros_clase END  (43)
 	herencia_opcional : .  (47)
 
-	EXTENDS  shift 148
+	EXTENDS  shift 151
 	END  reduce 47
 	SHORTINT  reduce 47
 	SINGLEF  reduce 47
 	AUTO  reduce 47
 
-	herencia_opcional  goto 149
+	herencia_opcional  goto 152
 
 
-state 96
+state 98
 	programa : error $$1 sentencias_declarativas BEGIN sentencias_ejecutables END .  (4)
 
 	.  reduce 4
 
 
-state 97
+state 99
 	programa : nombre_programa sentencias_declarativas error $$2 sentencias_ejecutables END .  (6)
 
 	.  reduce 6
 
 
-state 98
+state 100
 	lista_identificadores : lista_identificadores ',' IDENTIFICADOR .  (21)
 
 	.  reduce 21
 
 
-state 99
+state 101
 	sentencia_ejecutable : error ';' .  (76)
 
 	.  reduce 76
 
 
-state 100
+state 102
 	asignacion : IDENTIFICADOR ASIGNAR . expresion  (77)
 	unica : IDENTIFICADOR ASIGNAR . '(' expresion ')'  (113)
 
-	IDENTIFICADOR  shift 106
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
@@ -1324,11 +1384,11 @@ state 100
 	'-'  shift 60
 	'*'  shift 61
 	'/'  shift 62
-	'('  shift 150
+	'('  shift 153
 	.  error
 
-	expresion  goto 151
-	acceso_posicional  goto 109
+	expresion  goto 154
+	acceso_posicional  goto 111
 	termino  goto 71
 	factor  goto 72
 	invocacion_metodo  goto 73
@@ -1337,11 +1397,11 @@ state 100
 	conversion_tos  goto 76
 
 
-state 101
+state 103
 	factor : IDENTIFICADOR '(' . ')'  (101)
 	factor : IDENTIFICADOR '(' . lista_expresiones ')'  (102)
 
-	IDENTIFICADOR  shift 106
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
@@ -1349,53 +1409,53 @@ state 101
 	'-'  shift 60
 	'*'  shift 61
 	'/'  shift 62
-	')'  shift 152
+	')'  shift 155
 	.  error
 
-	expresion  goto 153
-	acceso_posicional  goto 109
+	expresion  goto 156
+	acceso_posicional  goto 111
 	termino  goto 71
 	factor  goto 72
-	lista_expresiones  goto 154
+	lista_expresiones  goto 157
 	invocacion_metodo  goto 73
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
 
 
-state 102
+state 104
 	acceso_posicional : IDENTIFICADOR '[' . CTE_SHORTINT ']'  (79)
 	acceso_posicional : IDENTIFICADOR '[' . IDENTIFICADOR ']'  (80)
 	acceso_posicional : IDENTIFICADOR '[' . CTE_SINGLEF ']'  (81)
 
-	IDENTIFICADOR  shift 155
-	CTE_SHORTINT  shift 156
-	CTE_SINGLEF  shift 157
-	.  error
-
-
-state 103
-	invocacion_metodo : IDENTIFICADOR '.' . IDENTIFICADOR '(' ')'  (108)
-	invocacion_metodo : IDENTIFICADOR '.' . IDENTIFICADOR '(' lista_expresiones ')'  (109)
-
 	IDENTIFICADOR  shift 158
-	.  error
-
-
-state 104
-	unica : IDENTIFICADOR '=' . '(' expresion ')'  (112)
-
-	'('  shift 159
+	CTE_SHORTINT  shift 159
+	CTE_SINGLEF  shift 160
 	.  error
 
 
 state 105
-	sentencia_if : IF error . bloque resto_if  (119)
+	invocacion_metodo : IDENTIFICADOR '.' . IDENTIFICADOR '(' ')'  (108)
+	invocacion_metodo : IDENTIFICADOR '.' . IDENTIFICADOR '(' lista_expresiones ')'  (109)
+
+	IDENTIFICADOR  shift 161
+	.  error
+
+
+state 106
+	unica : IDENTIFICADOR '=' . '(' expresion ')'  (112)
+
+	'('  shift 162
+	.  error
+
+
+state 107
+	sentencia_if : IF error . bloque resto_if  (120)
 
 	error  shift 49
 	IDENTIFICADOR  shift 50
 	IF  shift 51
-	BEGIN  shift 113
+	BEGIN  shift 133
 	POUT  shift 53
 	RET  shift 54
 	CTE_SHORTINT  shift 55
@@ -1408,7 +1468,7 @@ state 105
 	'/'  shift 62
 	.  error
 
-	sentencia_ejecutable  goto 116
+	sentencia_ejecutable  goto 134
 	asignacion  goto 64
 	expresion  goto 65
 	sentencia_if  goto 66
@@ -1422,10 +1482,12 @@ state 105
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
-	bloque  goto 160
+	encabezado_if  goto 77
+	bloque  goto 163
+	inicio_repeat  goto 78
 
 
-state 106
+state 108
 	acceso_posicional : IDENTIFICADOR . '[' CTE_SHORTINT ']'  (79)
 	acceso_posicional : IDENTIFICADOR . '[' IDENTIFICADOR ']'  (80)
 	acceso_posicional : IDENTIFICADOR . '[' CTE_SINGLEF ']'  (81)
@@ -1437,11 +1499,11 @@ state 106
 	unica : IDENTIFICADOR . '=' '(' expresion ')'  (112)
 	unica : IDENTIFICADOR . ASIGNAR '(' expresion ')'  (113)
 
-	ASIGNAR  shift 161
-	'('  shift 101
-	'['  shift 102
-	'.'  shift 103
-	'='  shift 104
+	ASIGNAR  shift 164
+	'('  shift 103
+	'['  shift 104
+	'.'  shift 105
+	'='  shift 106
 	IDENTIFICADOR  reduce 98
 	MAYORIGUAL  reduce 98
 	MENORIGUAL  reduce 98
@@ -1460,10 +1522,10 @@ state 106
 	'<'  reduce 98
 
 
-state 107
-	sentencia_if : IF '(' . condicion ')' bloque resto_if  (117)
+state 109
+	encabezado_if : IF '(' . condicion ')'  (117)
 
-	IDENTIFICADOR  shift 106
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
@@ -1473,114 +1535,81 @@ state 107
 	'/'  shift 62
 	.  error
 
-	expresion  goto 108
-	acceso_posicional  goto 109
+	expresion  goto 110
+	acceso_posicional  goto 111
 	termino  goto 71
 	factor  goto 72
 	invocacion_metodo  goto 73
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
-	condicion  goto 162
+	condicion  goto 165
 
 
-state 108
+state 110
 	expresion : expresion . '+' termino  (83)
 	expresion : expresion . '-' termino  (84)
 	expresion : expresion . '+' error  (85)
 	expresion : expresion . '-' error  (86)
-	condicion : expresion . comparador expresion  (124)
+	condicion : expresion . comparador expresion  (126)
 
-	MAYORIGUAL  shift 163
-	MENORIGUAL  shift 164
-	IGUALIGUAL  shift 165
-	DISTINTO  shift 166
-	'+'  shift 125
-	'-'  shift 126
-	'>'  shift 167
-	'<'  shift 168
+	MAYORIGUAL  shift 166
+	MENORIGUAL  shift 167
+	IGUALIGUAL  shift 168
+	DISTINTO  shift 169
+	'+'  shift 122
+	'-'  shift 123
+	'>'  shift 170
+	'<'  shift 171
 	.  error
 
-	comparador  goto 169
+	comparador  goto 172
 
 
-state 109
+state 111
 	factor : acceso_posicional .  (107)
 
 	.  reduce 107
 
 
-state 110
-	sentencia_if : IF condicion . ')' bloque resto_if  (118)
-
-	')'  shift 170
-	.  error
-
-
-state 111
-	sentencia_pout : POUT '(' . CADENA ')'  (144)
-	sentencia_pout : POUT '(' . expresion ')'  (145)
-	sentencia_pout : POUT '(' . ')'  (146)
-
-	IDENTIFICADOR  shift 106
-	CADENA  shift 171
-	CTE_SHORTINT  shift 55
-	CTE_SINGLEF  shift 56
-	TOS  shift 58
-	'+'  shift 59
-	'-'  shift 60
-	'*'  shift 61
-	'/'  shift 62
-	')'  shift 172
-	.  error
-
-	expresion  goto 173
-	acceso_posicional  goto 109
-	termino  goto 71
-	factor  goto 72
-	invocacion_metodo  goto 73
-	unica  goto 74
-	numero_negativo  goto 75
-	conversion_tos  goto 76
-
-
 state 112
-	sentencia_ret : RET '(' . expresion ')'  (147)
+	sentencia_if : IF condicion . ')' bloque resto_if  (119)
 
-	IDENTIFICADOR  shift 106
-	CTE_SHORTINT  shift 55
-	CTE_SINGLEF  shift 56
-	TOS  shift 58
-	'+'  shift 59
-	'-'  shift 60
-	'*'  shift 61
-	'/'  shift 62
+	')'  shift 173
 	.  error
-
-	expresion  goto 174
-	acceso_posicional  goto 109
-	termino  goto 71
-	factor  goto 72
-	invocacion_metodo  goto 73
-	unica  goto 74
-	numero_negativo  goto 75
-	conversion_tos  goto 76
 
 
 state 113
-	bloque : BEGIN . sentencias_ejecutables END  (131)
-	bloque : BEGIN . sentencias_ejecutables  (133)
-	sentencias_ejecutables : .  (68)
+	sentencia_pout : POUT '(' . CADENA ')'  (147)
+	sentencia_pout : POUT '(' . expresion ')'  (148)
+	sentencia_pout : POUT '(' . ')'  (149)
 
-	.  reduce 68
+	IDENTIFICADOR  shift 108
+	CADENA  shift 174
+	CTE_SHORTINT  shift 55
+	CTE_SINGLEF  shift 56
+	TOS  shift 58
+	'+'  shift 59
+	'-'  shift 60
+	'*'  shift 61
+	'/'  shift 62
+	')'  shift 175
+	.  error
 
-	sentencias_ejecutables  goto 175
+	expresion  goto 176
+	acceso_posicional  goto 111
+	termino  goto 71
+	factor  goto 72
+	invocacion_metodo  goto 73
+	unica  goto 74
+	numero_negativo  goto 75
+	conversion_tos  goto 76
 
 
 state 114
-	sentencia_repeat_until : REPEAT UNTIL . condicion_iteracion ';'  (135)
+	sentencia_ret : RET '(' . expresion ')'  (150)
 
-	IDENTIFICADOR  shift 106
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
@@ -1588,26 +1617,22 @@ state 114
 	'-'  shift 60
 	'*'  shift 61
 	'/'  shift 62
-	'('  shift 176
 	.  error
 
-	expresion  goto 108
-	acceso_posicional  goto 109
+	expresion  goto 177
+	acceso_posicional  goto 111
 	termino  goto 71
 	factor  goto 72
 	invocacion_metodo  goto 73
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
-	condicion  goto 177
-	condicion_iteracion  goto 178
 
 
 state 115
-	sentencia_repeat_until : REPEAT '(' . condicion ')' ';'  (137)
-	sentencia_repeat_until : REPEAT '(' . condicion ';'  (139)
+	conversion_tos : TOS '(' . expresion ')'  (116)
 
-	IDENTIFICADOR  shift 106
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
@@ -1617,57 +1642,17 @@ state 115
 	'/'  shift 62
 	.  error
 
-	expresion  goto 108
-	acceso_posicional  goto 109
+	expresion  goto 178
+	acceso_posicional  goto 111
 	termino  goto 71
 	factor  goto 72
 	invocacion_metodo  goto 73
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
-	condicion  goto 179
 
 
 state 116
-	bloque : sentencia_ejecutable .  (132)
-
-	.  reduce 132
-
-
-state 117
-	sentencia_repeat_until : REPEAT bloque . UNTIL condicion_iteracion ';'  (134)
-	sentencia_repeat_until : REPEAT bloque . '(' condicion ')' ';'  (136)
-	sentencia_repeat_until : REPEAT bloque . '(' condicion ';'  (138)
-
-	UNTIL  shift 180
-	'('  shift 181
-	.  error
-
-
-state 118
-	conversion_tos : TOS '(' . expresion ')'  (116)
-
-	IDENTIFICADOR  shift 106
-	CTE_SHORTINT  shift 55
-	CTE_SINGLEF  shift 56
-	TOS  shift 58
-	'+'  shift 59
-	'-'  shift 60
-	'*'  shift 61
-	'/'  shift 62
-	.  error
-
-	expresion  goto 182
-	acceso_posicional  goto 109
-	termino  goto 71
-	factor  goto 72
-	invocacion_metodo  goto 73
-	unica  goto 74
-	numero_negativo  goto 75
-	conversion_tos  goto 76
-
-
-state 119
 	expresion : '+' termino .  (87)
 	termino : termino . '*' factor  (89)
 	termino : termino . '/' factor  (90)
@@ -1677,11 +1662,11 @@ state 119
 	termino : termino . CTE_SHORTINT  (96)
 	termino : termino . CTE_SINGLEF  (97)
 
-	IDENTIFICADOR  shift 131
-	CTE_SHORTINT  shift 132
-	CTE_SINGLEF  shift 133
-	'*'  shift 134
-	'/'  shift 135
+	IDENTIFICADOR  shift 128
+	CTE_SHORTINT  shift 129
+	CTE_SINGLEF  shift 130
+	'*'  shift 131
+	'/'  shift 132
 	MAYORIGUAL  reduce 87
 	MENORIGUAL  reduce 87
 	IGUALIGUAL  reduce 87
@@ -1695,42 +1680,42 @@ state 119
 	'<'  reduce 87
 
 
-state 120
+state 117
 	numero_negativo : '-' CTE_SHORTINT .  (114)
 
 	.  reduce 114
 
 
-state 121
+state 118
 	numero_negativo : '-' CTE_SINGLEF .  (115)
 
 	.  reduce 115
 
 
-state 122
+state 119
 	termino : '*' factor .  (93)
 
 	.  reduce 93
 
 
-state 123
+state 120
 	termino : '/' factor .  (94)
 
 	.  reduce 94
 
 
-state 124
+state 121
 	sentencia_ejecutable : asignacion ';' .  (70)
 
 	.  reduce 70
 
 
-state 125
+state 122
 	expresion : expresion '+' . termino  (83)
 	expresion : expresion '+' . error  (85)
 
-	error  shift 183
-	IDENTIFICADOR  shift 106
+	error  shift 179
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
@@ -1739,8 +1724,8 @@ state 125
 	'/'  shift 62
 	.  error
 
-	acceso_posicional  goto 109
-	termino  goto 184
+	acceso_posicional  goto 111
+	termino  goto 180
 	factor  goto 72
 	invocacion_metodo  goto 73
 	unica  goto 74
@@ -1748,12 +1733,12 @@ state 125
 	conversion_tos  goto 76
 
 
-state 126
+state 123
 	expresion : expresion '-' . termino  (84)
 	expresion : expresion '-' . error  (86)
 
-	error  shift 185
-	IDENTIFICADOR  shift 106
+	error  shift 181
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
@@ -1762,8 +1747,8 @@ state 126
 	'/'  shift 62
 	.  error
 
-	acceso_posicional  goto 109
-	termino  goto 186
+	acceso_posicional  goto 111
+	termino  goto 182
 	factor  goto 72
 	invocacion_metodo  goto 73
 	unica  goto 74
@@ -1771,28 +1756,28 @@ state 126
 	conversion_tos  goto 76
 
 
-state 127
+state 124
 	sentencia_ejecutable : expresion ';' .  (71)
 
 	.  reduce 71
 
 
-state 128
+state 125
 	sentencia_ejecutable : sentencia_pout ';' .  (74)
 
 	.  reduce 74
 
 
-state 129
+state 126
 	sentencia_ejecutable : sentencia_ret ';' .  (75)
 
 	.  reduce 75
 
 
-state 130
+state 127
 	asignacion : acceso_posicional ASIGNAR . expresion  (78)
 
-	IDENTIFICADOR  shift 106
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
@@ -1802,8 +1787,8 @@ state 130
 	'/'  shift 62
 	.  error
 
-	expresion  goto 187
-	acceso_posicional  goto 109
+	expresion  goto 183
+	acceso_posicional  goto 111
 	termino  goto 71
 	factor  goto 72
 	invocacion_metodo  goto 73
@@ -1812,141 +1797,230 @@ state 130
 	conversion_tos  goto 76
 
 
-state 131
+state 128
 	termino : termino IDENTIFICADOR .  (95)
 
 	.  reduce 95
 
 
-state 132
+state 129
 	termino : termino CTE_SHORTINT .  (96)
 
 	.  reduce 96
 
 
-state 133
+state 130
 	termino : termino CTE_SINGLEF .  (97)
 
 	.  reduce 97
 
 
-state 134
+state 131
 	termino : termino '*' . factor  (89)
 	termino : termino '*' . error  (91)
 
-	error  shift 188
-	IDENTIFICADOR  shift 106
+	error  shift 184
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
 	'-'  shift 60
 	.  error
 
-	acceso_posicional  goto 109
-	factor  goto 189
+	acceso_posicional  goto 111
+	factor  goto 185
 	invocacion_metodo  goto 73
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
 
 
-state 135
+state 132
 	termino : termino '/' . factor  (90)
 	termino : termino '/' . error  (92)
 
-	error  shift 190
-	IDENTIFICADOR  shift 106
+	error  shift 186
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
 	'-'  shift 60
 	.  error
 
-	acceso_posicional  goto 109
-	factor  goto 191
+	acceso_posicional  goto 111
+	factor  goto 187
 	invocacion_metodo  goto 73
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
 
 
-state 136
-	declaracion_funciones : AUTO FUNCTION error $$4 . '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (33)
+state 133
+	bloque : BEGIN . sentencias_ejecutables END  (133)
+	bloque : BEGIN . sentencias_ejecutables  (135)
+	sentencias_ejecutables : .  (68)
 
-	'('  shift 192
+	.  reduce 68
+
+	sentencias_ejecutables  goto 188
+
+
+state 134
+	bloque : sentencia_ejecutable .  (134)
+
+	.  reduce 134
+
+
+state 135
+	sentencia_if : encabezado_if bloque . resto_if  (118)
+
+	ELSE  shift 189
+	END_IF  shift 190
+	';'  shift 191
 	.  error
+
+	resto_if  goto 192
+	inicio_else  goto 193
+
+
+state 136
+	sentencia_repeat_until : inicio_repeat UNTIL . condicion_iteracion ';'  (138)
+
+	IDENTIFICADOR  shift 108
+	CTE_SHORTINT  shift 55
+	CTE_SINGLEF  shift 56
+	TOS  shift 58
+	'+'  shift 59
+	'-'  shift 60
+	'*'  shift 61
+	'/'  shift 62
+	'('  shift 194
+	.  error
+
+	expresion  goto 110
+	acceso_posicional  goto 111
+	termino  goto 71
+	factor  goto 72
+	invocacion_metodo  goto 73
+	unica  goto 74
+	numero_negativo  goto 75
+	conversion_tos  goto 76
+	condicion  goto 195
+	condicion_iteracion  goto 196
 
 
 state 137
+	sentencia_repeat_until : inicio_repeat '(' . condicion ')' ';'  (140)
+	sentencia_repeat_until : inicio_repeat '(' . condicion ';'  (142)
+
+	IDENTIFICADOR  shift 108
+	CTE_SHORTINT  shift 55
+	CTE_SINGLEF  shift 56
+	TOS  shift 58
+	'+'  shift 59
+	'-'  shift 60
+	'*'  shift 61
+	'/'  shift 62
+	.  error
+
+	expresion  goto 110
+	acceso_posicional  goto 111
+	termino  goto 71
+	factor  goto 72
+	invocacion_metodo  goto 73
+	unica  goto 74
+	numero_negativo  goto 75
+	conversion_tos  goto 76
+	condicion  goto 197
+
+
+state 138
+	sentencia_repeat_until : inicio_repeat bloque . UNTIL condicion_iteracion ';'  (137)
+	sentencia_repeat_until : inicio_repeat bloque . '(' condicion ')' ';'  (139)
+	sentencia_repeat_until : inicio_repeat bloque . '(' condicion ';'  (141)
+
+	UNTIL  shift 198
+	'('  shift 199
+	.  error
+
+
+state 139
+	declaracion_funciones : AUTO FUNCTION error $$4 . '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (33)
+
+	'('  shift 200
+	.  error
+
+
+state 140
 	declaracion_comptime : COMPTIME tipo lista_identificadores ';' .  (64)
 
 	.  reduce 64
 
 
-state 138
+state 141
 	declaracion_funciones : tipo FUNCTION error $$3 . '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (29)
 
-	'('  shift 193
+	'('  shift 201
 	.  error
 
 
-state 139
+state 142
 	lista_variables : lista_variables ',' IDENTIFICADOR .  (18)
 
 	.  reduce 18
 
 
-state 140
+state 143
 	parametro_formal : error IDENTIFICADOR .  (40)
 
 	.  reduce 40
 
 
-state 141
+state 144
 	parametro_formal : tipo error .  (39)
 
 	.  reduce 39
 
 
-state 142
+state 145
 	parametro_formal : tipo IDENTIFICADOR .  (38)
 
 	.  reduce 38
 
 
-state 143
+state 146
 	lista_parametros_formales : lista_parametros_formales ',' . parametro_formal  (37)
 
-	error  shift 87
+	error  shift 89
 	SHORTINT  shift 12
 	SINGLEF  shift 13
 	.  error
 
-	tipo  goto 88
-	parametro_formal  goto 194
+	tipo  goto 90
+	parametro_formal  goto 202
 
 
-state 144
+state 147
 	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales ')' . sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (27)
 	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales ')' . sentencias_declarativas BEGIN sentencias_ejecutables END  (30)
 	sentencias_declarativas : .  (8)
 
 	.  reduce 8
 
-	sentencias_declarativas  goto 195
+	sentencias_declarativas  goto 203
 
 
-state 145
+state 148
 	encabezado_auto_funcion : inicio_auto_funcion '(' lista_parametros_formales ')' .  (26)
 
 	.  reduce 26
 
 
-state 146
+state 149
 	declaracion_funciones : encabezado_auto_funcion BEGIN sentencias_ejecutables END . ';'  (31)
 	declaracion_funciones : encabezado_auto_funcion BEGIN sentencias_ejecutables END .  (34)
 
-	';'  shift 196
+	';'  shift 204
 	error  reduce 34
 	IDENTIFICADOR  reduce 34
 	BEGIN  reduce 34
@@ -1957,7 +2031,7 @@ state 146
 	COMPTIME  reduce 34
 
 
-state 147
+state 150
 	lista_identificadores : lista_identificadores . ',' IDENTIFICADOR  (21)
 	importacion_opcional : IMPORT FROM lista_identificadores .  (45)
 
@@ -1965,31 +2039,31 @@ state 147
 	BEGIN  reduce 45
 
 
-state 148
+state 151
 	herencia_opcional : EXTENDS . lista_identificadores ';'  (48)
 	herencia_opcional : EXTENDS . ';'  (49)
 
 	IDENTIFICADOR  shift 29
-	';'  shift 197
+	';'  shift 205
 	.  error
 
-	lista_identificadores  goto 198
+	lista_identificadores  goto 206
 
 
-state 149
+state 152
 	declaracion_clase : encabezado_clase importacion_opcional BEGIN herencia_opcional . miembros_clase END ';'  (42)
 	declaracion_clase : encabezado_clase importacion_opcional BEGIN herencia_opcional . miembros_clase END  (43)
 	miembros_clase : .  (50)
 
 	.  reduce 50
 
-	miembros_clase  goto 199
+	miembros_clase  goto 207
 
 
-state 150
+state 153
 	unica : IDENTIFICADOR ASIGNAR '(' . expresion ')'  (113)
 
-	IDENTIFICADOR  shift 106
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
@@ -1999,8 +2073,8 @@ state 150
 	'/'  shift 62
 	.  error
 
-	expresion  goto 200
-	acceso_posicional  goto 109
+	expresion  goto 208
+	acceso_posicional  goto 111
 	termino  goto 71
 	factor  goto 72
 	invocacion_metodo  goto 73
@@ -2009,266 +2083,190 @@ state 150
 	conversion_tos  goto 76
 
 
-state 151
+state 154
 	asignacion : IDENTIFICADOR ASIGNAR expresion .  (77)
 	expresion : expresion . '+' termino  (83)
 	expresion : expresion . '-' termino  (84)
 	expresion : expresion . '+' error  (85)
 	expresion : expresion . '-' error  (86)
 
-	'+'  shift 125
-	'-'  shift 126
+	'+'  shift 122
+	'-'  shift 123
 	';'  reduce 77
 
 
-state 152
+state 155
 	factor : IDENTIFICADOR '(' ')' .  (101)
 
 	.  reduce 101
 
 
-state 153
+state 156
 	expresion : expresion . '+' termino  (83)
 	expresion : expresion . '-' termino  (84)
 	expresion : expresion . '+' error  (85)
 	expresion : expresion . '-' error  (86)
 	lista_expresiones : expresion .  (110)
 
-	'+'  shift 125
-	'-'  shift 126
+	'+'  shift 122
+	'-'  shift 123
 	','  reduce 110
 	')'  reduce 110
 
 
-state 154
+state 157
 	factor : IDENTIFICADOR '(' lista_expresiones . ')'  (102)
 	lista_expresiones : lista_expresiones . ',' expresion  (111)
 
-	','  shift 201
-	')'  shift 202
-	.  error
-
-
-state 155
-	acceso_posicional : IDENTIFICADOR '[' IDENTIFICADOR . ']'  (80)
-
-	']'  shift 203
-	.  error
-
-
-state 156
-	acceso_posicional : IDENTIFICADOR '[' CTE_SHORTINT . ']'  (79)
-
-	']'  shift 204
-	.  error
-
-
-state 157
-	acceso_posicional : IDENTIFICADOR '[' CTE_SINGLEF . ']'  (81)
-
-	']'  shift 205
+	','  shift 209
+	')'  shift 210
 	.  error
 
 
 state 158
-	invocacion_metodo : IDENTIFICADOR '.' IDENTIFICADOR . '(' ')'  (108)
-	invocacion_metodo : IDENTIFICADOR '.' IDENTIFICADOR . '(' lista_expresiones ')'  (109)
+	acceso_posicional : IDENTIFICADOR '[' IDENTIFICADOR . ']'  (80)
 
-	'('  shift 206
+	']'  shift 211
 	.  error
 
 
 state 159
-	unica : IDENTIFICADOR '=' '(' . expresion ')'  (112)
+	acceso_posicional : IDENTIFICADOR '[' CTE_SHORTINT . ']'  (79)
 
-	IDENTIFICADOR  shift 106
-	CTE_SHORTINT  shift 55
-	CTE_SINGLEF  shift 56
-	TOS  shift 58
-	'+'  shift 59
-	'-'  shift 60
-	'*'  shift 61
-	'/'  shift 62
+	']'  shift 212
 	.  error
-
-	expresion  goto 207
-	acceso_posicional  goto 109
-	termino  goto 71
-	factor  goto 72
-	invocacion_metodo  goto 73
-	unica  goto 74
-	numero_negativo  goto 75
-	conversion_tos  goto 76
 
 
 state 160
-	sentencia_if : IF error bloque . resto_if  (119)
+	acceso_posicional : IDENTIFICADOR '[' CTE_SINGLEF . ']'  (81)
 
-	ELSE  shift 208
-	END_IF  shift 209
-	';'  shift 210
+	']'  shift 213
 	.  error
-
-	resto_if  goto 211
 
 
 state 161
-	unica : IDENTIFICADOR ASIGNAR . '(' expresion ')'  (113)
+	invocacion_metodo : IDENTIFICADOR '.' IDENTIFICADOR . '(' ')'  (108)
+	invocacion_metodo : IDENTIFICADOR '.' IDENTIFICADOR . '(' lista_expresiones ')'  (109)
 
-	'('  shift 150
+	'('  shift 214
 	.  error
 
 
 state 162
-	sentencia_if : IF '(' condicion . ')' bloque resto_if  (117)
+	unica : IDENTIFICADOR '=' '(' . expresion ')'  (112)
 
-	')'  shift 212
+	IDENTIFICADOR  shift 108
+	CTE_SHORTINT  shift 55
+	CTE_SINGLEF  shift 56
+	TOS  shift 58
+	'+'  shift 59
+	'-'  shift 60
+	'*'  shift 61
+	'/'  shift 62
 	.  error
+
+	expresion  goto 215
+	acceso_posicional  goto 111
+	termino  goto 71
+	factor  goto 72
+	invocacion_metodo  goto 73
+	unica  goto 74
+	numero_negativo  goto 75
+	conversion_tos  goto 76
 
 
 state 163
-	comparador : MAYORIGUAL .  (125)
+	sentencia_if : IF error bloque . resto_if  (120)
 
-	.  reduce 125
+	ELSE  shift 189
+	END_IF  shift 190
+	';'  shift 191
+	.  error
+
+	resto_if  goto 216
+	inicio_else  goto 193
 
 
 state 164
-	comparador : MENORIGUAL .  (126)
+	unica : IDENTIFICADOR ASIGNAR . '(' expresion ')'  (113)
 
-	.  reduce 126
+	'('  shift 153
+	.  error
 
 
 state 165
-	comparador : IGUALIGUAL .  (127)
+	encabezado_if : IF '(' condicion . ')'  (117)
 
-	.  reduce 127
-
-
-state 166
-	comparador : DISTINTO .  (128)
-
-	.  reduce 128
-
-
-state 167
-	comparador : '>' .  (129)
-
-	.  reduce 129
-
-
-state 168
-	comparador : '<' .  (130)
-
-	.  reduce 130
-
-
-state 169
-	condicion : expresion comparador . expresion  (124)
-
-	IDENTIFICADOR  shift 106
-	CTE_SHORTINT  shift 55
-	CTE_SINGLEF  shift 56
-	TOS  shift 58
-	'+'  shift 59
-	'-'  shift 60
-	'*'  shift 61
-	'/'  shift 62
-	.  error
-
-	expresion  goto 213
-	acceso_posicional  goto 109
-	termino  goto 71
-	factor  goto 72
-	invocacion_metodo  goto 73
-	unica  goto 74
-	numero_negativo  goto 75
-	conversion_tos  goto 76
-
-
-state 170
-	sentencia_if : IF condicion ')' . bloque resto_if  (118)
-
-	error  shift 49
-	IDENTIFICADOR  shift 50
-	IF  shift 51
-	BEGIN  shift 113
-	POUT  shift 53
-	RET  shift 54
-	CTE_SHORTINT  shift 55
-	CTE_SINGLEF  shift 56
-	REPEAT  shift 57
-	TOS  shift 58
-	'+'  shift 59
-	'-'  shift 60
-	'*'  shift 61
-	'/'  shift 62
-	.  error
-
-	sentencia_ejecutable  goto 116
-	asignacion  goto 64
-	expresion  goto 65
-	sentencia_if  goto 66
-	sentencia_repeat_until  goto 67
-	sentencia_pout  goto 68
-	sentencia_ret  goto 69
-	acceso_posicional  goto 70
-	termino  goto 71
-	factor  goto 72
-	invocacion_metodo  goto 73
-	unica  goto 74
-	numero_negativo  goto 75
-	conversion_tos  goto 76
-	bloque  goto 214
-
-
-state 171
-	sentencia_pout : POUT '(' CADENA . ')'  (144)
-
-	')'  shift 215
-	.  error
-
-
-state 172
-	sentencia_pout : POUT '(' ')' .  (146)
-
-	.  reduce 146
-
-
-state 173
-	expresion : expresion . '+' termino  (83)
-	expresion : expresion . '-' termino  (84)
-	expresion : expresion . '+' error  (85)
-	expresion : expresion . '-' error  (86)
-	sentencia_pout : POUT '(' expresion . ')'  (145)
-
-	'+'  shift 125
-	'-'  shift 126
-	')'  shift 216
-	.  error
-
-
-state 174
-	expresion : expresion . '+' termino  (83)
-	expresion : expresion . '-' termino  (84)
-	expresion : expresion . '+' error  (85)
-	expresion : expresion . '-' error  (86)
-	sentencia_ret : RET '(' expresion . ')'  (147)
-
-	'+'  shift 125
-	'-'  shift 126
 	')'  shift 217
 	.  error
 
 
-state 175
-	sentencias_ejecutables : sentencias_ejecutables . sentencia_ejecutable  (69)
-	bloque : BEGIN sentencias_ejecutables . END  (131)
-	bloque : BEGIN sentencias_ejecutables .  (133)
+state 166
+	comparador : MAYORIGUAL .  (127)
+
+	.  reduce 127
+
+
+state 167
+	comparador : MENORIGUAL .  (128)
+
+	.  reduce 128
+
+
+state 168
+	comparador : IGUALIGUAL .  (129)
+
+	.  reduce 129
+
+
+state 169
+	comparador : DISTINTO .  (130)
+
+	.  reduce 130
+
+
+state 170
+	comparador : '>' .  (131)
+
+	.  reduce 131
+
+
+state 171
+	comparador : '<' .  (132)
+
+	.  reduce 132
+
+
+state 172
+	condicion : expresion comparador . expresion  (126)
+
+	IDENTIFICADOR  shift 108
+	CTE_SHORTINT  shift 55
+	CTE_SINGLEF  shift 56
+	TOS  shift 58
+	'+'  shift 59
+	'-'  shift 60
+	'*'  shift 61
+	'/'  shift 62
+	.  error
+
+	expresion  goto 218
+	acceso_posicional  goto 111
+	termino  goto 71
+	factor  goto 72
+	invocacion_metodo  goto 73
+	unica  goto 74
+	numero_negativo  goto 75
+	conversion_tos  goto 76
+
+
+state 173
+	sentencia_if : IF condicion ')' . bloque resto_if  (119)
 
 	error  shift 49
 	IDENTIFICADOR  shift 50
 	IF  shift 51
-	END  shift 218
+	BEGIN  shift 133
 	POUT  shift 53
 	RET  shift 54
 	CTE_SHORTINT  shift 55
@@ -2279,13 +2277,9 @@ state 175
 	'-'  shift 60
 	'*'  shift 61
 	'/'  shift 62
-	ELSE  reduce 133
-	END_IF  reduce 133
-	UNTIL  reduce 133
-	';'  reduce 133
-	'('  reduce 133
+	.  error
 
-	sentencia_ejecutable  goto 63
+	sentencia_ejecutable  goto 134
 	asignacion  goto 64
 	expresion  goto 65
 	sentencia_if  goto 66
@@ -2299,128 +2293,70 @@ state 175
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
+	encabezado_if  goto 77
+	bloque  goto 219
+	inicio_repeat  goto 78
+
+
+state 174
+	sentencia_pout : POUT '(' CADENA . ')'  (147)
+
+	')'  shift 220
+	.  error
+
+
+state 175
+	sentencia_pout : POUT '(' ')' .  (149)
+
+	.  reduce 149
 
 
 state 176
-	condicion_iteracion : '(' . condicion ')'  (140)
-	condicion_iteracion : '(' . condicion  (142)
+	expresion : expresion . '+' termino  (83)
+	expresion : expresion . '-' termino  (84)
+	expresion : expresion . '+' error  (85)
+	expresion : expresion . '-' error  (86)
+	sentencia_pout : POUT '(' expresion . ')'  (148)
 
-	IDENTIFICADOR  shift 106
-	CTE_SHORTINT  shift 55
-	CTE_SINGLEF  shift 56
-	TOS  shift 58
-	'+'  shift 59
-	'-'  shift 60
-	'*'  shift 61
-	'/'  shift 62
+	'+'  shift 122
+	'-'  shift 123
+	')'  shift 221
 	.  error
-
-	expresion  goto 108
-	acceso_posicional  goto 109
-	termino  goto 71
-	factor  goto 72
-	invocacion_metodo  goto 73
-	unica  goto 74
-	numero_negativo  goto 75
-	conversion_tos  goto 76
-	condicion  goto 219
 
 
 state 177
-	condicion_iteracion : condicion . ')'  (141)
-	condicion_iteracion : condicion .  (143)
+	expresion : expresion . '+' termino  (83)
+	expresion : expresion . '-' termino  (84)
+	expresion : expresion . '+' error  (85)
+	expresion : expresion . '-' error  (86)
+	sentencia_ret : RET '(' expresion . ')'  (150)
 
-	')'  shift 220
-	';'  reduce 143
+	'+'  shift 122
+	'-'  shift 123
+	')'  shift 222
+	.  error
 
 
 state 178
-	sentencia_repeat_until : REPEAT UNTIL condicion_iteracion . ';'  (135)
-
-	';'  shift 221
-	.  error
-
-
-state 179
-	sentencia_repeat_until : REPEAT '(' condicion . ')' ';'  (137)
-	sentencia_repeat_until : REPEAT '(' condicion . ';'  (139)
-
-	';'  shift 222
-	')'  shift 223
-	.  error
-
-
-state 180
-	sentencia_repeat_until : REPEAT bloque UNTIL . condicion_iteracion ';'  (134)
-
-	IDENTIFICADOR  shift 106
-	CTE_SHORTINT  shift 55
-	CTE_SINGLEF  shift 56
-	TOS  shift 58
-	'+'  shift 59
-	'-'  shift 60
-	'*'  shift 61
-	'/'  shift 62
-	'('  shift 176
-	.  error
-
-	expresion  goto 108
-	acceso_posicional  goto 109
-	termino  goto 71
-	factor  goto 72
-	invocacion_metodo  goto 73
-	unica  goto 74
-	numero_negativo  goto 75
-	conversion_tos  goto 76
-	condicion  goto 177
-	condicion_iteracion  goto 224
-
-
-state 181
-	sentencia_repeat_until : REPEAT bloque '(' . condicion ')' ';'  (136)
-	sentencia_repeat_until : REPEAT bloque '(' . condicion ';'  (138)
-
-	IDENTIFICADOR  shift 106
-	CTE_SHORTINT  shift 55
-	CTE_SINGLEF  shift 56
-	TOS  shift 58
-	'+'  shift 59
-	'-'  shift 60
-	'*'  shift 61
-	'/'  shift 62
-	.  error
-
-	expresion  goto 108
-	acceso_posicional  goto 109
-	termino  goto 71
-	factor  goto 72
-	invocacion_metodo  goto 73
-	unica  goto 74
-	numero_negativo  goto 75
-	conversion_tos  goto 76
-	condicion  goto 225
-
-
-state 182
 	expresion : expresion . '+' termino  (83)
 	expresion : expresion . '-' termino  (84)
 	expresion : expresion . '+' error  (85)
 	expresion : expresion . '-' error  (86)
 	conversion_tos : TOS '(' expresion . ')'  (116)
 
-	'+'  shift 125
-	'-'  shift 126
-	')'  shift 226
+	'+'  shift 122
+	'-'  shift 123
+	')'  shift 223
 	.  error
 
 
-state 183
+state 179
 	expresion : expresion '+' error .  (85)
 
 	.  reduce 85
 
 
-state 184
+state 180
 	expresion : expresion '+' termino .  (83)
 	termino : termino . '*' factor  (89)
 	termino : termino . '/' factor  (90)
@@ -2430,11 +2366,11 @@ state 184
 	termino : termino . CTE_SHORTINT  (96)
 	termino : termino . CTE_SINGLEF  (97)
 
-	IDENTIFICADOR  shift 131
-	CTE_SHORTINT  shift 132
-	CTE_SINGLEF  shift 133
-	'*'  shift 134
-	'/'  shift 135
+	IDENTIFICADOR  shift 128
+	CTE_SHORTINT  shift 129
+	CTE_SINGLEF  shift 130
+	'*'  shift 131
+	'/'  shift 132
 	MAYORIGUAL  reduce 83
 	MENORIGUAL  reduce 83
 	IGUALIGUAL  reduce 83
@@ -2448,13 +2384,13 @@ state 184
 	'<'  reduce 83
 
 
-state 185
+state 181
 	expresion : expresion '-' error .  (86)
 
 	.  reduce 86
 
 
-state 186
+state 182
 	expresion : expresion '-' termino .  (84)
 	termino : termino . '*' factor  (89)
 	termino : termino . '/' factor  (90)
@@ -2464,11 +2400,11 @@ state 186
 	termino : termino . CTE_SHORTINT  (96)
 	termino : termino . CTE_SINGLEF  (97)
 
-	IDENTIFICADOR  shift 131
-	CTE_SHORTINT  shift 132
-	CTE_SINGLEF  shift 133
-	'*'  shift 134
-	'/'  shift 135
+	IDENTIFICADOR  shift 128
+	CTE_SHORTINT  shift 129
+	CTE_SINGLEF  shift 130
+	'*'  shift 131
+	'/'  shift 132
 	MAYORIGUAL  reduce 84
 	MENORIGUAL  reduce 84
 	IGUALIGUAL  reduce 84
@@ -2482,85 +2418,292 @@ state 186
 	'<'  reduce 84
 
 
-state 187
+state 183
 	asignacion : acceso_posicional ASIGNAR expresion .  (78)
 	expresion : expresion . '+' termino  (83)
 	expresion : expresion . '-' termino  (84)
 	expresion : expresion . '+' error  (85)
 	expresion : expresion . '-' error  (86)
 
-	'+'  shift 125
-	'-'  shift 126
+	'+'  shift 122
+	'-'  shift 123
 	';'  reduce 78
 
 
-state 188
+state 184
 	termino : termino '*' error .  (91)
 
 	.  reduce 91
 
 
-state 189
+state 185
 	termino : termino '*' factor .  (89)
 
 	.  reduce 89
 
 
-state 190
+state 186
 	termino : termino '/' error .  (92)
 
 	.  reduce 92
 
 
-state 191
+state 187
 	termino : termino '/' factor .  (90)
 
 	.  reduce 90
 
 
+state 188
+	sentencias_ejecutables : sentencias_ejecutables . sentencia_ejecutable  (69)
+	bloque : BEGIN sentencias_ejecutables . END  (133)
+	bloque : BEGIN sentencias_ejecutables .  (135)
+
+	error  shift 49
+	IDENTIFICADOR  shift 50
+	IF  shift 51
+	END  shift 224
+	POUT  shift 53
+	RET  shift 54
+	CTE_SHORTINT  shift 55
+	CTE_SINGLEF  shift 56
+	REPEAT  shift 57
+	TOS  shift 58
+	'+'  shift 59
+	'-'  shift 60
+	'*'  shift 61
+	'/'  shift 62
+	ELSE  reduce 135
+	END_IF  reduce 135
+	UNTIL  reduce 135
+	';'  reduce 135
+	'('  reduce 135
+
+	sentencia_ejecutable  goto 63
+	asignacion  goto 64
+	expresion  goto 65
+	sentencia_if  goto 66
+	sentencia_repeat_until  goto 67
+	sentencia_pout  goto 68
+	sentencia_ret  goto 69
+	acceso_posicional  goto 70
+	termino  goto 71
+	factor  goto 72
+	invocacion_metodo  goto 73
+	unica  goto 74
+	numero_negativo  goto 75
+	conversion_tos  goto 76
+	encabezado_if  goto 77
+	inicio_repeat  goto 78
+
+
+state 189
+	inicio_else : ELSE .  (121)
+
+	.  reduce 121
+
+
+state 190
+	resto_if : END_IF . ';'  (122)
+
+	';'  shift 225
+	.  error
+
+
+state 191
+	resto_if : ';' .  (124)
+
+	.  reduce 124
+
+
 state 192
-	declaracion_funciones : AUTO FUNCTION error $$4 '(' . lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (33)
-	lista_parametros_formales : .  (35)
+	sentencia_if : encabezado_if bloque resto_if .  (118)
 
-	error  shift 87
-	SHORTINT  shift 12
-	SINGLEF  shift 13
-	','  reduce 35
-	')'  reduce 35
-
-	tipo  goto 88
-	lista_parametros_formales  goto 227
-	parametro_formal  goto 90
+	.  reduce 118
 
 
 state 193
-	declaracion_funciones : tipo FUNCTION error $$3 '(' . lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (29)
+	resto_if : inicio_else . bloque END_IF ';'  (123)
+	resto_if : inicio_else . bloque ';'  (125)
+
+	error  shift 49
+	IDENTIFICADOR  shift 50
+	IF  shift 51
+	BEGIN  shift 133
+	POUT  shift 53
+	RET  shift 54
+	CTE_SHORTINT  shift 55
+	CTE_SINGLEF  shift 56
+	REPEAT  shift 57
+	TOS  shift 58
+	'+'  shift 59
+	'-'  shift 60
+	'*'  shift 61
+	'/'  shift 62
+	.  error
+
+	sentencia_ejecutable  goto 134
+	asignacion  goto 64
+	expresion  goto 65
+	sentencia_if  goto 66
+	sentencia_repeat_until  goto 67
+	sentencia_pout  goto 68
+	sentencia_ret  goto 69
+	acceso_posicional  goto 70
+	termino  goto 71
+	factor  goto 72
+	invocacion_metodo  goto 73
+	unica  goto 74
+	numero_negativo  goto 75
+	conversion_tos  goto 76
+	encabezado_if  goto 77
+	bloque  goto 226
+	inicio_repeat  goto 78
+
+
+state 194
+	condicion_iteracion : '(' . condicion ')'  (143)
+	condicion_iteracion : '(' . condicion  (145)
+
+	IDENTIFICADOR  shift 108
+	CTE_SHORTINT  shift 55
+	CTE_SINGLEF  shift 56
+	TOS  shift 58
+	'+'  shift 59
+	'-'  shift 60
+	'*'  shift 61
+	'/'  shift 62
+	.  error
+
+	expresion  goto 110
+	acceso_posicional  goto 111
+	termino  goto 71
+	factor  goto 72
+	invocacion_metodo  goto 73
+	unica  goto 74
+	numero_negativo  goto 75
+	conversion_tos  goto 76
+	condicion  goto 227
+
+
+state 195
+	condicion_iteracion : condicion . ')'  (144)
+	condicion_iteracion : condicion .  (146)
+
+	')'  shift 228
+	';'  reduce 146
+
+
+state 196
+	sentencia_repeat_until : inicio_repeat UNTIL condicion_iteracion . ';'  (138)
+
+	';'  shift 229
+	.  error
+
+
+state 197
+	sentencia_repeat_until : inicio_repeat '(' condicion . ')' ';'  (140)
+	sentencia_repeat_until : inicio_repeat '(' condicion . ';'  (142)
+
+	';'  shift 230
+	')'  shift 231
+	.  error
+
+
+state 198
+	sentencia_repeat_until : inicio_repeat bloque UNTIL . condicion_iteracion ';'  (137)
+
+	IDENTIFICADOR  shift 108
+	CTE_SHORTINT  shift 55
+	CTE_SINGLEF  shift 56
+	TOS  shift 58
+	'+'  shift 59
+	'-'  shift 60
+	'*'  shift 61
+	'/'  shift 62
+	'('  shift 194
+	.  error
+
+	expresion  goto 110
+	acceso_posicional  goto 111
+	termino  goto 71
+	factor  goto 72
+	invocacion_metodo  goto 73
+	unica  goto 74
+	numero_negativo  goto 75
+	conversion_tos  goto 76
+	condicion  goto 195
+	condicion_iteracion  goto 232
+
+
+state 199
+	sentencia_repeat_until : inicio_repeat bloque '(' . condicion ')' ';'  (139)
+	sentencia_repeat_until : inicio_repeat bloque '(' . condicion ';'  (141)
+
+	IDENTIFICADOR  shift 108
+	CTE_SHORTINT  shift 55
+	CTE_SINGLEF  shift 56
+	TOS  shift 58
+	'+'  shift 59
+	'-'  shift 60
+	'*'  shift 61
+	'/'  shift 62
+	.  error
+
+	expresion  goto 110
+	acceso_posicional  goto 111
+	termino  goto 71
+	factor  goto 72
+	invocacion_metodo  goto 73
+	unica  goto 74
+	numero_negativo  goto 75
+	conversion_tos  goto 76
+	condicion  goto 233
+
+
+state 200
+	declaracion_funciones : AUTO FUNCTION error $$4 '(' . lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (33)
 	lista_parametros_formales : .  (35)
 
-	error  shift 87
+	error  shift 89
 	SHORTINT  shift 12
 	SINGLEF  shift 13
 	','  reduce 35
 	')'  reduce 35
 
-	tipo  goto 88
-	lista_parametros_formales  goto 228
-	parametro_formal  goto 90
+	tipo  goto 90
+	lista_parametros_formales  goto 234
+	parametro_formal  goto 92
 
 
-state 194
+state 201
+	declaracion_funciones : tipo FUNCTION error $$3 '(' . lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (29)
+	lista_parametros_formales : .  (35)
+
+	error  shift 89
+	SHORTINT  shift 12
+	SINGLEF  shift 13
+	','  reduce 35
+	')'  reduce 35
+
+	tipo  goto 90
+	lista_parametros_formales  goto 235
+	parametro_formal  goto 92
+
+
+state 202
 	lista_parametros_formales : lista_parametros_formales ',' parametro_formal .  (37)
 
 	.  reduce 37
 
 
-state 195
+state 203
 	sentencias_declarativas : sentencias_declarativas . sentencia_declarativa  (9)
 	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales ')' sentencias_declarativas . BEGIN sentencias_ejecutables END ';'  (27)
 	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales ')' sentencias_declarativas . BEGIN sentencias_ejecutables END  (30)
 
 	IDENTIFICADOR  shift 9
-	BEGIN  shift 229
+	BEGIN  shift 236
 	CLASS  shift 11
 	SHORTINT  shift 12
 	SINGLEF  shift 13
@@ -2581,63 +2724,63 @@ state 195
 	encabezado_clase  goto 26
 
 
-state 196
+state 204
 	declaracion_funciones : encabezado_auto_funcion BEGIN sentencias_ejecutables END ';' .  (31)
 
 	.  reduce 31
 
 
-state 197
+state 205
 	herencia_opcional : EXTENDS ';' .  (49)
 
 	.  reduce 49
 
 
-state 198
+state 206
 	lista_identificadores : lista_identificadores . ',' IDENTIFICADOR  (21)
 	herencia_opcional : EXTENDS lista_identificadores . ';'  (48)
 
-	';'  shift 230
+	';'  shift 237
 	','  shift 48
 	.  error
 
 
-state 199
+state 207
 	declaracion_clase : encabezado_clase importacion_opcional BEGIN herencia_opcional miembros_clase . END ';'  (42)
 	declaracion_clase : encabezado_clase importacion_opcional BEGIN herencia_opcional miembros_clase . END  (43)
 	miembros_clase : miembros_clase . miembro_clase  (51)
 
-	END  shift 231
+	END  shift 238
 	SHORTINT  shift 12
 	SINGLEF  shift 13
-	AUTO  shift 232
+	AUTO  shift 239
 	.  error
 
-	tipo  goto 233
-	miembro_clase  goto 234
-	atributo_clase  goto 235
-	metodo_clase  goto 236
-	encabezado_metodo  goto 237
-	encabezado_metodo_auto  goto 238
+	tipo  goto 240
+	miembro_clase  goto 241
+	atributo_clase  goto 242
+	metodo_clase  goto 243
+	encabezado_metodo  goto 244
+	encabezado_metodo_auto  goto 245
 
 
-state 200
+state 208
 	expresion : expresion . '+' termino  (83)
 	expresion : expresion . '-' termino  (84)
 	expresion : expresion . '+' error  (85)
 	expresion : expresion . '-' error  (86)
 	unica : IDENTIFICADOR ASIGNAR '(' expresion . ')'  (113)
 
-	'+'  shift 125
-	'-'  shift 126
-	')'  shift 239
+	'+'  shift 122
+	'-'  shift 123
+	')'  shift 246
 	.  error
 
 
-state 201
+state 209
 	lista_expresiones : lista_expresiones ',' . expresion  (111)
 
-	IDENTIFICADOR  shift 106
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
@@ -2647,8 +2790,8 @@ state 201
 	'/'  shift 62
 	.  error
 
-	expresion  goto 240
-	acceso_posicional  goto 109
+	expresion  goto 247
+	acceso_posicional  goto 111
 	termino  goto 71
 	factor  goto 72
 	invocacion_metodo  goto 73
@@ -2657,35 +2800,35 @@ state 201
 	conversion_tos  goto 76
 
 
-state 202
+state 210
 	factor : IDENTIFICADOR '(' lista_expresiones ')' .  (102)
 
 	.  reduce 102
 
 
-state 203
+state 211
 	acceso_posicional : IDENTIFICADOR '[' IDENTIFICADOR ']' .  (80)
 
 	.  reduce 80
 
 
-state 204
+state 212
 	acceso_posicional : IDENTIFICADOR '[' CTE_SHORTINT ']' .  (79)
 
 	.  reduce 79
 
 
-state 205
+state 213
 	acceso_posicional : IDENTIFICADOR '[' CTE_SINGLEF ']' .  (81)
 
 	.  reduce 81
 
 
-state 206
+state 214
 	invocacion_metodo : IDENTIFICADOR '.' IDENTIFICADOR '(' . ')'  (108)
 	invocacion_metodo : IDENTIFICADOR '.' IDENTIFICADOR '(' . lista_expresiones ')'  (109)
 
-	IDENTIFICADOR  shift 106
+	IDENTIFICADOR  shift 108
 	CTE_SHORTINT  shift 55
 	CTE_SINGLEF  shift 56
 	TOS  shift 58
@@ -2693,267 +2836,203 @@ state 206
 	'-'  shift 60
 	'*'  shift 61
 	'/'  shift 62
-	')'  shift 241
+	')'  shift 248
 	.  error
 
-	expresion  goto 153
-	acceso_posicional  goto 109
+	expresion  goto 156
+	acceso_posicional  goto 111
 	termino  goto 71
 	factor  goto 72
-	lista_expresiones  goto 242
+	lista_expresiones  goto 249
 	invocacion_metodo  goto 73
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
 
 
-state 207
+state 215
 	expresion : expresion . '+' termino  (83)
 	expresion : expresion . '-' termino  (84)
 	expresion : expresion . '+' error  (85)
 	expresion : expresion . '-' error  (86)
 	unica : IDENTIFICADOR '=' '(' expresion . ')'  (112)
 
-	'+'  shift 125
-	'-'  shift 126
-	')'  shift 243
+	'+'  shift 122
+	'-'  shift 123
+	')'  shift 250
 	.  error
 
 
-state 208
-	resto_if : ELSE . bloque END_IF ';'  (121)
-	resto_if : ELSE . bloque ';'  (123)
+state 216
+	sentencia_if : IF error bloque resto_if .  (120)
 
-	error  shift 49
-	IDENTIFICADOR  shift 50
-	IF  shift 51
-	BEGIN  shift 113
-	POUT  shift 53
-	RET  shift 54
-	CTE_SHORTINT  shift 55
-	CTE_SINGLEF  shift 56
-	REPEAT  shift 57
-	TOS  shift 58
-	'+'  shift 59
-	'-'  shift 60
-	'*'  shift 61
-	'/'  shift 62
-	.  error
-
-	sentencia_ejecutable  goto 116
-	asignacion  goto 64
-	expresion  goto 65
-	sentencia_if  goto 66
-	sentencia_repeat_until  goto 67
-	sentencia_pout  goto 68
-	sentencia_ret  goto 69
-	acceso_posicional  goto 70
-	termino  goto 71
-	factor  goto 72
-	invocacion_metodo  goto 73
-	unica  goto 74
-	numero_negativo  goto 75
-	conversion_tos  goto 76
-	bloque  goto 244
+	.  reduce 120
 
 
-state 209
-	resto_if : END_IF . ';'  (120)
+state 217
+	encabezado_if : IF '(' condicion ')' .  (117)
 
-	';'  shift 245
-	.  error
-
-
-state 210
-	resto_if : ';' .  (122)
-
-	.  reduce 122
+	.  reduce 117
 
 
-state 211
-	sentencia_if : IF error bloque resto_if .  (119)
-
-	.  reduce 119
-
-
-state 212
-	sentencia_if : IF '(' condicion ')' . bloque resto_if  (117)
-
-	error  shift 49
-	IDENTIFICADOR  shift 50
-	IF  shift 51
-	BEGIN  shift 113
-	POUT  shift 53
-	RET  shift 54
-	CTE_SHORTINT  shift 55
-	CTE_SINGLEF  shift 56
-	REPEAT  shift 57
-	TOS  shift 58
-	'+'  shift 59
-	'-'  shift 60
-	'*'  shift 61
-	'/'  shift 62
-	.  error
-
-	sentencia_ejecutable  goto 116
-	asignacion  goto 64
-	expresion  goto 65
-	sentencia_if  goto 66
-	sentencia_repeat_until  goto 67
-	sentencia_pout  goto 68
-	sentencia_ret  goto 69
-	acceso_posicional  goto 70
-	termino  goto 71
-	factor  goto 72
-	invocacion_metodo  goto 73
-	unica  goto 74
-	numero_negativo  goto 75
-	conversion_tos  goto 76
-	bloque  goto 246
-
-
-state 213
+state 218
 	expresion : expresion . '+' termino  (83)
 	expresion : expresion . '-' termino  (84)
 	expresion : expresion . '+' error  (85)
 	expresion : expresion . '-' error  (86)
-	condicion : expresion comparador expresion .  (124)
+	condicion : expresion comparador expresion .  (126)
 
-	'+'  shift 125
-	'-'  shift 126
-	';'  reduce 124
-	')'  reduce 124
+	'+'  shift 122
+	'-'  shift 123
+	';'  reduce 126
+	')'  reduce 126
 
 
-state 214
-	sentencia_if : IF condicion ')' bloque . resto_if  (118)
+state 219
+	sentencia_if : IF condicion ')' bloque . resto_if  (119)
 
-	ELSE  shift 208
-	END_IF  shift 209
-	';'  shift 210
+	ELSE  shift 189
+	END_IF  shift 190
+	';'  shift 191
 	.  error
 
-	resto_if  goto 247
+	resto_if  goto 251
+	inicio_else  goto 193
 
 
-state 215
-	sentencia_pout : POUT '(' CADENA ')' .  (144)
-
-	.  reduce 144
-
-
-state 216
-	sentencia_pout : POUT '(' expresion ')' .  (145)
-
-	.  reduce 145
-
-
-state 217
-	sentencia_ret : RET '(' expresion ')' .  (147)
+state 220
+	sentencia_pout : POUT '(' CADENA ')' .  (147)
 
 	.  reduce 147
 
 
-state 218
-	bloque : BEGIN sentencias_ejecutables END .  (131)
-
-	.  reduce 131
-
-
-state 219
-	condicion_iteracion : '(' condicion . ')'  (140)
-	condicion_iteracion : '(' condicion .  (142)
-
-	')'  shift 248
-	';'  reduce 142
-
-
-state 220
-	condicion_iteracion : condicion ')' .  (141)
-
-	.  reduce 141
-
-
 state 221
-	sentencia_repeat_until : REPEAT UNTIL condicion_iteracion ';' .  (135)
+	sentencia_pout : POUT '(' expresion ')' .  (148)
 
-	.  reduce 135
+	.  reduce 148
 
 
 state 222
-	sentencia_repeat_until : REPEAT '(' condicion ';' .  (139)
+	sentencia_ret : RET '(' expresion ')' .  (150)
 
-	.  reduce 139
+	.  reduce 150
 
 
 state 223
-	sentencia_repeat_until : REPEAT '(' condicion ')' . ';'  (137)
-
-	';'  shift 249
-	.  error
-
-
-state 224
-	sentencia_repeat_until : REPEAT bloque UNTIL condicion_iteracion . ';'  (134)
-
-	';'  shift 250
-	.  error
-
-
-state 225
-	sentencia_repeat_until : REPEAT bloque '(' condicion . ')' ';'  (136)
-	sentencia_repeat_until : REPEAT bloque '(' condicion . ';'  (138)
-
-	';'  shift 251
-	')'  shift 252
-	.  error
-
-
-state 226
 	conversion_tos : TOS '(' expresion ')' .  (116)
 
 	.  reduce 116
 
 
-state 227
-	declaracion_funciones : AUTO FUNCTION error $$4 '(' lista_parametros_formales . ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (33)
-	lista_parametros_formales : lista_parametros_formales . ',' parametro_formal  (37)
+state 224
+	bloque : BEGIN sentencias_ejecutables END .  (133)
 
-	','  shift 143
-	')'  shift 253
+	.  reduce 133
+
+
+state 225
+	resto_if : END_IF ';' .  (122)
+
+	.  reduce 122
+
+
+state 226
+	resto_if : inicio_else bloque . END_IF ';'  (123)
+	resto_if : inicio_else bloque . ';'  (125)
+
+	END_IF  shift 252
+	';'  shift 253
 	.  error
+
+
+state 227
+	condicion_iteracion : '(' condicion . ')'  (143)
+	condicion_iteracion : '(' condicion .  (145)
+
+	')'  shift 254
+	';'  reduce 145
 
 
 state 228
-	declaracion_funciones : tipo FUNCTION error $$3 '(' lista_parametros_formales . ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (29)
-	lista_parametros_formales : lista_parametros_formales . ',' parametro_formal  (37)
+	condicion_iteracion : condicion ')' .  (144)
 
-	','  shift 143
-	')'  shift 254
-	.  error
+	.  reduce 144
 
 
 state 229
+	sentencia_repeat_until : inicio_repeat UNTIL condicion_iteracion ';' .  (138)
+
+	.  reduce 138
+
+
+state 230
+	sentencia_repeat_until : inicio_repeat '(' condicion ';' .  (142)
+
+	.  reduce 142
+
+
+state 231
+	sentencia_repeat_until : inicio_repeat '(' condicion ')' . ';'  (140)
+
+	';'  shift 255
+	.  error
+
+
+state 232
+	sentencia_repeat_until : inicio_repeat bloque UNTIL condicion_iteracion . ';'  (137)
+
+	';'  shift 256
+	.  error
+
+
+state 233
+	sentencia_repeat_until : inicio_repeat bloque '(' condicion . ')' ';'  (139)
+	sentencia_repeat_until : inicio_repeat bloque '(' condicion . ';'  (141)
+
+	';'  shift 257
+	')'  shift 258
+	.  error
+
+
+state 234
+	declaracion_funciones : AUTO FUNCTION error $$4 '(' lista_parametros_formales . ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (33)
+	lista_parametros_formales : lista_parametros_formales . ',' parametro_formal  (37)
+
+	','  shift 146
+	')'  shift 259
+	.  error
+
+
+state 235
+	declaracion_funciones : tipo FUNCTION error $$3 '(' lista_parametros_formales . ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (29)
+	lista_parametros_formales : lista_parametros_formales . ',' parametro_formal  (37)
+
+	','  shift 146
+	')'  shift 260
+	.  error
+
+
+state 236
 	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales ')' sentencias_declarativas BEGIN . sentencias_ejecutables END ';'  (27)
 	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales ')' sentencias_declarativas BEGIN . sentencias_ejecutables END  (30)
 	sentencias_ejecutables : .  (68)
 
 	.  reduce 68
 
-	sentencias_ejecutables  goto 255
+	sentencias_ejecutables  goto 261
 
 
-state 230
+state 237
 	herencia_opcional : EXTENDS lista_identificadores ';' .  (48)
 
 	.  reduce 48
 
 
-state 231
+state 238
 	declaracion_clase : encabezado_clase importacion_opcional BEGIN herencia_opcional miembros_clase END . ';'  (42)
 	declaracion_clase : encabezado_clase importacion_opcional BEGIN herencia_opcional miembros_clase END .  (43)
 
-	';'  shift 256
+	';'  shift 262
 	error  reduce 43
 	IDENTIFICADOR  reduce 43
 	BEGIN  reduce 43
@@ -2964,177 +3043,164 @@ state 231
 	COMPTIME  reduce 43
 
 
-state 232
+state 239
 	encabezado_metodo_auto : AUTO . IDENTIFICADOR  (58)
 
-	IDENTIFICADOR  shift 257
+	IDENTIFICADOR  shift 263
 	.  error
 
 
-state 233
+state 240
 	atributo_clase : tipo . lista_identificadores exportacion_opcional ';'  (54)
 	encabezado_metodo : tipo . IDENTIFICADOR  (57)
 
-	IDENTIFICADOR  shift 258
+	IDENTIFICADOR  shift 264
 	.  error
 
-	lista_identificadores  goto 259
+	lista_identificadores  goto 265
 
 
-state 234
+state 241
 	miembros_clase : miembros_clase miembro_clase .  (51)
 
 	.  reduce 51
 
 
-state 235
+state 242
 	miembro_clase : atributo_clase .  (52)
 
 	.  reduce 52
 
 
-state 236
+state 243
 	miembro_clase : metodo_clase .  (53)
 
 	.  reduce 53
 
 
-state 237
+state 244
 	metodo_clase : encabezado_metodo . '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END exportacion_opcional ';'  (55)
 
-	'('  shift 260
+	'('  shift 266
 	.  error
 
 
-state 238
+state 245
 	metodo_clase : encabezado_metodo_auto . '(' lista_parametros_formales ')' BEGIN sentencias_ejecutables END exportacion_opcional ';'  (56)
 
-	'('  shift 261
+	'('  shift 267
 	.  error
 
 
-state 239
+state 246
 	unica : IDENTIFICADOR ASIGNAR '(' expresion ')' .  (113)
 
 	.  reduce 113
 
 
-state 240
+state 247
 	expresion : expresion . '+' termino  (83)
 	expresion : expresion . '-' termino  (84)
 	expresion : expresion . '+' error  (85)
 	expresion : expresion . '-' error  (86)
 	lista_expresiones : lista_expresiones ',' expresion .  (111)
 
-	'+'  shift 125
-	'-'  shift 126
+	'+'  shift 122
+	'-'  shift 123
 	','  reduce 111
 	')'  reduce 111
 
 
-state 241
+state 248
 	invocacion_metodo : IDENTIFICADOR '.' IDENTIFICADOR '(' ')' .  (108)
 
 	.  reduce 108
 
 
-state 242
+state 249
 	invocacion_metodo : IDENTIFICADOR '.' IDENTIFICADOR '(' lista_expresiones . ')'  (109)
 	lista_expresiones : lista_expresiones . ',' expresion  (111)
 
-	','  shift 201
-	')'  shift 262
+	','  shift 209
+	')'  shift 268
 	.  error
 
 
-state 243
+state 250
 	unica : IDENTIFICADOR '=' '(' expresion ')' .  (112)
 
 	.  reduce 112
 
 
-state 244
-	resto_if : ELSE bloque . END_IF ';'  (121)
-	resto_if : ELSE bloque . ';'  (123)
-
-	END_IF  shift 263
-	';'  shift 264
-	.  error
-
-
-state 245
-	resto_if : END_IF ';' .  (120)
-
-	.  reduce 120
-
-
-state 246
-	sentencia_if : IF '(' condicion ')' bloque . resto_if  (117)
-
-	ELSE  shift 208
-	END_IF  shift 209
-	';'  shift 210
-	.  error
-
-	resto_if  goto 265
-
-
-state 247
-	sentencia_if : IF condicion ')' bloque resto_if .  (118)
-
-	.  reduce 118
-
-
-state 248
-	condicion_iteracion : '(' condicion ')' .  (140)
-
-	.  reduce 140
-
-
-state 249
-	sentencia_repeat_until : REPEAT '(' condicion ')' ';' .  (137)
-
-	.  reduce 137
-
-
-state 250
-	sentencia_repeat_until : REPEAT bloque UNTIL condicion_iteracion ';' .  (134)
-
-	.  reduce 134
-
-
 state 251
-	sentencia_repeat_until : REPEAT bloque '(' condicion ';' .  (138)
+	sentencia_if : IF condicion ')' bloque resto_if .  (119)
 
-	.  reduce 138
+	.  reduce 119
 
 
 state 252
-	sentencia_repeat_until : REPEAT bloque '(' condicion ')' . ';'  (136)
+	resto_if : inicio_else bloque END_IF . ';'  (123)
 
-	';'  shift 266
+	';'  shift 269
 	.  error
 
 
 state 253
+	resto_if : inicio_else bloque ';' .  (125)
+
+	.  reduce 125
+
+
+state 254
+	condicion_iteracion : '(' condicion ')' .  (143)
+
+	.  reduce 143
+
+
+state 255
+	sentencia_repeat_until : inicio_repeat '(' condicion ')' ';' .  (140)
+
+	.  reduce 140
+
+
+state 256
+	sentencia_repeat_until : inicio_repeat bloque UNTIL condicion_iteracion ';' .  (137)
+
+	.  reduce 137
+
+
+state 257
+	sentencia_repeat_until : inicio_repeat bloque '(' condicion ';' .  (141)
+
+	.  reduce 141
+
+
+state 258
+	sentencia_repeat_until : inicio_repeat bloque '(' condicion ')' . ';'  (139)
+
+	';'  shift 270
+	.  error
+
+
+state 259
 	declaracion_funciones : AUTO FUNCTION error $$4 '(' lista_parametros_formales ')' . sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (33)
 	sentencias_declarativas : .  (8)
 
 	.  reduce 8
 
-	sentencias_declarativas  goto 267
+	sentencias_declarativas  goto 271
 
 
-state 254
+state 260
 	declaracion_funciones : tipo FUNCTION error $$3 '(' lista_parametros_formales ')' . sentencias_declarativas BEGIN sentencias_ejecutables END ';'  (29)
 	sentencias_declarativas : .  (8)
 
 	.  reduce 8
 
-	sentencias_declarativas  goto 268
+	sentencias_declarativas  goto 272
 
 
-state 255
+state 261
 	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables . END ';'  (27)
 	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables . END  (30)
 	sentencias_ejecutables : sentencias_ejecutables . sentencia_ejecutable  (69)
@@ -3142,7 +3208,7 @@ state 255
 	error  shift 49
 	IDENTIFICADOR  shift 50
 	IF  shift 51
-	END  shift 269
+	END  shift 273
 	POUT  shift 53
 	RET  shift 54
 	CTE_SHORTINT  shift 55
@@ -3169,21 +3235,23 @@ state 255
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
+	encabezado_if  goto 77
+	inicio_repeat  goto 78
 
 
-state 256
+state 262
 	declaracion_clase : encabezado_clase importacion_opcional BEGIN herencia_opcional miembros_clase END ';' .  (42)
 
 	.  reduce 42
 
 
-state 257
+state 263
 	encabezado_metodo_auto : AUTO IDENTIFICADOR .  (58)
 
 	.  reduce 58
 
 
-state 258
+state 264
 	lista_identificadores : IDENTIFICADOR .  (20)
 	encabezado_metodo : tipo IDENTIFICADOR .  (57)
 
@@ -3193,85 +3261,72 @@ state 258
 	'('  reduce 57
 
 
-state 259
+state 265
 	lista_identificadores : lista_identificadores . ',' IDENTIFICADOR  (21)
 	atributo_clase : tipo lista_identificadores . exportacion_opcional ';'  (54)
 	exportacion_opcional : .  (59)
 
-	EXPORT  shift 270
+	EXPORT  shift 274
 	','  shift 48
 	';'  reduce 59
 
-	exportacion_opcional  goto 271
+	exportacion_opcional  goto 275
 
 
-state 260
+state 266
 	metodo_clase : encabezado_metodo '(' . lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END exportacion_opcional ';'  (55)
 	lista_parametros_formales : .  (35)
 
-	error  shift 87
+	error  shift 89
 	SHORTINT  shift 12
 	SINGLEF  shift 13
 	','  reduce 35
 	')'  reduce 35
 
-	tipo  goto 88
-	lista_parametros_formales  goto 272
-	parametro_formal  goto 90
+	tipo  goto 90
+	lista_parametros_formales  goto 276
+	parametro_formal  goto 92
 
 
-state 261
+state 267
 	metodo_clase : encabezado_metodo_auto '(' . lista_parametros_formales ')' BEGIN sentencias_ejecutables END exportacion_opcional ';'  (56)
 	lista_parametros_formales : .  (35)
 
-	error  shift 87
+	error  shift 89
 	SHORTINT  shift 12
 	SINGLEF  shift 13
 	','  reduce 35
 	')'  reduce 35
 
-	tipo  goto 88
-	lista_parametros_formales  goto 273
-	parametro_formal  goto 90
+	tipo  goto 90
+	lista_parametros_formales  goto 277
+	parametro_formal  goto 92
 
 
-state 262
+state 268
 	invocacion_metodo : IDENTIFICADOR '.' IDENTIFICADOR '(' lista_expresiones ')' .  (109)
 
 	.  reduce 109
 
 
-state 263
-	resto_if : ELSE bloque END_IF . ';'  (121)
-
-	';'  shift 274
-	.  error
-
-
-state 264
-	resto_if : ELSE bloque ';' .  (123)
+state 269
+	resto_if : inicio_else bloque END_IF ';' .  (123)
 
 	.  reduce 123
 
 
-state 265
-	sentencia_if : IF '(' condicion ')' bloque resto_if .  (117)
+state 270
+	sentencia_repeat_until : inicio_repeat bloque '(' condicion ')' ';' .  (139)
 
-	.  reduce 117
-
-
-state 266
-	sentencia_repeat_until : REPEAT bloque '(' condicion ')' ';' .  (136)
-
-	.  reduce 136
+	.  reduce 139
 
 
-state 267
+state 271
 	sentencias_declarativas : sentencias_declarativas . sentencia_declarativa  (9)
 	declaracion_funciones : AUTO FUNCTION error $$4 '(' lista_parametros_formales ')' sentencias_declarativas . BEGIN sentencias_ejecutables END ';'  (33)
 
 	IDENTIFICADOR  shift 9
-	BEGIN  shift 275
+	BEGIN  shift 278
 	CLASS  shift 11
 	SHORTINT  shift 12
 	SINGLEF  shift 13
@@ -3292,12 +3347,12 @@ state 267
 	encabezado_clase  goto 26
 
 
-state 268
+state 272
 	sentencias_declarativas : sentencias_declarativas . sentencia_declarativa  (9)
 	declaracion_funciones : tipo FUNCTION error $$3 '(' lista_parametros_formales ')' sentencias_declarativas . BEGIN sentencias_ejecutables END ';'  (29)
 
 	IDENTIFICADOR  shift 9
-	BEGIN  shift 276
+	BEGIN  shift 279
 	CLASS  shift 11
 	SHORTINT  shift 12
 	SINGLEF  shift 13
@@ -3318,11 +3373,11 @@ state 268
 	encabezado_clase  goto 26
 
 
-state 269
+state 273
 	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END . ';'  (27)
 	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END .  (30)
 
-	';'  shift 277
+	';'  shift 280
 	error  reduce 30
 	IDENTIFICADOR  reduce 30
 	BEGIN  reduce 30
@@ -3333,82 +3388,76 @@ state 269
 	COMPTIME  reduce 30
 
 
-state 270
+state 274
 	exportacion_opcional : EXPORT . TO lista_identificadores  (60)
 	exportacion_opcional : EXPORT . lista_identificadores  (61)
 
 	IDENTIFICADOR  shift 29
-	TO  shift 278
+	TO  shift 281
 	.  error
 
-	lista_identificadores  goto 279
-
-
-state 271
-	atributo_clase : tipo lista_identificadores exportacion_opcional . ';'  (54)
-
-	';'  shift 280
-	.  error
-
-
-state 272
-	lista_parametros_formales : lista_parametros_formales . ',' parametro_formal  (37)
-	metodo_clase : encabezado_metodo '(' lista_parametros_formales . ')' sentencias_declarativas BEGIN sentencias_ejecutables END exportacion_opcional ';'  (55)
-
-	','  shift 143
-	')'  shift 281
-	.  error
-
-
-state 273
-	lista_parametros_formales : lista_parametros_formales . ',' parametro_formal  (37)
-	metodo_clase : encabezado_metodo_auto '(' lista_parametros_formales . ')' BEGIN sentencias_ejecutables END exportacion_opcional ';'  (56)
-
-	','  shift 143
-	')'  shift 282
-	.  error
-
-
-state 274
-	resto_if : ELSE bloque END_IF ';' .  (121)
-
-	.  reduce 121
+	lista_identificadores  goto 282
 
 
 state 275
+	atributo_clase : tipo lista_identificadores exportacion_opcional . ';'  (54)
+
+	';'  shift 283
+	.  error
+
+
+state 276
+	lista_parametros_formales : lista_parametros_formales . ',' parametro_formal  (37)
+	metodo_clase : encabezado_metodo '(' lista_parametros_formales . ')' sentencias_declarativas BEGIN sentencias_ejecutables END exportacion_opcional ';'  (55)
+
+	','  shift 146
+	')'  shift 284
+	.  error
+
+
+state 277
+	lista_parametros_formales : lista_parametros_formales . ',' parametro_formal  (37)
+	metodo_clase : encabezado_metodo_auto '(' lista_parametros_formales . ')' BEGIN sentencias_ejecutables END exportacion_opcional ';'  (56)
+
+	','  shift 146
+	')'  shift 285
+	.  error
+
+
+state 278
 	declaracion_funciones : AUTO FUNCTION error $$4 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN . sentencias_ejecutables END ';'  (33)
 	sentencias_ejecutables : .  (68)
 
 	.  reduce 68
 
-	sentencias_ejecutables  goto 283
+	sentencias_ejecutables  goto 286
 
 
-state 276
+state 279
 	declaracion_funciones : tipo FUNCTION error $$3 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN . sentencias_ejecutables END ';'  (29)
 	sentencias_ejecutables : .  (68)
 
 	.  reduce 68
 
-	sentencias_ejecutables  goto 284
+	sentencias_ejecutables  goto 287
 
 
-state 277
+state 280
 	declaracion_funciones : encabezado_funcion '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';' .  (27)
 
 	.  reduce 27
 
 
-state 278
+state 281
 	exportacion_opcional : EXPORT TO . lista_identificadores  (60)
 
 	IDENTIFICADOR  shift 29
 	.  error
 
-	lista_identificadores  goto 285
+	lista_identificadores  goto 288
 
 
-state 279
+state 282
 	lista_identificadores : lista_identificadores . ',' IDENTIFICADOR  (21)
 	exportacion_opcional : EXPORT lista_identificadores .  (61)
 
@@ -3416,36 +3465,36 @@ state 279
 	';'  reduce 61
 
 
-state 280
+state 283
 	atributo_clase : tipo lista_identificadores exportacion_opcional ';' .  (54)
 
 	.  reduce 54
 
 
-state 281
+state 284
 	metodo_clase : encabezado_metodo '(' lista_parametros_formales ')' . sentencias_declarativas BEGIN sentencias_ejecutables END exportacion_opcional ';'  (55)
 	sentencias_declarativas : .  (8)
 
 	.  reduce 8
 
-	sentencias_declarativas  goto 286
+	sentencias_declarativas  goto 289
 
 
-state 282
+state 285
 	metodo_clase : encabezado_metodo_auto '(' lista_parametros_formales ')' . BEGIN sentencias_ejecutables END exportacion_opcional ';'  (56)
 
-	BEGIN  shift 287
+	BEGIN  shift 290
 	.  error
 
 
-state 283
+state 286
 	declaracion_funciones : AUTO FUNCTION error $$4 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables . END ';'  (33)
 	sentencias_ejecutables : sentencias_ejecutables . sentencia_ejecutable  (69)
 
 	error  shift 49
 	IDENTIFICADOR  shift 50
 	IF  shift 51
-	END  shift 288
+	END  shift 291
 	POUT  shift 53
 	RET  shift 54
 	CTE_SHORTINT  shift 55
@@ -3472,16 +3521,18 @@ state 283
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
+	encabezado_if  goto 77
+	inicio_repeat  goto 78
 
 
-state 284
+state 287
 	declaracion_funciones : tipo FUNCTION error $$3 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables . END ';'  (29)
 	sentencias_ejecutables : sentencias_ejecutables . sentencia_ejecutable  (69)
 
 	error  shift 49
 	IDENTIFICADOR  shift 50
 	IF  shift 51
-	END  shift 289
+	END  shift 292
 	POUT  shift 53
 	RET  shift 54
 	CTE_SHORTINT  shift 55
@@ -3508,9 +3559,11 @@ state 284
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
+	encabezado_if  goto 77
+	inicio_repeat  goto 78
 
 
-state 285
+state 288
 	lista_identificadores : lista_identificadores . ',' IDENTIFICADOR  (21)
 	exportacion_opcional : EXPORT TO lista_identificadores .  (60)
 
@@ -3518,12 +3571,12 @@ state 285
 	';'  reduce 60
 
 
-state 286
+state 289
 	sentencias_declarativas : sentencias_declarativas . sentencia_declarativa  (9)
 	metodo_clase : encabezado_metodo '(' lista_parametros_formales ')' sentencias_declarativas . BEGIN sentencias_ejecutables END exportacion_opcional ';'  (55)
 
 	IDENTIFICADOR  shift 9
-	BEGIN  shift 290
+	BEGIN  shift 293
 	CLASS  shift 11
 	SHORTINT  shift 12
 	SINGLEF  shift 13
@@ -3544,31 +3597,8 @@ state 286
 	encabezado_clase  goto 26
 
 
-state 287
-	metodo_clase : encabezado_metodo_auto '(' lista_parametros_formales ')' BEGIN . sentencias_ejecutables END exportacion_opcional ';'  (56)
-	sentencias_ejecutables : .  (68)
-
-	.  reduce 68
-
-	sentencias_ejecutables  goto 291
-
-
-state 288
-	declaracion_funciones : AUTO FUNCTION error $$4 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END . ';'  (33)
-
-	';'  shift 292
-	.  error
-
-
-state 289
-	declaracion_funciones : tipo FUNCTION error $$3 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END . ';'  (29)
-
-	';'  shift 293
-	.  error
-
-
 state 290
-	metodo_clase : encabezado_metodo '(' lista_parametros_formales ')' sentencias_declarativas BEGIN . sentencias_ejecutables END exportacion_opcional ';'  (55)
+	metodo_clase : encabezado_metodo_auto '(' lista_parametros_formales ')' BEGIN . sentencias_ejecutables END exportacion_opcional ';'  (56)
 	sentencias_ejecutables : .  (68)
 
 	.  reduce 68
@@ -3577,13 +3607,36 @@ state 290
 
 
 state 291
+	declaracion_funciones : AUTO FUNCTION error $$4 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END . ';'  (33)
+
+	';'  shift 295
+	.  error
+
+
+state 292
+	declaracion_funciones : tipo FUNCTION error $$3 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END . ';'  (29)
+
+	';'  shift 296
+	.  error
+
+
+state 293
+	metodo_clase : encabezado_metodo '(' lista_parametros_formales ')' sentencias_declarativas BEGIN . sentencias_ejecutables END exportacion_opcional ';'  (55)
+	sentencias_ejecutables : .  (68)
+
+	.  reduce 68
+
+	sentencias_ejecutables  goto 297
+
+
+state 294
 	metodo_clase : encabezado_metodo_auto '(' lista_parametros_formales ')' BEGIN sentencias_ejecutables . END exportacion_opcional ';'  (56)
 	sentencias_ejecutables : sentencias_ejecutables . sentencia_ejecutable  (69)
 
 	error  shift 49
 	IDENTIFICADOR  shift 50
 	IF  shift 51
-	END  shift 295
+	END  shift 298
 	POUT  shift 53
 	RET  shift 54
 	CTE_SHORTINT  shift 55
@@ -3610,28 +3663,30 @@ state 291
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
+	encabezado_if  goto 77
+	inicio_repeat  goto 78
 
 
-state 292
+state 295
 	declaracion_funciones : AUTO FUNCTION error $$4 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';' .  (33)
 
 	.  reduce 33
 
 
-state 293
+state 296
 	declaracion_funciones : tipo FUNCTION error $$3 '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END ';' .  (29)
 
 	.  reduce 29
 
 
-state 294
+state 297
 	metodo_clase : encabezado_metodo '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables . END exportacion_opcional ';'  (55)
 	sentencias_ejecutables : sentencias_ejecutables . sentencia_ejecutable  (69)
 
 	error  shift 49
 	IDENTIFICADOR  shift 50
 	IF  shift 51
-	END  shift 296
+	END  shift 299
 	POUT  shift 53
 	RET  shift 54
 	CTE_SHORTINT  shift 55
@@ -3658,53 +3713,55 @@ state 294
 	unica  goto 74
 	numero_negativo  goto 75
 	conversion_tos  goto 76
-
-
-state 295
-	metodo_clase : encabezado_metodo_auto '(' lista_parametros_formales ')' BEGIN sentencias_ejecutables END . exportacion_opcional ';'  (56)
-	exportacion_opcional : .  (59)
-
-	EXPORT  shift 270
-	';'  reduce 59
-
-	exportacion_opcional  goto 297
-
-
-state 296
-	metodo_clase : encabezado_metodo '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END . exportacion_opcional ';'  (55)
-	exportacion_opcional : .  (59)
-
-	EXPORT  shift 270
-	';'  reduce 59
-
-	exportacion_opcional  goto 298
-
-
-state 297
-	metodo_clase : encabezado_metodo_auto '(' lista_parametros_formales ')' BEGIN sentencias_ejecutables END exportacion_opcional . ';'  (56)
-
-	';'  shift 299
-	.  error
+	encabezado_if  goto 77
+	inicio_repeat  goto 78
 
 
 state 298
-	metodo_clase : encabezado_metodo '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END exportacion_opcional . ';'  (55)
+	metodo_clase : encabezado_metodo_auto '(' lista_parametros_formales ')' BEGIN sentencias_ejecutables END . exportacion_opcional ';'  (56)
+	exportacion_opcional : .  (59)
 
-	';'  shift 300
-	.  error
+	EXPORT  shift 274
+	';'  reduce 59
+
+	exportacion_opcional  goto 300
 
 
 state 299
+	metodo_clase : encabezado_metodo '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END . exportacion_opcional ';'  (55)
+	exportacion_opcional : .  (59)
+
+	EXPORT  shift 274
+	';'  reduce 59
+
+	exportacion_opcional  goto 301
+
+
+state 300
+	metodo_clase : encabezado_metodo_auto '(' lista_parametros_formales ')' BEGIN sentencias_ejecutables END exportacion_opcional . ';'  (56)
+
+	';'  shift 302
+	.  error
+
+
+state 301
+	metodo_clase : encabezado_metodo '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END exportacion_opcional . ';'  (55)
+
+	';'  shift 303
+	.  error
+
+
+state 302
 	metodo_clase : encabezado_metodo_auto '(' lista_parametros_formales ')' BEGIN sentencias_ejecutables END exportacion_opcional ';' .  (56)
 
 	.  reduce 56
 
 
-state 300
+state 303
 	metodo_clase : encabezado_metodo '(' lista_parametros_formales ')' sentencias_declarativas BEGIN sentencias_ejecutables END exportacion_opcional ';' .  (55)
 
 	.  reduce 55
 
 
-46 terminals, 53 nonterminals
-148 grammar rules, 301 states
+46 terminals, 56 nonterminals
+151 grammar rules, 304 states

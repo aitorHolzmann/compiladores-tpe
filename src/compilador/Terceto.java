@@ -25,6 +25,10 @@ public class Terceto {
     public String getOperando2() { return operando2; }
     public String getTipo() { return tipo; }
 
+    public void setOperando1(String operando1) {
+        this.operando1 = operando1;
+    }
+
     public void setOperando2(String operando2) {
         this.operando2 = operando2;
     }

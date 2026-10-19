@@ -1,0 +1,58 @@
+programa_control_ok
+
+shortint a, b, c;
+singlef x, y, z;
+
+BEGIN
+  a := 5$s;
+  b := 10$s;
+  c := 0$s;
+  x := 1.0;
+  y := 2.0;
+  z := 0.0;
+
+  // 1. IF simple
+  IF (a > 10$s)
+    c := a + 1$s;
+  END_IF;
+
+  // 2. IF-ELSE
+  IF (x <= y)
+    z := x * 2.0;
+  ELSE
+    z := y * 3.0;
+  END_IF;
+
+  // 3. IF anidados dentro de IF-ELSE
+  IF (a == b)
+    IF (c != 0$s)
+      a := 1$s;
+    ELSE
+      a := 2$s;
+    END_IF;
+  ELSE
+    a := 3$s;
+  END_IF;
+
+  // 4. REPEAT UNTIL sentencia simple
+  REPEAT
+    a := a + 1$s;
+  UNTIL (a >= 20$s);
+
+  // 5. REPEAT UNTIL con BEGIN ... END
+  REPEAT
+  BEGIN
+    x := x + 1.0;
+    z := z - 1.0;
+  END
+  UNTIL (x > 10.0);
+
+  // 6. REPEAT conteniendo IF anidado
+  REPEAT
+    IF (a < 30$s)
+      a := a + 2$s;
+    END_IF;
+  UNTIL (a == 30$s);
+
+  pout("Fin de control de flujo ok");
+END

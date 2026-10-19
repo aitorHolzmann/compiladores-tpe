@@ -1,0 +1,34 @@
+programa_control_error
+
+shortint a, b;
+singlef x, y;
+
+BEGIN
+  // Error 1: Incompatibilidad de tipos en condicion IF
+  IF (a > x)
+    a := 1$s;
+  END_IF;
+
+  // Error 2: Falta '(' en condicion IF
+  IF a == b)
+    a := 2$s;
+  END_IF;
+
+  // Error 3: Falta END_IF en IF-ELSE
+  IF (a == b)
+    a := 3$s;
+  ELSE
+    a := 4$s;
+  ;
+
+  // Error 4: Falta cuerpo en REPEAT UNTIL
+  REPEAT
+  UNTIL (a == 0$s);
+
+  // Error 5: Incompatibilidad de tipos en condicion REPEAT UNTIL
+  REPEAT
+    a := a + 1$s;
+  UNTIL (a == y);
+
+  pout("Fin de control con errores");
+END
