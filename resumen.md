@@ -53,15 +53,12 @@ Para las estructuras de control (IF, IF-ELSE y REPEAT UNTIL) se implementó la t
 
 En `condicion` se emite el terceto con el operador de comparación (`>`, `<`, `<=`, etc.) siempre que ambos operandos tengan el mismo tipo.
 
-IF simple:
-1. `encabezado_if : IF '(' condicion ')'`: crea un terceto incompleto `( BF , [cond] , ? )` y apila su índice en `pilaSaltos`.
-2. Al llegar a `END_IF ';'`: se desapila el índice del `BF` y se completa su destino con el próximo terceto a generar (`GeneradorTerceto.getProximoIndice()`).
+Tenemos que controlar las ramificaciones del codigo. Por eso cada instruccion que genera una rama fue separada en su propia regla semantica. 
 
-IF-ELSE:
-1. `encabezado_if`: crea el `BF` y lo apila.
-2. `inicio_else : ELSE`: al terminar el bloque THEN, se emite un salto incondicional `( BI , ? , - )` para saltear el ELSE. Se desapila el `BF` anterior y se completa su destino con la primera instrucción del ELSE. Luego se apila el índice del `BI`.
-3. Al llegar a `END_IF ';'`: se desapila el `BI` y se completa su destino con `GeneradorTerceto.getProximoIndice()`.
+El primer caso es el del IF. En nuestra implementacion las instrucciones de la rama verdadera **true** se generan a continuacion de la condicion, entonces debemos agregar en el medio un salto en caso de falso. Cuando detectamos el encabezado se genera un terceto BF con la condicion y un espacio vacio que se completa mas adelante. Ademas el indice del terceto BF se guarda en una pila del **parser** que va a ser utilizada para conocer el anidamiento de las sentencias condicionales y poder actualizar los saltos. 
 
-REPEAT UNTIL (Tema 12):
-1. `inicio_repeat : REPEAT`: apila la dirección de inicio del cuerpo del ciclo (`getProximoIndice()`).
-2. Al llegar a `UNTIL condicion_iteracion ';'`: como la especificación de la cátedra dice que itera hasta que la condición sea verdadera, debe volver a saltar al inicio mientras sea falsa. Se desapila la dirección de inicio y se emite `( BF , [cond] , [dir_inicio] )`. No requiere backpatching diferido porque el salto es hacia atrás y la dirección inicial ya es conocida.
+Entonces si es un **if simple sin else** cuando lleguemos al **end if** significa que se generaron todos los tercetos del bloque condicional, entonces la ejecucion debe continuar a partir del proximo terceto. En ese momento podemos completar el campo vacio del terceto BF, para debemos tomar el tope de la pila que en este caso sera el terceto BF y completar el campo vacio con el indice del proximo terceto. 
+
+Ahora si es un **IF ELSE** cambia un poco. Todavia debemos agregar el terceto BF porque al igual que antes los tercetos de la rama **true** se van a generar a continuacion de la condicion. Pero la diferencia está en que ahora el salto no debe llegar al final del **end if** sino al bloque **else**. La regla **inicio_else** detecta la palabra reservada **else** y tiene 2 responsabilidades. Primero tenemos que pensar que si venimos por la rama **true** debemos introducir un salto para no ejecutar el bloque falso. Entonces el ultimo terceto del bloque verdadero va a ser un nuevo terceto **BI** a que ademas se agrega a la pila, porque es un salto incondicional al final del **end_if** cuya posición no conocemos todavía. Pero ademas como encontramos la posicion del **else** podemos actualizar el terceto **BF** para que haga un salto al primer terceto del bloque falso. Luego de generar todos los tercetos del bloque falso, vamos a llegar al **end_if**, en ese momento podemos tomar el terceto **bi** de la pila y actualizar su salto. 
+
+La ultima sentencia de control es **repeat until** que itera mientras la condicion sea falsa. Este caso es mas sencillo porque no tenemos que hacer un salto a futuro sino hacia atras. Primero se lee el repeat y todo el bloque de instrucciones que se deben ejecutar. Entonces cuando leemos la palabra **repeat** debemos guardar en la pila ese inicio del primer terceto del bloque de instrucciones. Cuando llegemos al final y leamos **until** generamos un terceto **bf** con la condicion, y el salto al inicio del bloque de iteracion.

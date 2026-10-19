@@ -888,6 +888,29 @@ END_IF;
 
 ---
 
+#### ❓ Pregunta 6: Si una sentencia `REPEAT UNTIL` tiene un error sintáctico (ej. falta el cuerpo o la condición), ¿qué ocurre con los tercetos ya emitidos dentro del bloque? ¿Por qué no se hace rollback?
+* **Explicación para la defensa:**  
+  1. **En `inicio_repeat`:** Únicamente se apiló el índice numérico en `pilaSaltos`; no se generó ninguna instrucción intermedia.
+  2. **En el cuerpo (`bloque`):** Las sentencias internas válidas ya redujeron y emitieron tercetos de manera secuencial en una sola pasada (*single-pass*). Al detectarse el error sintáctico al cierre del bucle, simplemente se cancela la emisión del terceto `( BF , ... )`.
+  3. **No se hace rollback porque la compilación ya está abortada:** En la arquitectura de compiladores, si se detecta al menos un error sintáctico o semántico (`cant_errores > 0 || cant_errores_semanticos > 0`), **la etapa posterior de generación de código Assembler (TP4) queda terminantemente cancelada**. Los tercetos quedan en memoria exclusivamente como traza de depuración del parser, pero jamás llegarán a traducirse a código ejecutable. Implementar un mecanismo de marcha atrás (*rollback*) complejizaría la tabla de símbolos y los índices de tercetos sin ninguna utilidad práctica.
+
+---
+
+#### ❓ Pregunta 7: ¿Por qué en las reglas de error de `REPEAT UNTIL` no usamos directamente el no terminal `condicion_iteracion` en vez de reglas explícitas con `'('`? ¿Qué es un ancla sintáctica (*anchor token*)?
+* **Explicación para la defensa:**  
+  1. **Aparición de 8 conflictos Shift/Reduce en `y.output`:** Si reemplazamos `inicio_repeat bloque '(' condicion ')' ';'` por `inicio_repeat bloque condicion_iteracion ';'`, BYacc/J reporta inmediatamente 8 conflictos en el estado 191.
+  2. **Causa técnica del conflicto:** La regla de error `condicion_iteracion : condicion` contempla una condición *sin paréntesis*. Como una `condicion` puede arrancar con identificadores o números, y las sentencias dentro de `BEGIN sentencias_ejecutables` también arrancan con identificadores o números, si falta la palabra clave `UNTIL`, el autómata LALR(1) con 1 solo token de preanálisis no puede decidir si un identificador `x` es la siguiente sentencia del bloque (hacer *shift*) o si es la condición del bucle sin `UNTIL` ni paréntesis (hacer *reduce*).
+  3. **El concepto de ancla sintáctica (*anchor token*):** Cuando está presente la palabra clave `UNTIL`, esta actúa como un ancla inequívoca que avisa al autómata que comienza la condición. Pero cuando **falta `UNTIL`**, el autómata necesita imperiosamente el delimitador `'('` para separar el cuerpo de la condición. Esas reglas con `'('` explícito no son duplicación accidental, sino **anclas sintácticas indispensables para garantizar los 0 conflictos exigidos por la cátedra**.
+
+---
+
+#### ❓ Pregunta 8: ¿Por qué no se unifica la regla sintáctica de condición entre paréntesis `( condicion )` para el `IF` y el `REPEAT UNTIL` en un solo no terminal?
+* **Explicación para la defensa:**  
+  1. **Problema del lookahead y delimitador posterior:** En `REPEAT UNTIL`, la condición está al final de la sentencia y termina con `;`, permitiendo al parser un punto de sincronización seguro aun si falta el `)`. En cambio, en el `IF`, la condición está en el medio y lo que sigue es directamente el cuerpo/bloque sin punto y coma intermedio; relajar los paréntesis en esa posición generaría colisiones Shift/Reduce con las sentencias del bloque.
+  2. **Criterio de contextualidad de la cátedra:** Se evalúa positivamente que los mensajes sean informativos y específicos al contexto (*"Falta '(' de apertura en condicion de seleccion"* vs. *"Falta '(' de apertura en condicion de iteracion"*).
+
+---
+
 ### 5.3. Casos de Prueba Verificados
 
 #### Caso 1: Estructuras de Control y Anidamiento Válidos (`tests/test_hito5_control_ok.txt`)
