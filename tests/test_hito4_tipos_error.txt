@@ -1,0 +1,27 @@
+programa_tipos_error
+
+shortint a, b;
+singlef x, y;
+
+BEGIN
+  // Error 1: Operacion binaria entre shortint y singlef sin conversion
+  a := a + x;
+
+  // Error 2: Operacion binaria entre singlef y shortint sin conversion
+  x := y * b;
+
+  // Error 3: Asignacion de singlef a shortint sin tos()
+  a := x;
+
+  // Error 4: Asignacion de shortint a singlef
+  x := a;
+
+  // Error 5: Uso indebido de tos() sobre una expresion de tipo shortint
+  b := tos(a + 5$s);
+
+  // Error 6: Comparacion entre tipos incompatibles sin conversion
+  IF (a > x)
+    pout("Error de tipos");
+  END_IF;
+END
+

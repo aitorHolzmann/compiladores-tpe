@@ -418,7 +418,19 @@ asignacion
                 int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
                 if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
                     String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
-                    GeneradorTerceto.crearTerceto(":=", mangling, $3.sval);
+                    String tipoVar = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.TIPO);
+                    String tipoExp = (String) $3.obj;
+                    if (tipoExp != null) {
+                        if (tipoVar != null && tipoVar.equals(tipoExp)) {
+                            GeneradorTerceto.crearTerceto(":=", mangling, $3.sval, tipoVar);
+                        } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
+                            agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
+                        } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
+                            agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF '" + lexema + "'");
+                        } else {
+                            agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + lexema + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
+                        }
+                    }
                 } else {
                     agregarErrorSemantico("Variable '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
                 }
@@ -443,10 +455,21 @@ expresion
     | expresion '+' termino
         {
             if ($1 != null && $1.sval != null && $3 != null && $3.sval != null) {
-                String op1 = $1.sval;
-                String op2 = $3.sval;
-                int idTerceto = GeneradorTerceto.crearTerceto("+", op1, op2);
-                $$ = new ParserVal("[" + idTerceto + "]");
+                String tipo1 = (String) $1.obj;
+                String tipo2 = (String) $3.obj;
+                if (tipo1 != null && tipo2 != null) {
+                    if (tipo1.equals(tipo2)) {
+                        int idTerceto = GeneradorTerceto.crearTerceto("+", $1.sval, $3.sval, tipo1);
+                        ParserVal pv = new ParserVal("[" + idTerceto + "]");
+                        pv.obj = tipo1;
+                        $$ = pv;
+                    } else {
+                        agregarErrorSemantico("Incompatibilidad de tipos en operacion '+': no se puede operar " + tipo1 + " con " + tipo2 + " (requiere conversion explicita 'tos')");
+                        $$ = new ParserVal();
+                    }
+                } else {
+                    $$ = new ParserVal();
+                }
             } else {
                 $$ = new ParserVal();
             }
@@ -454,10 +477,21 @@ expresion
     | expresion '-' termino
         {
             if ($1 != null && $1.sval != null && $3 != null && $3.sval != null) {
-                String op1 = $1.sval;
-                String op2 = $3.sval;
-                int idTerceto = GeneradorTerceto.crearTerceto("-", op1, op2);
-                $$ = new ParserVal("[" + idTerceto + "]");
+                String tipo1 = (String) $1.obj;
+                String tipo2 = (String) $3.obj;
+                if (tipo1 != null && tipo2 != null) {
+                    if (tipo1.equals(tipo2)) {
+                        int idTerceto = GeneradorTerceto.crearTerceto("-", $1.sval, $3.sval, tipo1);
+                        ParserVal pv = new ParserVal("[" + idTerceto + "]");
+                        pv.obj = tipo1;
+                        $$ = pv;
+                    } else {
+                        agregarErrorSemantico("Incompatibilidad de tipos en operacion '-': no se puede operar " + tipo1 + " con " + tipo2 + " (requiere conversion explicita 'tos')");
+                        $$ = new ParserVal();
+                    }
+                } else {
+                    $$ = new ParserVal();
+                }
             } else {
                 $$ = new ParserVal();
             }
@@ -474,10 +508,21 @@ termino
     | termino '*' factor
         {
             if ($1 != null && $1.sval != null && $3 != null && $3.sval != null) {
-                String op1 = $1.sval;
-                String op2 = $3.sval;
-                int idTerceto = GeneradorTerceto.crearTerceto("*", op1, op2);
-                $$ = new ParserVal("[" + idTerceto + "]");
+                String tipo1 = (String) $1.obj;
+                String tipo2 = (String) $3.obj;
+                if (tipo1 != null && tipo2 != null) {
+                    if (tipo1.equals(tipo2)) {
+                        int idTerceto = GeneradorTerceto.crearTerceto("*", $1.sval, $3.sval, tipo1);
+                        ParserVal pv = new ParserVal("[" + idTerceto + "]");
+                        pv.obj = tipo1;
+                        $$ = pv;
+                    } else {
+                        agregarErrorSemantico("Incompatibilidad de tipos en operacion '*': no se puede operar " + tipo1 + " con " + tipo2 + " (requiere conversion explicita 'tos')");
+                        $$ = new ParserVal();
+                    }
+                } else {
+                    $$ = new ParserVal();
+                }
             } else {
                 $$ = new ParserVal();
             }
@@ -485,10 +530,21 @@ termino
     | termino '/' factor
         {
             if ($1 != null && $1.sval != null && $3 != null && $3.sval != null) {
-                String op1 = $1.sval;
-                String op2 = $3.sval;
-                int idTerceto = GeneradorTerceto.crearTerceto("/", op1, op2);
-                $$ = new ParserVal("[" + idTerceto + "]");
+                String tipo1 = (String) $1.obj;
+                String tipo2 = (String) $3.obj;
+                if (tipo1 != null && tipo2 != null) {
+                    if (tipo1.equals(tipo2)) {
+                        int idTerceto = GeneradorTerceto.crearTerceto("/", $1.sval, $3.sval, tipo1);
+                        ParserVal pv = new ParserVal("[" + idTerceto + "]");
+                        pv.obj = tipo1;
+                        $$ = pv;
+                    } else {
+                        agregarErrorSemantico("Incompatibilidad de tipos en operacion '/': no se puede operar " + tipo1 + " con " + tipo2 + " (requiere conversion explicita 'tos')");
+                        $$ = new ParserVal();
+                    }
+                } else {
+                    $$ = new ParserVal();
+                }
             } else {
                 $$ = new ParserVal();
             }
@@ -510,8 +566,10 @@ factor
             int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
             if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
                 String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
+                String tipo = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.TIPO);
                 ParserVal pv = new ParserVal(mangling);
                 pv.ival = idVar;
+                pv.obj = tipo;
                 $$ = pv;
             } else {
                 agregarErrorSemantico("Variable '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
@@ -526,8 +584,10 @@ factor
             if (valor > AnalizadorLexico.ValorMaximoInt) {
                 yyerror("Constante shortint positiva fuera de rango (" + lexema + "). Rango permitido: [-128, 127]");
             }
+            TablaSimbolos.agregarAtributo(id, TablaSimbolos.TIPO, "SHORTINT");
             ParserVal pv = new ParserVal(lexema);
             pv.ival = id;
+            pv.obj = "SHORTINT";
             $$ = pv;
         }
     | CTE_SINGLEF
@@ -538,8 +598,10 @@ factor
             if (valor != 0.0 && (valor < AnalizadorLexico.ValorMinimoFloat || valor > AnalizadorLexico.ValorMaximoFloat)) {
                 yyerror("Constante singlef fuera de rango (" + lexema + ")");
             }
+            TablaSimbolos.agregarAtributo(id, TablaSimbolos.TIPO, "SINGLEF");
             ParserVal pv = new ParserVal(lexema);
             pv.ival = id;
+            pv.obj = "SINGLEF";
             $$ = pv;
         }
     | IDENTIFICADOR '(' ')'
@@ -554,6 +616,9 @@ factor
             $$ = $1;
         }
     | conversion_tos
+        {
+            $$ = $1;
+        }
     | acceso_posicional
     ;
 
@@ -577,8 +642,27 @@ unica
                 int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
                 if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
                     String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
-                    int idTerceto = GeneradorTerceto.crearTerceto(":=", mangling, $4.sval);
-                    $$ = new ParserVal("[" + idTerceto + "]");
+                    String tipoVar = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.TIPO);
+                    String tipoExp = (String) $4.obj;
+                    if (tipoExp != null) {
+                        if (tipoVar != null && tipoVar.equals(tipoExp)) {
+                            int idTerceto = GeneradorTerceto.crearTerceto(":=", mangling, $4.sval, tipoVar);
+                            ParserVal pv = new ParserVal("[" + idTerceto + "]");
+                            pv.obj = tipoVar;
+                            $$ = pv;
+                        } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
+                            agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
+                            $$ = new ParserVal();
+                        } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
+                            agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF '" + lexema + "'");
+                            $$ = new ParserVal();
+                        } else {
+                            agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + lexema + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
+                            $$ = new ParserVal();
+                        }
+                    } else {
+                        $$ = new ParserVal();
+                    }
                 } else {
                     agregarErrorSemantico("Variable '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
                     $$ = new ParserVal();
@@ -600,8 +684,10 @@ numero_negativo
             int id_pos = $2.ival;
             String lexema_pos = TablaSimbolos.obtenerAtributo(id_pos, TablaSimbolos.LEXEMA);
             int id_neg = TablaSimbolos.convertirANegativo(lexema_pos);
+            TablaSimbolos.agregarAtributo(id_neg, TablaSimbolos.TIPO, "SHORTINT");
             ParserVal pv = new ParserVal("-" + lexema_pos);
             pv.ival = id_neg;
+            pv.obj = "SHORTINT";
             $$ = pv;
         }
     | '-' CTE_SINGLEF
@@ -609,8 +695,10 @@ numero_negativo
             int id_pos = $2.ival;
             String lexema_pos = TablaSimbolos.obtenerAtributo(id_pos, TablaSimbolos.LEXEMA);
             int id_neg = TablaSimbolos.convertirANegativo(lexema_pos);
+            TablaSimbolos.agregarAtributo(id_neg, TablaSimbolos.TIPO, "SINGLEF");
             ParserVal pv = new ParserVal("-" + lexema_pos);
             pv.ival = id_neg;
+            pv.obj = "SINGLEF";
             $$ = pv;
         }
     ;
@@ -618,6 +706,24 @@ numero_negativo
 /* Tema 34: Conversion explicita de flotante a entero corto */
 conversion_tos
     : TOS '(' expresion ')'
+        {
+            if ($3 != null && $3.sval != null) {
+                String tipoExp = (String) $3.obj;
+                if ("SINGLEF".equals(tipoExp)) {
+                    int idTerceto = GeneradorTerceto.crearTerceto("tos", $3.sval, "-", "SHORTINT");
+                    ParserVal pv = new ParserVal("[" + idTerceto + "]");
+                    pv.obj = "SHORTINT";
+                    $$ = pv;
+                } else if (tipoExp != null) {
+                    agregarErrorSemantico("La funcion de conversion 'tos' requiere una expresion de tipo SINGLEF (se recibio: " + tipoExp + ")");
+                    $$ = new ParserVal();
+                } else {
+                    $$ = new ParserVal();
+                }
+            } else {
+                $$ = new ParserVal();
+            }
+        }
     ;
 
 /* SENTENCIAS DE CONTROL                                                     */
@@ -640,6 +746,15 @@ resto_if
 
 condicion
     : expresion comparador expresion
+        {
+            if ($1 != null && $1.sval != null && $3 != null && $3.sval != null) {
+                String tipo1 = (String) $1.obj;
+                String tipo2 = (String) $3.obj;
+                if (tipo1 != null && tipo2 != null && !tipo1.equals(tipo2)) {
+                    agregarErrorSemantico("Incompatibilidad de tipos en comparacion: no se puede comparar " + tipo1 + " con " + tipo2 + " (requiere conversion explicita 'tos')");
+                }
+            }
+        }
     ;
 
 comparador
@@ -694,7 +809,7 @@ sentencia_pout
     | POUT '(' expresion ')'
         {
             if ($3 != null && $3.sval != null) {
-                GeneradorTerceto.crearTerceto("POUT", $3.sval, "-");
+                GeneradorTerceto.crearTerceto("POUT", $3.sval, "-", (String) $3.obj);
             }
         }
     | POUT '(' ')'

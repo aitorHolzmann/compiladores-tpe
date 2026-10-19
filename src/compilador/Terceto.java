@@ -4,19 +4,33 @@ public class Terceto {
     private String operador;
     private String operando1;
     private String operando2;
+    private String tipo;
 
     public Terceto(String operador, String operando1, String operando2) {
         this.operador = operador;
         this.operando1 = operando1;
         this.operando2 = operando2;
+        this.tipo = null;
+    }
+
+    public Terceto(String operador, String operando1, String operando2, String tipo) {
+        this.operador = operador;
+        this.operando1 = operando1;
+        this.operando2 = operando2;
+        this.tipo = tipo;
     }
 
     public String getOperador() { return operador; }
     public String getOperando1() { return operando1; }
     public String getOperando2() { return operando2; }
+    public String getTipo() { return tipo; }
 
     public void setOperando2(String operando2) {
         this.operando2 = operando2;
+    }
+
+    public void setTipo(String tipo) {
+        this.tipo = tipo;
     }
     
     public String toString() {

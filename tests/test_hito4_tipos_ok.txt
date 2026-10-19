@@ -1,0 +1,29 @@
+programa_tipos_ok
+
+shortint a, b, c;
+singlef x, y, z;
+
+BEGIN
+  // Operaciones homogeneas shortint
+  a := 10$s;
+  b := 20$s;
+  c := a + b * 2$s;
+  pout(c);
+
+  // Operaciones homogeneas singlef
+  x := 1.5;
+  y := 2.5;
+  z := x + y * 3.0;
+  pout(z);
+
+  // Tema 34: Conversion explicita tos() de singlef a shortint
+  a := tos(x);
+  b := tos(x + y);
+  c := tos(z) + 5$s;
+  pout(c);
+
+  // Tema 17: Asignacion en expresion con tipos compatibles
+  a := b = (30$s);
+  x := y = (10.0);
+END
+

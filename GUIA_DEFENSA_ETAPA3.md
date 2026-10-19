@@ -18,10 +18,10 @@
 [Hito 3] Ámbitos, Name Mangling con ":" y Tabla de Símbolos Enriquecida (COMPLETADO)
     │
     ▼
-[Hito 4] Chequeo Estático de Tipos y Tema 34: Conversión Explícita tos() (SIGUIENTE)
+[Hito 4] Chequeo Estático de Tipos y Tema 34: Conversión Explícita tos() (COMPLETADO)
     │
     ▼
-[Hito 5] Control de Flujo y Backpatching: IF, IF-ELSE y REPEAT UNTIL (Tema 12)
+[Hito 5] Control de Flujo y Backpatching: IF, IF-ELSE y REPEAT UNTIL (Tema 12) (SIGUIENTE)
     │
     ▼
 [Hito 6] Funciones, Clases y Temas Avanzados (AUTO FUNCTION, COMPTIME, IMPORT/EXPORT, Herencia Múltiple)
@@ -537,16 +537,293 @@ Compilacion finalizada con 0 error(es) sintactico(s) y 3 error(es) semantico(s)
 
 ---
 
-## 📌 Hito 4 (SIGUIENTE): Chequeo Estático de Tipos y Tema 34: Conversión Explícita `tos()`
+## 📌 Hito 4: Chequeo Estático de Tipos y Tema 34: Conversión Explícita `tos()`
 
 ### 4.1. Objetivo Técnico
-1. Propagar el tipo (`SHORTINT` o `SINGLEF`) a través de atributos sintetizados (`$$.sval` y campo `tipo`) en `expresion`, `termino` y `factor`.
-2. Validar compatibilidad de tipos en operaciones aritméticas binarias (`+`, `-`, `*`, `/`):
-   - Prohibido operar `SHORTINT` con `SINGLEF` sin conversión explícita `tos()`.
-3. Validar compatibilidad en sentencias de asignación (`:=`):
-   - Asignar `SHORTINT` a `SINGLEF`: permitido mediante conversión implícita (generar terceto de conversión).
-   - Asignar `SINGLEF` a `SHORTINT`: prohibido sin conversión explícita `tos()` (error semántico).
-4. Implementar el **Tema 34**: función intrínseca `tos(expresion)` que convierte de `SINGLEF` a `SHORTINT` emitiendo el terceto `( tos , [i] , - )`.
+1. **Asociar tipos en la Tabla de Símbolos:** Garantizar que todas las constantes (`CTE_SHORTINT`, `CTE_SINGLEF` y sus variantes negativas) registren su atributo `TIPO` en `TablaSimbolos` (`"SHORTINT"` o `"SINGLEF"`).
+2. **Propagación de tipos en el autómata LALR(1):** Propagar el tipo resultante a través de atributos sintetizados utilizando el campo `obj` de `ParserVal` en `factor`, `termino` y `expresion`.
+3. **Validación estricta en operaciones aritméticas binarias (`+`, `-`, `*`, `/`):**
+   - Operaciones homogéneas (`SHORTINT op SHORTINT` o `SINGLEF op SINGLEF`): válidas, emiten terceto con el tipo resultante.
+   - Operaciones heterogéneas (`SHORTINT op SINGLEF` o viceversa): prohibidas sin conversión explícita previa; emiten error semántico y bloquean la emisión del terceto.
+4. **Validación estricta en sentencias de asignación (`:=` y Tema 17 `= (exp)`):**
+   - Variable y expresión del mismo tipo: válidas, emiten terceto de asignación.
+   - Asignar `SINGLEF` a `SHORTINT`: error semántico específico indicando que requiere la conversión explícita `tos`.
+   - Asignar `SHORTINT` a `SINGLEF`: error semántico por tipos incompatibles (el Grupo 20 tiene asignado el Tema 34 y no el Tema 35 de conversiones implícitas).
+5. **Implementación del Tema 34 (`tos`):**
+   - Reconocer la función intrínseca `tos(expresion)`.
+   - Validar que la expresión interna sea de tipo `SINGLEF`.
+   - Emitir el terceto de conversión `( tos , op , - )` y sintetizar hacia arriba el tipo `"SHORTINT"`.
+6. **Validación en comparaciones (`condicion`):**
+   - Prohibir comparaciones entre operandos de distinto tipo sin conversión explícita `tos`.
+
+---
+
+### 4.2. Decisiones de Diseño y Preguntas Conceptuales
+
+#### ❓ Pregunta 1: ¿Por qué el chequeo de tipos se realiza durante la reducción de BYacc/J y no en una pasada posterior sobre un AST?
+* **Explicación para la defensa:**  
+  1. **Enfoque arquitectónico de la cátedra:** El enunciado del TP3 establece textualmente: *"Para Tercetos y Árbol Sintáctico, los chequeos de tipos se deben efectuar durante la generación de código intermedio."*  
+  2. **Traducción dirigida por la sintaxis (Syntax-Directed Translation - SDT) en una sola pasada:** Nuestro compilador no construye un Árbol de Sintaxis Abstracta (AST) explícito en memoria, sino que traduce directamente el flujo de tokens a una secuencia de tercetos a medida que el autómata de pila LALR(1) reduce cada producción.
+  3. **Invariante en la reducción:** Cada vez que el parser reduce una regla como `expresion : expresion '+' termino`, tiene en el tope de la pila semántica los atributos de los hijos (`$1` y `$3`). Verificar los tipos en ese instante exacto permite detener inmediatamente la creación de código intermedio inválido antes de que el terceto se incorpore a la lista global.
+
+---
+
+#### ❓ Pregunta 2: ¿Cómo viaja la información de tipos por la pila de BYacc/J si `ParserVal` no tiene un campo `tipo` nativo?
+* **Explicación para la defensa:**  
+  La clase `ParserVal` provista por BYacc/J simula la unión de C mediante cuatro campos:
+  - `ival` (entero): usado para índices a la Tabla de Símbolos.
+  - `dval` (flotante).
+  - `sval` (String): usado para transportar la referencia textual del operando (`"a:main"`, `"5"`, `"[0]"`).
+  - `obj` (`Object`): campo genérico para estructuras arbitrarias.
+  
+  **Nuestra solución:** Utilizamos el campo `pv.obj` para transportar la cadena con el tipo canónico (`"SHORTINT"` o `"SINGLEF"`):
+  - En `factor : IDENTIFICADOR` se consulta la Tabla de Símbolos y se asigna `pv.obj = tipo`.
+  - En `factor : CTE_SHORTINT` y `numero_negativo` se asigna `pv.obj = "SHORTINT"`.
+  - En `factor : CTE_SINGLEF` y `numero_negativo` se asigna `pv.obj = "SINGLEF"`.
+  - En las reglas unitarias (`termino : factor`, `expresion : termino`), BYacc/J ejecuta `$$ = $1;`, lo que propaga automáticamente la referencia completa con su `obj` intacto sin costo de memoria adicional.
+
+---
+
+#### ❓ Pregunta 3: ¿Por qué nuestro compilador rechaza asignar un entero a un flotante (`singlef := shortint`) sin conversión si en otros lenguajes es válido?
+* **Explicación para la defensa:**  
+  Esto responde a la estricta **especificación de temas particulares de la cátedra**:
+  - El **Tema 35** define las *Conversiones Implícitas*, donde el compilador inserta automáticamente instrucciones de conversión de entero a flotante.
+  - El **Tema 33** define *Conversiones Explícitas de Entero a Flotante* (`tosf` / `todf`).
+  - Nuestro grupo (Grupo 20) tiene asignado **únicamente el Tema 34: Conversiones Explícitas de Flotante a Entero (`tos`)**.  
+  El `Tp3.pdf` indica para el Tema 34 que *"Sólo se permitirán operaciones (expresiones aritméticas o comparaciones) con operandos de distinto tipo, si en el código se incluye la conversión explícita [...]. Para asignaciones, sólo se permitirá asignar una expresión de punto flotante a una variable de tipo entero, si se incluye la conversión correspondiente"*.  
+  Al no tener asignado el Tema 35, cualquier cruce de tipos fuera de lo reglado por el Tema 34 es rechazado por el sistema de tipos.
+
+---
+
+#### ❓ Pregunta 4: ¿Qué sucede ante un error de tipos y por qué NO es un "error silencioso"? ¿Cómo se evitan los errores en cascada?
+* **Explicación para la defensa:**  
+  1. **El error SIEMPRE se reporta:** Si los operandos de una suma son `SHORTINT` y `SINGLEF`, la acción semántica emite inmediatamente:  
+     `Error semantico (linea X): Incompatibilidad de tipos en operacion '+': no se puede operar SHORTINT con SINGLEF (requiere conversion explicita 'tos')`.
+  2. **Supresión de errores en cascada:** Tras reportar el error, la regla ejecuta `$$ = new ParserVal();`. Una instancia vacía de `ParserVal` tiene sus atributos `sval = null` y `obj = null`.  
+  3. **Protección en niveles superiores:** Las reglas contenedoras (por ejemplo, una asignación `a := a + x;`) chequean `if ($3 != null && $3.sval != null && $3.obj != null)`. Al detectar que el hijo proviene de una falla ya informada:
+     - No emiten un segundo mensaje redundante ("error en asignación").
+     - No generan tercetos con operandos basura o referencias corruptas.
+     - Continúan analizando el resto del código fuente para encontrar otros posibles errores en el programa.
+
+---
+
+#### ❓ Pregunta 5: ¿Cómo se implementa la función intrínseca `tos()` y qué tercetos genera?
+* **Explicación para la defensa:**  
+  La regla en `gram.y` es:
+  ```yacc
+  conversion_tos : TOS '(' expresion ')'
+  ```
+  1. **Chequeo semántico:** Se valida que `$3.obj` sea exactamente `"SINGLEF"`. Si el programador intenta aplicar `tos` sobre un `SHORTINT`, el compilador reporta:  
+     `Error semantico (linea X): La funcion de conversion 'tos' requiere una expresion de tipo SINGLEF (se recibio: SHORTINT)`.
+  2. **Emisión del terceto:** Si es válido, se emite el terceto:  
+     `[i] ( tos , $3.sval , - )` con tipo asociado `"SHORTINT"`.
+  3. **Sintetización del tipo:** La regla asigna `$$.sval = "[" + i + "]"` y `$$.obj = "SHORTINT"`. De este modo, cualquier operación que envuelva al `tos()` (como `tos(z) + 5$s`) ve al operando como un entero corto legítimo.
+
+---
+
+#### ❓ Pregunta 6: ¿Por qué ninguna Acción Semántica (AS) léxica guarda el tipo de los identificadores si en `factor : IDENTIFICADOR` lo consultamos en la Tabla de Símbolos?
+* **Explicación para la defensa:**  
+  1. **El Léxico carece de memoria contextual:** Cuando el autómata finito determinista del analizador léxico procesa los caracteres `a`, `b`, etc., ejecuta la acción `AS3` para cerrar el token de identificador. En ese momento, el léxico ignora completamente si esa palabra representará una variable de tipo `SHORTINT`, un `SINGLEF`, una función o una clase.
+  2. **El Sintáctico como fuente de verdad de tipos:** El tipo de un identificador se conoce únicamente cuando el autómata ascendente reduce una producción declarativa, como `declaracion_variables : tipo lista_variables ';'`. En esa acción semántica sintáctica se ejecuta `TablaSimbolos.declararVariable(nombreVar, tipoDato, "variable", ambitoActual)`, y es allí donde se registra `atributos.put(TIPO, tipo)` en la entrada correspondiente de la tabla.
+  3. Por lo tanto, cuando las sentencias ejecutables reducen `factor : IDENTIFICADOR`, la variable ya cuenta con su metadato `TIPO` cargado y listo para ser consultado en $O(1)$.
+
+---
+
+#### ❓ Pregunta 7: ¿Qué ocurre en la sentencia de asignación si `tipoExp` llega en `null`?
+* **Explicación para la defensa:**  
+  En la acción semántica de `asignacion : IDENTIFICADOR ASIGNAR expresion`:
+  ```java
+  String tipoExp = (String) $3.obj;
+  if (tipoExp != null) {
+      // Comparación y generación de terceto :=
+  }
+  ```
+  1. **Supresión de código intermedio:** Si `tipoExp` es `null`, la guarda `if (tipoExp != null)` evalúa a `false` y el compilador **no genera ningún terceto de asignación**.
+  2. **Causa del valor `null`:** Ocurre exclusivamente cuando la subexpresión del lado derecho falló previamente durante el análisis (por ejemplo, operó tipos incompatibles o utilizó una variable no declarada) y sintetizó una instancia vacía `new ParserVal()` con sus campos en `null`.
+  3. **Invariante:** Esto garantiza que la máquina intermedia jamás reciba una instrucción `:=` con una expresión que no haya superado satisfactoriamente el análisis semántico de tipos.
+
+---
+
+#### ❓ Pregunta 8: En las comparaciones (`condicion`), ¿qué caso provocaría que un operando tenga tipo `null` y qué significa?
+* **Explicación para la defensa:**  
+  Consideremos una sentencia de selección como:
+  ```pascal
+  IF (a + z > 10$s)
+  ```
+  Donde la variable `z` no fue declarada en el código fuente:
+  1. Al reducir la subexpresión `a + z`, se detecta que `z` no existe, se reporta inmediatamente el error `Variable 'z' no declarada` y la suma sintetiza `new ParserVal()`, dejando `sval = null` y `obj = null`.
+  2. Al llegar a la reducción de `condicion : expresion comparador expresion`, el lado izquierdo tiene su tipo en `null`.
+  3. **Manejo defensivo:** La guarda `if (tipo1 != null && tipo2 != null)` previene que el comparador intente cotejar `null` contra `"SHORTINT"`, lo que emitiría un **error falso en cascada** (*"Tipos incompatibles: null y SHORTINT"*). La condición entiende que el error de base ya fue reportado en la hoja del árbol y se abstiene de duplicar advertencias.
+
+---
+
+#### ❓ Pregunta 9: ¿Por qué la regla `condicion` debe emitir un terceto de comparación y cómo se consumirá en el Hito 5 con el salto condicional `BF`?
+* **Explicación para la defensa:**  
+  1. **Semántica de control en tercetos:** En la teoría de la cátedra (*Resumen Generación código intermedio.pdf*, diapositiva *"Selección – Tercetos"*), la evaluación de una condición `(a > 0)` debe producir una instrucción de comparación en código intermedio:
+     ```text
+     1. ( > , a , 0 )       // Terceto generado por 'condicion'
+     2. ( BF , [1] , 6 )    // Salto condicional generado por el 'IF'
+     ```
+  2. **Rol de la condición:** La regla `condicion` genera el terceto relacional (`>`, `<`, `<=`, etc.) y sintetiza su referencia numérica (`[1]`) en `$$`.
+  3. **Consumo por el salto condicional:** La sentencia de control (`IF` o `REPEAT`) toma esa referencia como su primer operando para generar el terceto `BF` (Branch False), indicando: *"si el resultado de la comparación [1] es falso, bifurcar hacia la dirección de destino"*.
+  4. En el Hito 4 dejamos establecido el chequeo estático de tipos en la comparación, sentando la base para incorporar la emisión del terceto relacional y el backpatching en el Hito 5.
+
+---
+
+### 4.3. Casos de Prueba Verificados
+
+#### Caso 1: Tipos Válidos y Conversión `tos()` (`tests/test_hito4_tipos_ok.txt`)
+```pascal
+programa_tipos_ok
+
+shortint a, b, c;
+singlef x, y, z;
+
+BEGIN
+  // Operaciones homogeneas shortint
+  a := 10$s;
+  b := 20$s;
+  c := a + b * 2$s;
+  pout(c);
+
+  // Operaciones homogeneas singlef
+  x := 1.5;
+  y := 2.5;
+  z := x + y * 3.0;
+  pout(z);
+
+  // Tema 34: Conversion explicita tos() de singlef a shortint
+  a := tos(x);
+  b := tos(x + y);
+  c := tos(z) + 5$s;
+  pout(c);
+
+  // Tema 17: Asignacion en expresion con tipos compatibles
+  a := b = (30$s);
+  x := y = (10.0);
+END
+```
+
+**Salida obtenida:**
+```text
+Programa reconocido correctamente
+=== TABLA DE SIMBOLOS ===
+1: {USO=nombre_programa, TIPO=programa, MANGLING=programa_tipos_ok:main, AMBITO=:main, LEXEMA=programa_tipos_ok}
+2: {USO=variable, TIPO=SHORTINT, MANGLING=a:main, AMBITO=:main, LEXEMA=a}
+3: {USO=variable, TIPO=SHORTINT, MANGLING=b:main, AMBITO=:main, LEXEMA=b}
+4: {USO=variable, TIPO=SHORTINT, MANGLING=c:main, AMBITO=:main, LEXEMA=c}
+5: {USO=variable, TIPO=SINGLEF, MANGLING=x:main, AMBITO=:main, LEXEMA=x}
+6: {USO=variable, TIPO=SINGLEF, MANGLING=y:main, AMBITO=:main, LEXEMA=y}
+7: {USO=variable, TIPO=SINGLEF, MANGLING=z:main, AMBITO=:main, LEXEMA=z}
+8: {TIPO=SHORTINT, LEXEMA=10, OCURRENCIAS=1}
+9: {TIPO=SHORTINT, LEXEMA=20, OCURRENCIAS=1}
+10: {TIPO=SHORTINT, LEXEMA=2, OCURRENCIAS=1}
+11: {TIPO=SINGLEF, LEXEMA=1.5, OCURRENCIAS=1}
+12: {TIPO=SINGLEF, LEXEMA=2.5, OCURRENCIAS=1}
+13: {TIPO=SINGLEF, LEXEMA=3.0, OCURRENCIAS=1}
+14: {TIPO=SHORTINT, LEXEMA=5, OCURRENCIAS=1}
+15: {TIPO=SHORTINT, LEXEMA=30, OCURRENCIAS=1}
+16: {TIPO=SINGLEF, LEXEMA=10.0, OCURRENCIAS=1}
+
+----------------------------------------
+         CODIGO INTERMEDIO (TERCETOS)   
+----------------------------------------
+0 ( := , a:main , 10 )
+1 ( := , b:main , 20 )
+2 ( * , b:main , 2 )
+3 ( + , a:main , [2] )
+4 ( := , c:main , [3] )
+5 ( POUT , c:main , - )
+6 ( := , x:main , 1.5 )
+7 ( := , y:main , 2.5 )
+8 ( * , y:main , 3.0 )
+9 ( + , x:main , [8] )
+10 ( := , z:main , [9] )
+11 ( POUT , z:main , - )
+12 ( tos , x:main , - )
+13 ( := , a:main , [12] )
+14 ( + , x:main , y:main )
+15 ( tos , [14] , - )
+16 ( := , b:main , [15] )
+17 ( tos , z:main , - )
+18 ( + , [17] , 5 )
+19 ( := , c:main , [18] )
+20 ( POUT , c:main , - )
+21 ( := , b:main , 30 )
+22 ( := , a:main , [21] )
+23 ( := , y:main , 10.0 )
+24 ( := , x:main , [23] )
+----------------------------------------
+```
+*Validación:* Todas las constantes registran `TIPO` en TS; los tercetos de `tos` (`12`, `15`, `17`) convierten de `SINGLEF` a `SHORTINT` y permiten su posterior operación con constantes y variables enteras.
+
+---
+
+#### Caso 2: Detección de Errores de Tipo y Supresión de Tercetos (`tests/test_hito4_tipos_error.txt`)
+```pascal
+programa_tipos_error
+
+shortint a, b;
+singlef x, y;
+
+BEGIN
+  // Error 1: Operacion binaria entre shortint y singlef sin conversion
+  a := a + x;
+
+  // Error 2: Operacion binaria entre singlef y shortint sin conversion
+  x := y * b;
+
+  // Error 3: Asignacion de singlef a shortint sin tos()
+  a := x;
+
+  // Error 4: Asignacion de shortint a singlef
+  x := a;
+
+  // Error 5: Uso indebido de tos() sobre una expresion de tipo shortint
+  b := tos(a + 5$s);
+
+  // Error 6: Comparacion entre tipos incompatibles sin conversion
+  IF (a > x)
+    pout("Error de tipos");
+  END_IF;
+END
+```
+
+**Salida obtenida:**
+```text
+Error semantico (linea 8): Incompatibilidad de tipos en operacion '+': no se puede operar SHORTINT con SINGLEF (requiere conversion explicita 'tos')
+Error semantico (linea 11): Incompatibilidad de tipos en operacion '*': no se puede operar SINGLEF con SHORTINT (requiere conversion explicita 'tos')
+Error semantico (linea 14): Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT 'a' sin conversion explicita 'tos'
+Error semantico (linea 17): Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF 'x'
+Error semantico (linea 20): La funcion de conversion 'tos' requiere una expresion de tipo SINGLEF (se recibio: SHORTINT)
+Error semantico (linea 23): Incompatibilidad de tipos en comparacion: no se puede comparar SHORTINT con SINGLEF (requiere conversion explicita 'tos')
+Compilacion finalizada con 0 error(es) sintactico(s) y 6 error(es) semantico(s)
+
+----------------------------------------
+         CODIGO INTERMEDIO (TERCETOS)   
+----------------------------------------
+0 ( + , a:main , 5 )
+1 ( POUT , "Error de tipos" , - )
+----------------------------------------
+```
+*Validación:* El compilador detecta y reporta taxativamente los 6 errores semánticos con sus números de línea reales. Se suprimen por completo las 5 sentencias de asignación inválidas y jamás se emite código intermedio con tipos corruptos.
+
+---
+
+## 📌 Hito 5 (SIGUIENTE): Control de Flujo y Backpatching: IF, IF-ELSE y REPEAT UNTIL (Tema 12)
+
+### 5.1. Objetivo Técnico
+1. **Tercetos de comparación:** Emitir el terceto `( CMP , op1 , op2 )` al reducir la regla `condicion`.
+2. **Backpatching con pilas de saltos (`Stack<Integer>`):**
+   - Para `IF (condicion) bloque`:
+     - Al finalizar la condición: emitir terceto incompleto `( BF , [cond] , [?] )` y apilar su número.
+     - Al finalizar el bloque: desapilar y completar el destino del salto con la dirección actual.
+   - Para `IF (condicion) bloque ELSE bloque END_IF`:
+     - Al finalizar el primer bloque: emitir salto incondicional incompleto `( BI , [?] , - )`, apilarlo, desapilar el `BF` y completarlo apuntando a la primera instrucción del `ELSE`.
+     - Al finalizar el `ELSE`: desapilar el `BI` y completarlo apuntando a la instrucción posterior al `END_IF`.
+   - Para `REPEAT bloque UNTIL (condicion);` (Tema 12):
+     - Marcar la dirección de inicio del cuerpo del bucle.
+     - Al reducir la condición de cierre: emitir `( BF , [cond] , [dir_inicio] )` (itera mientras la condición sea falsa hasta que se vuelva verdadera).
 
 
 

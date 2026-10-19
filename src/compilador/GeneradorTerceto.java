@@ -6,7 +6,11 @@ public class GeneradorTerceto {
     private static ArrayList<Terceto> codigoIntermedio = new ArrayList<>();
 
     public static int crearTerceto(String op, String arg1, String arg2) {
-        Terceto terceto = new Terceto(op, arg1, arg2);
+        return crearTerceto(op, arg1, arg2, null);
+    }
+
+    public static int crearTerceto(String op, String arg1, String arg2, String tipo) {
+        Terceto terceto = new Terceto(op, arg1, arg2, tipo);
         codigoIntermedio.add(terceto);
         return codigoIntermedio.size() - 1;
     }
