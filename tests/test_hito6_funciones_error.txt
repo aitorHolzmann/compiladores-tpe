@@ -1,0 +1,41 @@
+programa_funciones_error
+
+shortint a;
+singlef x;
+
+// Error 1: Tipo de retorno incompatible en funcion con tipo declarado estatico
+shortint function func_retorno_incompatible(shortint p)
+begin
+    ret (3.14);
+end;
+
+// Error 2: Ausencia de sentencia RET en funcion AUTO
+auto function auto_sin_ret(shortint p)
+begin
+    p := p + 1$s;
+end;
+
+shortint function func_params(shortint p1, shortint p2)
+begin
+    ret (p1);
+end;
+
+begin
+    // Error 3: RET fuera de una funcion (en el ambito principal)
+    ret (1$s);
+
+    // Error 4: Invocacion a funcion no declarada
+    a := funcion_fantasma(1$s);
+
+    // Error 5: Invocar un identificador que es variable, no funcion
+    a := a(1$s);
+
+    // Error 6: Cantidad incorrecta de parametros (esperaba 2, paso 1)
+    a := func_params(1$s);
+
+    // Error 7: Tipo incompatible en parametro (esperaba SHORTINT, paso SINGLEF)
+    a := func_params(1$s, 2.5);
+
+    pout("Fin de pruebas errores");
+end
+

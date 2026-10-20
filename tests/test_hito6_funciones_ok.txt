@@ -1,0 +1,58 @@
+programa_funciones_ok
+
+shortint a, b, res_short;
+singlef x, y, res_single;
+
+shortint function suma(shortint p1, shortint p2)
+    shortint acumulador;
+begin
+    acumulador := p1 + p2;
+    ret (acumulador);
+end;
+
+auto function cuadrado(shortint num)
+begin
+    ret (num * num);
+end;
+
+auto function max_abarcativo(shortint val_entero, singlef val_float)
+begin
+    if (tos(val_float) > val_entero)
+        ret (val_float);
+    else
+        ret (val_entero);
+    end_if;
+end;
+
+shortint function sin_retorno(shortint p)
+begin
+    p := p + 1$s;
+end;
+
+begin
+    a := 10$s;
+    b := 20$s;
+    x := 1.5;
+    y := 3.5;
+
+    // Llamada basica a funcion estatica
+    res_short := suma(a, b);
+
+    // Llamada a AUTO FUNCTION con inferencia SHORTINT
+    res_short := cuadrado(5$s);
+
+    // Llamada a AUTO FUNCTION con retornos mixtos (inferencia a SINGLEF)
+    res_single := max_abarcativo(a, y);
+
+    // Llamada en expresion aritmetica
+    res_short := suma(2$s, 3$s) + 4$s;
+
+    // Llamada con asignacion en expresion (Tema 17)
+    res_short := suma(a, b = (5$s));
+
+    // Llamada a funcion sin retorno explícito (genera retorno default)
+    res_short := sin_retorno(a);
+
+    pout("Fin de pruebas funciones ok");
+end
+

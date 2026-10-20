@@ -168,8 +168,13 @@ encabezado_funcion
         {
             int ref = $3.ival;
             String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, $1.sval, "funcion", ambitoActual);
+            int idFunc = TablaSimbolos.declararVariable(nombre, $1.sval, "funcion", ambitoActual);
+            String mangling = nombre + ambitoActual;
+            if (idFunc != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                TablaSimbolos.agregarAtributo(idFunc, "TIENE_RET", "false");
+            }
             entrarAmbito(nombre);
+            GeneradorTerceto.crearTerceto("FUNCION", mangling, "-");
             $$ = $3;
         }
     ;
@@ -180,7 +185,9 @@ inicio_auto_funcion
             int ref = $3.ival;
             String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
             TablaSimbolos.declararVariable(nombre, "auto", "funcion", ambitoActual);
+            String mangling = nombre + ambitoActual;
             entrarAmbito(nombre);
+            GeneradorTerceto.crearTerceto("FUNCION", mangling, "-");
             $$ = $3;
         }
     ;
@@ -195,6 +202,17 @@ declaracion_funciones
         sentencias_declarativas
         BEGIN sentencias_ejecutables END ';'
         {
+            String mangling = obtenerFuncionActualMangled();
+            if (mangling != null) {
+                int refFunc = TablaSimbolos.buscarPorMangling(mangling);
+                String tieneRet = TablaSimbolos.obtenerAtributo(refFunc, "TIENE_RET");
+                if (!"true".equals(tieneRet)) {
+                    String tipo = TablaSimbolos.obtenerAtributo(refFunc, TablaSimbolos.TIPO);
+                    String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0$s";
+                    GeneradorTerceto.crearTerceto("RET", valDef, "-", tipo);
+                }
+                GeneradorTerceto.crearTerceto("FIN_FUNCION", mangling, "-");
+            }
             salirAmbito();
         }
     | tipo FUNCTION error { yyerror("Falta nombre de funcion"); } '(' lista_parametros_formales ')'
@@ -204,13 +222,21 @@ declaracion_funciones
         sentencias_declarativas
         BEGIN sentencias_ejecutables END
         {
+            String mangling = obtenerFuncionActualMangled();
+            if (mangling != null) {
+                GeneradorTerceto.crearTerceto("FIN_FUNCION", mangling, "-");
+            }
             yyerror("Falta ';' al final de la declaracion de funcion");
             salirAmbito();
         } 
     | encabezado_auto_funcion BEGIN sentencias_ejecutables END ';'
         {
+            String mangling = obtenerFuncionActualMangled();
             if (cant_retornos_auto == 0) {
                 yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
+            }
+            if (mangling != null) {
+                GeneradorTerceto.crearTerceto("FIN_FUNCION", mangling, "-");
             }
             cant_retornos_auto = -1;
             salirAmbito();
@@ -220,8 +246,12 @@ declaracion_funciones
         BEGIN sentencias_ejecutables END ';' 
     | encabezado_auto_funcion BEGIN sentencias_ejecutables END
         {
+            String mangling = obtenerFuncionActualMangled();
             if (cant_retornos_auto == 0) {
                 yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
+            }
+            if (mangling != null) {
+                GeneradorTerceto.crearTerceto("FIN_FUNCION", mangling, "-");
             }
             cant_retornos_auto = -1;
             yyerror("Falta ';' al final de la declaracion de funcion");
@@ -241,6 +271,11 @@ parametro_formal
             int ref = $2.ival;
             String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
             TablaSimbolos.declararVariable(nombre, $1.sval, "parametro", ambitoActual);
+            String funcMangled = obtenerFuncionActualMangled();
+            if (funcMangled != null) {
+                String nombreParamMangled = nombre + ambitoActual;
+                TablaSimbolos.agregarParametroAFuncion(funcMangled, $1.sval, nombreParamMangled);
+            }
             imprimirRegla("parametro_formal");
         }
     | tipo error { yyerror("Falta de nombre de parametro formal en declaracion de funcion"); }
@@ -606,7 +641,86 @@ factor
             $$ = pv;
         }
     | IDENTIFICADOR '(' ')'
+        {
+            int ref = $1.ival;
+            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            int idFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+            if (idFunc == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                agregarErrorSemantico("Funcion '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
+                $$ = new ParserVal();
+            } else {
+                String uso = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.USO);
+                if (!"funcion".equals(uso)) {
+                    agregarErrorSemantico("El identificador '" + lexema + "' no es una funcion (uso actual: " + uso + ")");
+                    $$ = new ParserVal();
+                } else {
+                    String funcMangled = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.MANGLING);
+                    String tipoRetorno = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.TIPO);
+                    int cantEsperada = TablaSimbolos.obtenerCantidadParametros(funcMangled);
+
+                    if (cantEsperada != 0) {
+                        agregarErrorSemantico("Cantidad incorrecta de parametros en invocacion a '" + lexema + "': se esperaban " + cantEsperada + " pero se recibieron 0");
+                        $$ = new ParserVal();
+                    } else {
+                        int idCall = GeneradorTerceto.crearTerceto("CALL", funcMangled, "-", tipoRetorno);
+                        ParserVal pv = new ParserVal("[" + idCall + "]");
+                        pv.obj = tipoRetorno;
+                        $$ = pv;
+                    }
+                }
+            }
+        }
     | IDENTIFICADOR '(' lista_expresiones ')'
+        {
+            int ref = $1.ival;
+            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            int idFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+            if (idFunc == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                agregarErrorSemantico("Funcion '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
+                $$ = new ParserVal();
+            } else {
+                String uso = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.USO);
+                if (!"funcion".equals(uso)) {
+                    agregarErrorSemantico("El identificador '" + lexema + "' no es una funcion (uso actual: " + uso + ")");
+                    $$ = new ParserVal();
+                } else {
+                    String funcMangled = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.MANGLING);
+                    String tipoRetorno = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.TIPO);
+                    int cantEsperada = TablaSimbolos.obtenerCantidadParametros(funcMangled);
+                    ArrayList<ParserVal> paramsReales = ($3 != null && $3.obj != null) ? (ArrayList<ParserVal>) $3.obj : new ArrayList<>();
+                    int cantRecibida = paramsReales.size();
+
+                    if (cantRecibida != cantEsperada) {
+                        agregarErrorSemantico("Cantidad incorrecta de parametros en invocacion a '" + lexema + "': se esperaban " + cantEsperada + " pero se recibieron " + cantRecibida);
+                        $$ = new ParserVal();
+                    } else {
+                        boolean paramsOk = true;
+                        for (int i = 0; i < cantEsperada; i++) {
+                            String tipoFormal = TablaSimbolos.obtenerTipoParametro(funcMangled, i);
+                            String nomFormal = TablaSimbolos.obtenerNombreParametro(funcMangled, i);
+                            ParserVal pReal = paramsReales.get(i);
+                            String tipoReal = (pReal != null) ? (String) pReal.obj : null;
+
+                            if (tipoFormal != null && tipoReal != null && !tipoFormal.equals(tipoReal)) {
+                                agregarErrorSemantico("Incompatibilidad de tipos en parametro " + (i + 1) + " al invocar a '" + lexema + "': se esperaba " + tipoFormal + " pero se recibio " + tipoReal);
+                                paramsOk = false;
+                            } else if (pReal != null && pReal.sval != null) {
+                                GeneradorTerceto.crearTerceto(":=", nomFormal, pReal.sval, tipoFormal);
+                            }
+                        }
+
+                        if (paramsOk) {
+                            int idCall = GeneradorTerceto.crearTerceto("CALL", funcMangled, "-", tipoRetorno);
+                            ParserVal pv = new ParserVal("[" + idCall + "]");
+                            pv.obj = tipoRetorno;
+                            $$ = pv;
+                        } else {
+                            $$ = new ParserVal();
+                        }
+                    }
+                }
+            }
+        }
     | invocacion_metodo
     | unica
         {
@@ -630,7 +744,19 @@ invocacion_metodo
 
 lista_expresiones
     : expresion
+        {
+            ArrayList<ParserVal> lista = new ArrayList<>();
+            lista.add($1);
+            ParserVal pv = new ParserVal();
+            pv.obj = lista;
+            $$ = pv;
+        }
     | lista_expresiones ',' expresion
+        {
+            ArrayList<ParserVal> lista = (ArrayList<ParserVal>) $1.obj;
+            lista.add($3);
+            $$ = $1;
+        }
     ;
 
 /* Tema 17: Asignacion en expresion */
@@ -918,8 +1044,33 @@ sentencia_pout
 sentencia_ret
     : RET '(' expresion ')'
         {
-            if (cant_retornos_auto >= 0) {
-                cant_retornos_auto++;
+            String funcionActual = obtenerFuncionActualMangled();
+            if (funcionActual == null) {
+                agregarErrorSemantico("Sentencia RET fuera del cuerpo de una funcion");
+            } else {
+                int idFunc = TablaSimbolos.buscarPorMangling(funcionActual);
+                String tipoDeclarado = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.TIPO);
+                String tipoExp = ($3 != null) ? (String) $3.obj : null;
+                TablaSimbolos.agregarAtributo(idFunc, "TIENE_RET", "true");
+
+                if (cant_retornos_auto >= 0) {
+                    cant_retornos_auto++;
+                    if ("auto".equals(tipoDeclarado)) {
+                        TablaSimbolos.agregarAtributo(idFunc, TablaSimbolos.TIPO, tipoExp);
+                    } else if (tipoExp != null && !tipoDeclarado.equals(tipoExp)) {
+                        TablaSimbolos.agregarAtributo(idFunc, TablaSimbolos.TIPO, "SINGLEF");
+                    }
+                } else {
+                    if (tipoDeclarado != null && tipoExp != null && !tipoDeclarado.equals(tipoExp)) {
+                        agregarErrorSemantico("Tipo de retorno incompatible en funcion '" + 
+                            TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.LEXEMA) + 
+                            "': se esperaba " + tipoDeclarado + " pero se retorno " + tipoExp);
+                    }
+                }
+
+                if ($3 != null && $3.sval != null) {
+                    GeneradorTerceto.crearTerceto("RET", $3.sval, "-", tipoExp);
+                }
             }
         }
     ;
@@ -936,6 +1087,17 @@ static int cant_retornos_auto = -1;
 
 public static String ambitoActual = ":main";
 public static Stack<Integer> pilaSaltos = new Stack<>();
+
+public static String obtenerFuncionActualMangled() {
+    if (ambitoActual == null || ambitoActual.equals(":main")) {
+        return null;
+    }
+
+    int index = ambitoActual.lastIndexOf(':');
+    String nombreFuncion = ambitoActual.substring(index + 1);
+    String ambitoPadre = ambitoActual.substring(0, index);
+    return nombreFuncion + ambitoPadre;
+}
 
 public static void entrarAmbito(String nombre) {
     ambitoActual = ambitoActual + ":" + nombre;
@@ -980,6 +1142,7 @@ public static void main(String[] args) {
     try {
         ambitoActual = ":main";
         pilaSaltos.clear();
+        cant_retornos_auto = -1;
         cant_errores = 0;
         cant_errores_semanticos = 0;
         AnalizadorLexico.reader = new PushbackReader(new BufferedReader(

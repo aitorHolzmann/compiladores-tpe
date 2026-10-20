@@ -38,7 +38,7 @@ facto
 unica
 
 
-Chequeo de Tipos
+# Chequeo de Tipos
 
 La semantica tiene que hacer las verificaciones de tipo. Cuando se hacen asignaciones, operaciones, y en nuestro caso tambien cuando se hace la conversion de SINGLEF a SHORTINT. El tipo se guarda tanto en la tabla de simbolos con las acciones semanticas, como desde la gramatica como informacion del terceto. 
 
@@ -47,7 +47,7 @@ En la regla **factor** y **numero negativo** guardamos el tipo en **pv.obj**. En
 Las asignaciones y comparaciones verifican que se realicen entre elementos del mismo tipo. La funcion TOS() verifica que reciba un SINGLEF.
 
 
-Control de Flujo y Backpatching
+# Control de Flujo y Backpatching
 
 Para las estructuras de control (IF, IF-ELSE y REPEAT UNTIL) se implementó la técnica de backpatching usando una pila `Stack<Integer> pilaSaltos`.
 
@@ -62,3 +62,17 @@ Entonces si es un **if simple sin else** cuando lleguemos al **end if** signific
 Ahora si es un **IF ELSE** cambia un poco. Todavia debemos agregar el terceto BF porque al igual que antes los tercetos de la rama **true** se van a generar a continuacion de la condicion. Pero la diferencia está en que ahora el salto no debe llegar al final del **end if** sino al bloque **else**. La regla **inicio_else** detecta la palabra reservada **else** y tiene 2 responsabilidades. Primero tenemos que pensar que si venimos por la rama **true** debemos introducir un salto para no ejecutar el bloque falso. Entonces el ultimo terceto del bloque verdadero va a ser un nuevo terceto **BI** que ademas se agrega a la pila, porque es un salto incondicional al final del **end_if** cuya posición no conocemos todavía. Pero ademas como encontramos la posicion del **else** podemos actualizar el terceto **BF** para que haga un salto al primer terceto del bloque falso. Luego de generar todos los tercetos del bloque falso, vamos a llegar al **end_if**, en ese momento podemos tomar el terceto **bi** de la pila y actualizar su salto. 
 
 La ultima sentencia de control es **repeat until** que itera mientras la condicion sea falsa. Este caso es mas sencillo porque no tenemos que hacer un salto a futuro sino hacia atras. Primero se lee el repeat y todo el bloque de instrucciones que se deben ejecutar. Entonces cuando leemos la palabra **repeat** debemos guardar en la pila ese inicio del primer terceto del bloque de instrucciones. Cuando llegemos al final y leamos **until** generamos un terceto **bf** con la condicion, y el salto al inicio del bloque de iteracion.
+
+# Funciones y parametros
+
+Queremos controlar las declaraciones e invocaciones. Para eso debemos implementar el guardado de la firma de la funcion, es decir tipo de retorno, cantidad y tipo de parametros, para luego poder verificar las invocaciones.
+
+Empecemos con las funciones. Cuando detectamos el encabezado de una funcion, ya en ese momento estamos guardando el uso (funcion) y el tipo de retorno (puede ser auto y se define después), y ademas generamos el terceto que indica el inicio de una funcion. Luego de detectar el encabezado de la funcion, se reducen las reglas de parametro_formal. Cada parametro formal se agrega como atributo de la funcion en la tabla de simbolos llamando a **TablaSimbolos.agregarParametroAFuncion(String funcionMangled, String tipoParam, String nombreParamMangled)**. Si dentro de la funcion encontramos un RET vamos a generar un terceto con el valor y el tipo, pero antes debemos controlar que coincida con el tipo de la funcion. Puede ser el caso de una funcion AUTO, si es así debemos actualizar el atributo tipo en la tabla de simbolos, pero como ademas permite varios retornos tambien hay que contemplar que ese tipo puede crecer a uno mas abarcativo. Por utlimo cuando reconocemos la declaracion completa de la funcion hay que controlar que efectivamente haya un retorno y emitir el tereceto para indicar el fin de la funcion. Si es el caso de una funcion normal entonces se contempla que no haya sentencia de ret explicita en el codigo, en ese caso la generamos nosotros con un valor por defecto (0$s si es SHORTINT y 0.0 si es SINGLEF). Si es una funcion AUTO entonces la instruccion RET es obligatoria, si no está avisa con error.
+
+Dijimos que en la tabla de simbolos los parametros formales se guardan como atributos de la funcion, vamos a explicarlo mas a detalle. El caso mas sencillo es una funcion que no declara parametros, entonces no hace falta registrar nada. Pero si necesitamos registrar parametros entonces llamamos a **agregarParametroAFuncion**. Para registrar un parametro insertamos dos atributos que guardan su nombre y tipo. El nombre de estos atributos está formado por el numero del parametro que fue insertado. Es decir para guardar el primero vamos a insertar **PARAM_NOMBRE_1** y **PARAM_TIPO_1**. Para llevar la cuenta de cuantos parámetros hay, la funcion tiene otro atributo que es **CANT_PARAMS** que se actualiza con cada llamado al metodo. Esta implementacion favorece la busqueda posicional de atributos, que fue un tema particular asignado a nuestro grupo. 
+
+Ya hablamos de como se declaran las funciones. Ahora toca hablar de como se invocan. El caso mas simple es invocar a una funcion que no necesite parametros. La regla primero valida que efectivamente estemos intentando invocar a una funcion y que ademas esté al alcance, despues si se verifica que efectivamente la declaracion de la funcion no tiene parámetros entonces se genera un terceto con la llamada y el tipo de retorno, ademas al reducir la regla se guarda el tipo de retorno para que las operaciones puedan verificar la comptabilidad de tipos de las expresiones.
+
+Para el caso de las funciones que si necesitan parametros hay que trabajar un poco mas. La regla **lista_expresiones** guarda una lista de objetos del parser, cada uno tiene el valor en **svalue** y el tipo en el **obj**. Al igual que antes validamos que esté al alcanse y que sea una funcion, si se cumple entonces obtengo la cantidad de parametros esperada de la funcion con la longitud de la lista de expresiones. Si la longitud es la misma, entonces tengo que iterar y comparar posicion a posicion si el tipo esperado es el mismo que el de la expresion real, cuando la verificacion se cumple genero un terceto para asignar al parametro formal el valor y tipo del real. Cuando termine de recorrer toda la lista sin errores, puedo emitir el terceto con la llamada a la funcion 
+
+

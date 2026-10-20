@@ -165,6 +165,73 @@ public class TablaSimbolos {
         return LEXEMA_NO_ENCONTRADO;
     }
 
+    public static int buscarPorMangling(String manglingBuscado) {
+        for (Map.Entry<Integer, Map<String, String>> entrada : tabla_simbolos.entrySet()) {
+            Map<String, String> atributos = entrada.getValue();
+            String m = atributos.get(MANGLING);
+            if (m != null && m.equals(manglingBuscado)) {
+                return entrada.getKey();
+            }
+        }
+        return LEXEMA_NO_ENCONTRADO;
+    }
+
+    public static void actualizarTipo(String manglingBuscado, String nuevoTipo) {
+        int ref = buscarPorMangling(manglingBuscado);
+        if (ref != LEXEMA_NO_ENCONTRADO) {
+            tabla_simbolos.get(ref).put(TIPO, nuevoTipo);
+        }
+    }
+
+    public static void agregarParametroAFuncion(String funcionMangled, String tipoParam, String nombreParamMangled) {
+        int ref = buscarPorMangling(funcionMangled);
+        if (ref != LEXEMA_NO_ENCONTRADO) {
+            Map<String, String> atrs = tabla_simbolos.get(ref);
+            int cant = 0;
+            if (atrs.containsKey("CANT_PARAMS")) {
+                try {
+                    cant = Integer.parseInt(atrs.get("CANT_PARAMS"));
+                } catch (NumberFormatException e) {
+                    cant = 0;
+                }
+            }
+            atrs.put("PARAM_TIPO_" + cant, tipoParam);
+            atrs.put("PARAM_NOMBRE_" + cant, nombreParamMangled);
+            atrs.put("CANT_PARAMS", String.valueOf(cant + 1));
+        }
+    }
+
+    public static int obtenerCantidadParametros(String funcionMangled) {
+        int ref = buscarPorMangling(funcionMangled);
+        if (ref != LEXEMA_NO_ENCONTRADO) {
+            Map<String, String> atrs = tabla_simbolos.get(ref);
+            if (atrs.containsKey("CANT_PARAMS")) {
+                try {
+                    return Integer.parseInt(atrs.get("CANT_PARAMS"));
+                } catch (NumberFormatException e) {
+                    return 0;
+                }
+            }
+        }
+        return 0;
+    }
+
+    public static String obtenerTipoParametro(String funcionMangled, int indice) {
+        int ref = buscarPorMangling(funcionMangled);
+        if (ref != LEXEMA_NO_ENCONTRADO) {
+            return tabla_simbolos.get(ref).get("PARAM_TIPO_" + indice);
+        }
+        return null;
+    }
+
+    public static String obtenerNombreParametro(String funcionMangled, int indice) {
+        int ref = buscarPorMangling(funcionMangled);
+        if (ref != LEXEMA_NO_ENCONTRADO) {
+            return tabla_simbolos.get(ref).get("PARAM_NOMBRE_" + indice);
+        }
+        return null;
+    }
+
     public static void imprimirTabla() {
         System.out.println("=== TABLA DE SIMBOLOS ===");
         for (Map.Entry<Integer, Map<String, String>> entry : tabla_simbolos.entrySet()) {

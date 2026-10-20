@@ -1087,13 +1087,246 @@ Compilacion finalizada con 3 error(es) sintactico(s) y 2 error(es) semantico(s)
 
 ---
 
-## 📌 Hito 6 (SIGUIENTE): Funciones, Clases y Temas Avanzados
-### 6.1. Alcance
-- **Tema 21:** Funciones inferidas `AUTO FUNCTION` (verificación de al menos un `RET` sintáctico, inferencia del tipo de retorno a partir del terceto sintetizado por `RET`).
-- **Tema 22:** Variables `COMPTIME` evaluadas estáticamente (supresión de tercetos en tiempo de ejecución).
-- **Tema 26:** Modificadores `IMPORT FROM` y `EXPORT TO` en clases (chequeo de visibilidad semántica de miembros).
-- **Tema 29:** Acceso posicional a atributos de clases (`obj[0$s]`).
-- **Tema 30:** Herencia múltiple de clases (`EXTENDS` múltiple con desambiguación por orden de declaración).
+## 📌 Hito 6: Funciones, Clases y Temas Avanzados
+
+---
+
+### 6.1. Sub-hito 6.1: Funciones Tradicionales y `AUTO FUNCTION` (Tema 21)
+
+#### 6.1.1. Objetivo Técnico
+Permitir la definición de funciones con tipos explícitos (`SHORTINT`, `SINGLEF`) y funciones con tipo inferido (`AUTO FUNCTION`), soportando:
+1. Parámetros formales registrados en la Tabla de Símbolos dentro del ámbito local de la función y asociados en su firma ordenada.
+2. Emisión de tercetos delimitadores: `( FUNCION , nombre:mangled , - )` e inicio/fin claramente delimitados.
+3. Tercetos de retorno: `( RET , expresion , - )` y generación automática de retorno por defecto si una función con tipo explícito carece de `RET`.
+4. Pasaje de parámetros por copia: emisión de tercetos de asignación `( := , pFormal:mangled , pReal )` previo al terceto de invocación `( CALL , f:mangled , - )`.
+5. Inferencia del tipo más abarcativo en `AUTO FUNCTION` (Tema 21) según las especificaciones de `Tp3.pdf`.
+
+---
+
+#### 6.1.2. Decisiones de Diseño y Preguntas Conceptuales para la Defensa
+
+##### ❓ Pregunta 1: ¿Cómo se guardan los parámetros en la Tabla de Símbolos y por qué se usó un enfoque combinado?
+* **Respuesta para la defensa:**  
+  Adoptamos una arquitectura dual complementaria:
+  1. **Cada parámetro formal es un símbolo individual en la Tabla de Símbolos:**  
+     Se registra con `uso = "parametro"`, su tipo (`SHORTINT` o `SINGLEF`) y su nombre con name mangling (`p1:main:suma`). Esto es indispensable porque dentro del cuerpo de la función las sentencias ejecutables (`p1 + 1$s`) buscan el identificador en el ámbito local (`:main:suma`) y deben resolverlo con su tipo.
+  2. **La entrada de la función en la Tabla de Símbolos almacena su firma ordenada:**  
+     En la entrada de la función (`suma:main`) se guardan atributos indexados: `CANT_PARAMS`, `PARAM_TIPO_0`, `PARAM_NOMBRE_0`, etc.
+  - *Justificación técnica:* Cuando en el programa principal se invoca `suma(a, b)`, el compilador no necesita realizar un escaneo costoso de toda la Tabla de Símbolos buscando qué parámetros pertenecen a `suma`. Accede directamente a la entrada de la función, verifica la aridad en $O(1)$, valida los tipos de cada argumento real contra el formal y genera los tercetos de copia con los nombres mangled exactos.
+
+---
+
+##### ❓ Pregunta 2: ¿Cómo se implementa el pasaje de parámetros por copia en Tercetos según la cátedra?
+* **Respuesta para la defensa:**  
+  `Tp3.pdf` especifica textualmente:
+  > *"El pasaje de parámetros será por copia. Por lo tanto, previo a la invocación, se deberá efectuar la copia de cada parámetro real sobre el parámetro formal correspondiente, en el orden en que aparecen."*
+  
+  Por lo tanto, ante una llamada como `res := suma(a, b);`, el compilador emite:
+  1. Asignación del primer parámetro: `( := , p1:main:suma , a:main )`.
+  2. Asignación del segundo parámetro: `( := , p2:main:suma , b:main )`.
+  3. Invocación de la función: `( CALL , suma:main , - )`.
+  4. Asignación del resultado retornado: `( := , res:main , [idCALL] )`.
+
+---
+
+##### ❓ Pregunta 3: ¿Cómo funciona la inferencia de tipos en `AUTO FUNCTION` si existen múltiples retornos (`RET`)?
+* **Respuesta para la defensa:**  
+  Según `Tp3.pdf` (Tema 21):
+  > *"Estas funciones deben tener al menos un retorno, pero permiten también varios retornos de tipos diferentes. El compilador deberá determinar, para este tipo de funciones, el tipo de retorno más abarcativo cuando existen retornos de tipos diferentes."*
+  
+  1. Al declararse la función, se inicia en la Tabla de Símbolos con `tipo = "auto"`.
+  2. **Sin sobreingeniería ni pilas paralelas:** identificamos la función activa directamente desde el último segmento de `ambitoActual` y actualizamos el tipo directamente en la entrada de la función en la Tabla de Símbolos.
+  3. Cada vez que se procesa una sentencia `RET (exp)`:
+     - Si la función aún tiene `TIPO = "auto"`, se actualiza con el tipo de `exp`.
+     - Si ya tenía un tipo y viene otro distinto (por ejemplo `SHORTINT` y `SINGLEF`), se promueve al tipo más abarcativo del lenguaje: `SINGLEF`.
+  4. Al cerrarse la función (`END;`), el atributo `TIPO` en la Tabla de Símbolos ya contiene el tipo inferido definitivo. Así, las futuras invocaciones en el código ejecutable conocen el tipo devuelto para validar asignaciones y expresiones aritméticas.
+
+---
+
+##### ❓ Pregunta 4: ¿Cómo delimitamos las funciones en los Tercetos según lo exigido por `Tp3.pdf`?
+* **Respuesta para la defensa:**  
+  `Tp3.pdf` establece que para las funciones se debe generar el código intermedio en una única estructura junto con el programa principal o en estructuras independientes, *"con algún delimitador que permita determinar claramente el inicio y fin de cada una"*.
+  
+  Emitimos los tercetos delimitadores:
+  - `( FUNCION , nombre:mangled , - )` al inicio del bloque de la función.
+  - `( FIN_FUNCION , nombre:mangled , - )` al concluir la función.
+  
+  Además, si una función con tipo estático no contiene ninguna sentencia `RET` explícita, el compilador emite automáticamente un valor de retorno por defecto (`0$s` para `SHORTINT` o `0.0` para `SINGLEF`) antes de `FIN_FUNCION`, cumpliendo con la pauta de la cátedra.
+
+---
+
+##### ❓ Pregunta 5: ¿Para qué necesitamos `obtenerFuncionActualMangled()` si en `encabezado_funcion` ya guardamos `$$ = $3` (la referencia a la Tabla de Símbolos)?
+* **Respuesta para la defensa:**  
+  Es una consecuencia directa del funcionamiento del autómata **Bottom-Up LALR(1)**:
+  1. En `declaracion_funciones`, `$1` corresponde al encabezado y está disponible en la pila, **pero recién cuando la función termina de parsearse por completo (`END;`)**.
+  2. MIENTRAS se analiza el cuerpo, las reglas hijas se reducen **mucho antes**:
+     - `parametro_formal : tipo IDENTIFICADOR`: sus únicos símbolos son `$1` y `$2`. No puede ver el `$1` de la regla padre que aún no redujo sin usar trucos de pila (`$-2`), prohibidos por la cátedra.
+     - `sentencia_ret : RET '(' expresion ')'`: está anidada dentro de las sentencias ejecutables. Sus símbolos son `$1` y `$3`. Necesita saber en qué función se encuentra para chequear el tipo de retorno o acumular la inferencia en `AUTO`.
+     - Si alguien escribe un `RET` en el programa principal (`:main`), ¿cómo detectamos que no está en ninguna función?
+  3. `obtenerFuncionActualMangled()` resuelve esto de forma natural leyendo `ambitoActual` (que vale por ejemplo `:main:suma`). Extrae el nombre de la función y su ámbito padre (`suma:main`) en $O(1)$ en cualquier punto intermedio de la compilación, sin necesidad de pilas paralelas.
+
+---
+
+##### ❓ Pregunta 6: ¿Por qué en `declaracion_funciones` la regla de error (falta de `;`) hace menos acciones que el camino feliz?
+* **Respuesta para la defensa:**  
+  En BYacc/J distinguimos dos tipos de producciones:
+  1. **Camino feliz (primera regla):** Código fuente válido. Tiene la responsabilidad canónica de emitir código de ejecución, resolver retornos por defecto y verificar toda la semántica normal.
+  2. **Reglas de gramática de error (recuperación sintáctica):** Su objetivo primordial NO es generar código para ejecución posterior (porque al registrar un error sintáctico con `cant_errores > 0`, el compilador abortará la generación de Assembler en el TP4). Su misión es:
+     - Emitir el error exacto con número de línea (`yyerror(...)`).
+     - **Recuperar la sincronización del autómata** y limpiar el estado (`salirAmbito()`) para que los errores sintácticos no se propaguen como falsos errores semánticos en las líneas siguientes.
+     - Emitir `FIN_FUNCION` para no dejar abierto un bloque inconcluso en el código intermedio.
+  Por eso, omitir la inyección de retornos por defecto en código sintácticamente roto es correcto: no se debe parchar código inválido destinado a descartarse.
+
+---
+
+##### ❓ Pregunta 7: ¿El retorno es obligatorio siempre o puede no haber ninguno? ¿Dónde se emite el retorno por defecto y por qué NO puede estar en `sentencia_ret`?
+* **Respuesta para la defensa:**  
+  1. **Depende del tipo de función según `Tp3.pdf`:**
+     - En **funciones normales** (con tipo explícito `SHORTINT` o `SINGLEF`), el retorno **NO es obligatorio**. Si el programador no escribe ningún `RET`, la cátedra exige que el compilador asuma un valor por defecto (`0$s` o `0.0`).
+     - En funciones inferidas **`AUTO FUNCTION` (Tema 21)**, el retorno **SÍ es obligatorio (al menos uno)**, porque de lo contrario el compilador no tendría de dónde inferir el tipo de dato que devuelve la función.
+  2. **¿Por qué el retorno por defecto NO puede generarse en `sentencia_ret`?**
+     - La regla `sentencia_ret : RET '(' expresion ')'` **solo se reduce si el token `RET` aparece en el código fuente**.
+     - Si la función no tiene ningún `RET`, el parser **JAMÁS visita ni reduce `sentencia_ret`**.
+     - Por ende, el único momento en que el compilador sabe con certeza que la función concluyó sin retornos es al llegar al delimitador `END;` en `declaracion_funciones`. Es allí donde se verifica si hubo algún `RET` y, de no haberlo, se inyecta el terceto `( RET , valDefault , - )`.
+
+---
+
+##### ❓ Pregunta 8: ¿En qué momento `TIENE_RET` es `"false"` y cómo se evalúa en la Tabla de Símbolos?
+* **Respuesta para la defensa:**  
+  1. Al declararse la función en `encabezado_funcion`, el atributo `TIENE_RET` no existe en la entrada (o se inicializa en `"false"`).
+  2. Si durante el análisis del cuerpo se ejecuta alguna `sentencia_ret`, se actualiza `TIENE_RET = "true"`.
+  3. Al llegar a `declaracion_funciones`, se consulta `TablaSimbolos.obtenerAtributo(refFunc, "TIENE_RET")`. En Java, la expresión `!"true".equals(tieneRet)` evalúa de forma null-safe: si el atributo nunca fue agregado (retorna `"NO ENCONTRADO"`) o vale `"false"`, la condición es verdadera y se emite el retorno por defecto. Si ya era `"true"`, no se emite nada.
+
+---
+
+#### 6.1.3. Casos de Prueba y Salidas Verificadas
+
+##### Caso 1: Pruebas Válidas de Funciones y AUTO FUNCTION (`tests/test_hito6_funciones_ok.txt`)
+```pascal
+programa_funciones_ok
+
+shortint a, b, res_short;
+singlef x, y, res_single;
+
+shortint function suma(shortint p1, shortint p2)
+    shortint acumulador;
+begin
+    acumulador := p1 + p2;
+    ret (acumulador);
+end;
+
+auto function cuadrado(shortint num)
+begin
+    ret (num * num);
+end;
+
+auto function max_abarcativo(shortint val_entero, singlef val_float)
+begin
+    if (tos(val_float) > val_entero)
+        ret (val_float);
+    else
+        ret (val_entero);
+    end_if;
+end;
+
+shortint function sin_retorno(shortint p)
+begin
+    p := p + 1$s;
+end;
+
+begin
+    a := 10$s;
+    b := 20$s;
+    x := 1.5;
+    y := 3.5;
+
+    res_short := suma(a, b);
+    res_short := cuadrado(5$s);
+    res_single := max_abarcativo(a, y);
+    res_short := suma(2$s, 3$s) + 4$s;
+    res_short := suma(a, b = (5$s));
+    res_short := sin_retorno(a);
+
+    pout("Fin de pruebas funciones ok");
+end
+```
+
+**Tercetos generados y verificados:**
+```text
+0 ( FUNCION , suma:main , - )
+1 ( + , p1:main:suma , p2:main:suma )
+2 ( := , acumulador:main:suma , [1] )
+3 ( RET , acumulador:main:suma , - )
+4 ( FIN_FUNCION , suma:main , - )
+5 ( FUNCION , cuadrado:main , - )
+6 ( * , num:main:cuadrado , num:main:cuadrado )
+7 ( RET , [6] , - )
+8 ( FIN_FUNCION , cuadrado:main , - )
+9 ( FUNCION , max_abarcativo:main , - )
+10 ( tos , val_float:main:max_abarcativo , - )
+11 ( > , [10] , val_entero:main:max_abarcativo )
+12 ( BF , [11] , [15] )
+13 ( RET , val_float:main:max_abarcativo , - )
+14 ( BI , [16] , - )
+15 ( RET , val_entero:main:max_abarcativo , - )
+16 ( FIN_FUNCION , max_abarcativo:main , - )
+17 ( FUNCION , sin_retorno:main , - )
+18 ( + , p:main:sin_retorno , 1 )
+19 ( := , p:main:sin_retorno , [18] )
+20 ( RET , 0$s , - )
+21 ( FIN_FUNCION , sin_retorno:main , - )
+22 ( := , a:main , 10 )
+23 ( := , b:main , 20 )
+24 ( := , x:main , 1.5 )
+25 ( := , y:main , 3.5 )
+26 ( := , p1:main:suma , a:main )
+27 ( := , p2:main:suma , b:main )
+28 ( CALL , suma:main , - )
+29 ( := , res_short:main , [28] )
+30 ( := , num:main:cuadrado , 5 )
+31 ( CALL , cuadrado:main , - )
+32 ( := , res_short:main , [31] )
+33 ( := , val_entero:main:max_abarcativo , a:main )
+34 ( := , val_float:main:max_abarcativo , y:main )
+35 ( CALL , max_abarcativo:main , - )
+36 ( := , res_single:main , [35] )
+37 ( := , p1:main:suma , 2 )
+38 ( := , p2:main:suma , 3 )
+39 ( CALL , suma:main , - )
+40 ( + , [39] , 4 )
+41 ( := , res_short:main , [40] )
+42 ( := , b:main , 5 )
+43 ( := , p1:main:suma , a:main )
+44 ( := , p2:main:suma , [42] )
+45 ( CALL , suma:main , - )
+46 ( := , res_short:main , [45] )
+47 ( := , p:main:sin_retorno , a:main )
+48 ( CALL , sin_retorno:main , - )
+49 ( := , res_short:main , [48] )
+50 ( POUT , "Fin de pruebas funciones ok" , - )
+```
+
+---
+
+##### Caso 2: Pruebas de Errores Semánticos y Sintácticos (`tests/test_hito6_funciones_error.txt`)
+**Errores detectados:**
+```text
+Error semantico (linea 9): Tipo de retorno incompatible en funcion 'func_retorno_incompati': se esperaba SHORTINT pero se retorno SINGLEF
+Error sintactico (linea 16): Ausencia de sentencia de retorno 'RET' en funcion AUTO
+Error semantico (linea 25): Sentencia RET fuera del cuerpo de una funcion
+Error semantico (linea 28): Funcion 'funcion_fantasma' no declarada o no visible en el ambito actual (:main)
+Error semantico (linea 31): El identificador 'a' no es una funcion (uso actual: variable)
+Error semantico (linea 34): Cantidad incorrecta de parametros en invocacion a 'func_params': se esperaban 2 pero se recibieron 1
+Error semantico (linea 37): Incompatibilidad de tipos en parametro 2 al invocar a 'func_params': se esperaba SHORTINT pero se recibio SINGLEF
+Compilacion finalizada con 1 error(es) sintactico(s) y 6 error(es) semantico(s)
+```
+
+---
+
+### 6.2. Sub-hito 6.2 (SIGUIENTE): Variables en Tiempo de Compilación `COMPTIME` (Tema 22)
+- Atributos `COMPTIME` y valor constante evaluado estáticamente en la Tabla de Símbolos.
+- Supresión de tercetos en tiempo de ejecución.
+- Detección de errores semánticos por asignación de variables de runtime a variables `COMPTIME`.
 
 
 
