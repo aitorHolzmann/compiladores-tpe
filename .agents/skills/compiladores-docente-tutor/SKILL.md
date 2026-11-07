@@ -62,7 +62,7 @@ Para evitar sospechas durante la corrección o defensa:
 ### ¿Cómo interactúan yyparse() e yylex()?
 - `yyparse()` es el motor principal (enfoque monolítico).
 - Cada vez que el autómata necesita un nuevo símbolo terminal para resolver una transición o reducción, llama a `yylex()`.
-- `yylex()` devuelve el código numérico del token (definido como constante estática en `Parser.java`) y, si el token tiene atributos (como identificadores, constantes o cadenas), carga la referencia a la Tabla de Símbolos en la variable global `yylval` (`ParserVal.ival`).
+- `yylex()` devuelve el código numérico del token (definido como constante estática en `Parser.java`) y, si el token tiene atributos (como identificadores, constantes o cadenas), carga la clave/lexema para la Tabla de Símbolos en la variable global `yylval` (`ParserVal.sval`).
 - Si se llega a fin de archivo, `yylex()` retorna `0` (o `$end`).
 
 ### ¿Por qué las constantes negativas se tratan en el Sintáctico?

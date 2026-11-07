@@ -32,16 +32,8 @@ public class AS3 extends Accion_Semantica{
             AnalizadorLexico.mostrarWarning("El texto { " + token_entregado + " } contiene mayúsculas. Se convirtió a minusculas, resultado: " + token_entregado.toLowerCase());
         }
         
-        identificador = TablaSimbolos.obtenerSimbolo(token_entregado);
-
-        if  (identificador != TablaSimbolos.LEXEMA_NO_ENCONTRADO){
-            AnalizadorLexico.setReferenciaTablaSimbolos(identificador);
-            return TablaPalabrasReservadas.obtenerIdentificador("IDENTIFICADOR");
-        }
-
-        
-        int nuevo_identificador = TablaSimbolos.agregarSimbolo(token_entregado);
-        AnalizadorLexico.setReferenciaTablaSimbolos(nuevo_identificador);
+        TablaSimbolos.agregarIdentificador(token_entregado);
+        AnalizadorLexico.setReferenciaTablaSimbolos(token_entregado);
         return TablaPalabrasReservadas.obtenerIdentificador("IDENTIFICADOR");
 
     }

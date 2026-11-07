@@ -34,7 +34,7 @@ public class AnalizadorLexico {
     private static final char EXPONENTE = 's';
 
 
-    public static int referenciaTablaSimbolos = -1;
+    public static String referenciaTablaSimbolos = null;
 
     
     //Atributos de la clase
@@ -69,7 +69,7 @@ public class AnalizadorLexico {
         return CANT_ESTADOS;
     }
 
-    public static void setReferenciaTablaSimbolos(int referencia){
+    public static void setReferenciaTablaSimbolos(String referencia){
         referenciaTablaSimbolos = referencia;
     }
 

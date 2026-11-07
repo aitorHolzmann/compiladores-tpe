@@ -42,9 +42,64 @@ begin
     end;
 end;
 
+// Jerarquia en diamante (Tema 30: herencia multiple y desambiguacion Opcion 1)
+class c_raiz
+begin
+    shortint r_val;
+
+    shortint m_raiz()
+    begin
+        ret(10$s);
+    end;
+
+    shortint m_comun()
+    begin
+        ret(1$s);
+    end;
+end;
+
+class c_rama1
+begin
+    extends c_raiz;
+    shortint r1_val;
+
+    shortint m_comun()
+    begin
+        ret(20$s);
+    end;
+end;
+
+class c_rama2
+begin
+    extends c_raiz;
+    shortint r2_val;
+
+    shortint m_comun()
+    begin
+        ret(30$s);
+    end;
+
+    shortint m_rama2()
+    begin
+        ret(40$s);
+    end;
+end;
+
+class c_diamante
+begin
+    extends c_rama1, c_rama2;
+    shortint d_val;
+
+    shortint m_propio_dia()
+    begin
+        ret(50$s);
+    end;
+end;
+
 c_derivada d;
 c_base1 b;
 c_cliente cli;
+c_diamante dia;
 shortint r_short, idx;
 singlef r_single;
 
@@ -66,6 +121,20 @@ begin
 
     // 4. Invocacion de metodo con objeto y visibilidad (Tema 26)
     cli.m_cliente(b);
+
+    // 5. Invocacion en jerarquia en diamante (Tema 30)
+    // 5.1 Metodo de la raiz comun alcanzable por ambas ramas sin bucle infinito
+    r_short := dia.m_raiz();
+
+    // 5.2 Desambiguacion posicional Opcion 1: m_comun esta en c_rama1 y c_rama2
+    // Se resuelve c_rama1@m_comun por aparecer primero en 'extends c_rama1, c_rama2'
+    r_short := dia.m_comun();
+
+    // 5.3 Metodo exclusivo de la segunda rama
+    r_short := dia.m_rama2();
+
+    // 5.4 Metodo propio de la clase diamante
+    r_short := dia.m_propio_dia();
 
     pout("Fin de pruebas clases ok");
 end

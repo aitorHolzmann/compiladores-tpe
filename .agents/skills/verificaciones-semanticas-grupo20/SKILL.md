@@ -10,8 +10,8 @@ Este catálogo lista los errores semánticos requeridos y las reglas específica
 ## 1. Reglas Generales
 - **Formato de error**: Los errores deben reportarse estrictamente con el formato:
   `Error semantico (linea X): <descripcion>`
-- **Name Mangling**: Las variables y funciones se codifican con el separador `:` para mantener unicidad según su ámbito.
-  - Ejemplo: `a:main`, `x:main:f1:f2`.
+- **Name Mangling**: Las variables y funciones se codifican con el separador `@` y ámbito primero (pedido en consulta docente del 07/11) para mantener unicidad según su ámbito.
+  - Ejemplo: `main@a`, `main@f1@f2@x`.
   - Se debe utilizar una variable global `ambitoActual` en el analizador sintáctico para construir los nombres.
 
 ## 2. Chequeos de Declaración

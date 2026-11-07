@@ -50,8 +50,7 @@ import java.util.Stack;
 nombre_programa
     : IDENTIFICADOR
         {
-            int ref = $1.ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            String nombre = $1.sval;
             TablaSimbolos.declararVariable(nombre, "programa", "nombre_programa", ambitoActual);
             $$ = $1;
         }
@@ -117,9 +116,7 @@ lista_variables
     : IDENTIFICADOR
         {
             ArrayList<String> lista = new ArrayList<>();
-            int ref = $1.ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            lista.add(lexema);
+            lista.add($1.sval);
             ParserVal pv = new ParserVal();
             pv.obj = lista;
             $$ = pv;
@@ -127,9 +124,7 @@ lista_variables
     | lista_variables ',' IDENTIFICADOR
         {
             ArrayList<String> lista = (ArrayList<String>) $1.obj;
-            int ref = $3.ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            lista.add(lexema);
+            lista.add($3.sval);
             $$ = $1;
         }
     | lista_variables IDENTIFICADOR   { yyerror("Falta ',' entre los identificadores"); $$ = $1; }
@@ -139,9 +134,7 @@ lista_identificadores
     : IDENTIFICADOR
         {
             ArrayList<String> lista = new ArrayList<>();
-            int ref = $1.ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            lista.add(lexema);
+            lista.add($1.sval);
             ParserVal pv = new ParserVal();
             pv.obj = lista;
             $$ = pv;
@@ -149,9 +142,7 @@ lista_identificadores
     | lista_identificadores ',' IDENTIFICADOR
         {
             ArrayList<String> lista = (ArrayList<String>) $1.obj;
-            int ref = $3.ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            lista.add(lexema);
+            lista.add($3.sval);
             $$ = $1;
         }
     ;
@@ -166,15 +157,13 @@ tipo
 encabezado_funcion
     : tipo FUNCTION IDENTIFICADOR
         {
-            int ref = $3.ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            int idFunc = TablaSimbolos.declararVariable(nombre, $1.sval, "funcion", ambitoActual);
-            String mangling = nombre + ambitoActual;
-            if (idFunc != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
-                TablaSimbolos.agregarAtributo(idFunc, "TIENE_RET", "false");
+            String nombre = $3.sval;
+            String claveFunc = TablaSimbolos.declararVariable(nombre, $1.sval, "funcion", ambitoActual);
+            if (claveFunc != null) {
+                TablaSimbolos.agregarAtributo(claveFunc, "TIENE_RET", Boolean.FALSE);
             }
             entrarAmbito(nombre);
-            GeneradorTerceto.crearTerceto("FUNCION", mangling, "-");
+            GeneradorTerceto.iniciarAmbito(ambitoActual);
             $$ = $3;
         }
     ;
@@ -182,12 +171,13 @@ encabezado_funcion
 inicio_auto_funcion
     : AUTO FUNCTION IDENTIFICADOR
         {
-            int ref = $3.ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, "auto", "funcion", ambitoActual);
-            String mangling = nombre + ambitoActual;
+            String nombre = $3.sval;
+            String claveFunc = TablaSimbolos.declararVariable(nombre, "auto", "funcion", ambitoActual);
+            if (claveFunc != null) {
+                TablaSimbolos.agregarAtributo(claveFunc, "TIENE_RET", Boolean.FALSE);
+            }
             entrarAmbito(nombre);
-            GeneradorTerceto.crearTerceto("FUNCION", mangling, "-");
+            GeneradorTerceto.iniciarAmbito(ambitoActual);
             $$ = $3;
         }
     ;
@@ -204,14 +194,12 @@ declaracion_funciones
         {
             String mangling = obtenerFuncionActualMangled();
             if (mangling != null) {
-                int refFunc = TablaSimbolos.buscarPorMangling(mangling);
-                String tieneRet = TablaSimbolos.obtenerAtributo(refFunc, "TIENE_RET");
-                if (!"true".equals(tieneRet)) {
-                    String tipo = TablaSimbolos.obtenerAtributo(refFunc, TablaSimbolos.TIPO);
+                Boolean tieneRet = (Boolean) TablaSimbolos.obtenerAtributo(mangling, "TIENE_RET");
+                if (!Boolean.TRUE.equals(tieneRet)) {
+                    String tipo = TablaSimbolos.obtenerTipo(mangling);
                     String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0$s";
                     GeneradorTerceto.crearTerceto("RET", valDef, "-", tipo);
                 }
-                GeneradorTerceto.crearTerceto("FIN_FUNCION", mangling, "-");
             }
             salirAmbito();
         }
@@ -224,19 +212,20 @@ declaracion_funciones
         {
             String mangling = obtenerFuncionActualMangled();
             if (mangling != null) {
-                GeneradorTerceto.crearTerceto("FIN_FUNCION", mangling, "-");
+                Boolean tieneRet = (Boolean) TablaSimbolos.obtenerAtributo(mangling, "TIENE_RET");
+                if (!Boolean.TRUE.equals(tieneRet)) {
+                    String tipo = TablaSimbolos.obtenerTipo(mangling);
+                    String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0$s";
+                    GeneradorTerceto.crearTerceto("RET", valDef, "-", tipo);
+                }
             }
             yyerror("Falta ';' al final de la declaracion de funcion");
             salirAmbito();
         } 
     | encabezado_auto_funcion BEGIN sentencias_ejecutables END ';'
         {
-            String mangling = obtenerFuncionActualMangled();
             if (cant_retornos_auto == 0) {
                 yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
-            }
-            if (mangling != null) {
-                GeneradorTerceto.crearTerceto("FIN_FUNCION", mangling, "-");
             }
             cant_retornos_auto = -1;
             salirAmbito();
@@ -246,12 +235,8 @@ declaracion_funciones
         BEGIN sentencias_ejecutables END ';' 
     | encabezado_auto_funcion BEGIN sentencias_ejecutables END
         {
-            String mangling = obtenerFuncionActualMangled();
             if (cant_retornos_auto == 0) {
                 yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
-            }
-            if (mangling != null) {
-                GeneradorTerceto.crearTerceto("FIN_FUNCION", mangling, "-");
             }
             cant_retornos_auto = -1;
             yyerror("Falta ';' al final de la declaracion de funcion");
@@ -268,31 +253,26 @@ lista_parametros_formales
 parametro_formal
     : tipo IDENTIFICADOR
         {
-            int ref = $2.ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            String nombre = $2.sval;
             TablaSimbolos.declararVariable(nombre, $1.sval, "parametro", ambitoActual);
             String funcMangled = obtenerFuncionActualMangled();
             if (funcMangled != null) {
-                String nombreParamMangled = nombre + ambitoActual;
-                TablaSimbolos.agregarParametroAFuncion(funcMangled, $1.sval, nombreParamMangled);
+                TablaSimbolos.agregarParametro(funcMangled, nombre);
             }
             imprimirRegla("parametro_formal");
         }
     | IDENTIFICADOR IDENTIFICADOR
         {
-            int refTipo = $1.ival;
-            String nomClase = TablaSimbolos.obtenerAtributo(refTipo, TablaSimbolos.LEXEMA);
-            int idClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
-            if (idClase == TablaSimbolos.LEXEMA_NO_ENCONTRADO || !"nombre_clase".equals(TablaSimbolos.obtenerAtributo(idClase, TablaSimbolos.USO))) {
+            String nomClase = $1.sval;
+            String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+            if (!TablaSimbolos.existeSimbolo(claveClase) || !"nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase))) {
                 agregarErrorSemantico("Tipo de parametro formal '" + nomClase + "' no declarado o no es una clase valida");
             }
-            int refNom = $2.ival;
-            String nombre = TablaSimbolos.obtenerAtributo(refNom, TablaSimbolos.LEXEMA);
+            String nombre = $2.sval;
             TablaSimbolos.declararVariable(nombre, nomClase, "parametro", ambitoActual);
             String funcMangled = obtenerFuncionActualMangled();
             if (funcMangled != null) {
-                String nombreParamMangled = nombre + ambitoActual;
-                TablaSimbolos.agregarParametroAFuncion(funcMangled, nomClase, nombreParamMangled);
+                TablaSimbolos.agregarParametro(funcMangled, nombre);
             }
             imprimirRegla("parametro_formal");
         }
@@ -306,9 +286,9 @@ parametro_formal
 encabezado_clase
     : CLASS IDENTIFICADOR
         {
-            int ref = $2.ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, "clase", "nombre_clase", ambitoActual);
+            String nombre = $2.sval;
+            String claveClase = TablaSimbolos.declararVariable(nombre, "clase", "nombre_clase", ambitoActual);
+            claseActualValida = (claveClase != null);
             entrarAmbito(nombre);
             $$ = $2;
         }
@@ -318,12 +298,14 @@ declaracion_clase
     : encabezado_clase importacion_opcional
         BEGIN herencia_opcional miembros_clase END ';'
         {
+            claseActualValida = false;
             salirAmbito();
         }
     | encabezado_clase importacion_opcional
         BEGIN herencia_opcional miembros_clase END
         {
             yyerror("Falta ';' al final de la declaracion de clase");
+            claseActualValida = false;
             salirAmbito();
         }
     ;
@@ -339,13 +321,20 @@ importacion_opcional
             if (nomClase != null) {
                 ArrayList<String> imports = (ArrayList<String>) $3.obj;
                 if (imports != null) {
-                    for (String imp : imports) {
-                        int refImp = TablaSimbolos.buscarPorMangling(imp + ":main");
-                        if (refImp == TablaSimbolos.LEXEMA_NO_ENCONTRADO || !"nombre_clase".equals(TablaSimbolos.obtenerAtributo(refImp, TablaSimbolos.USO))) {
+                    ArrayList<String> importsValidos = new ArrayList<>();
+                    for (int i = 0; i < imports.size(); i++) {
+                        String imp = imports.get(i);
+                        String claveImp = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + imp;
+                        if (!TablaSimbolos.existeSimbolo(claveImp) || !"nombre_clase".equals(TablaSimbolos.obtenerUso(claveImp))) {
                             agregarErrorSemantico("Clase '" + imp + "' especificada en IMPORT FROM no declarada");
+                        } else {
+                            importsValidos.add(imp);
                         }
                     }
-                    TablaSimbolos.registrarImports(nomClase + ":main", imports);
+                    if (claseActualValida) {
+                        String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+                        TablaSimbolos.registrarImports(claveClase, importsValidos);
+                    }
                 }
             }
             imprimirRegla("importacion_opcional");
@@ -369,13 +358,24 @@ herencia_opcional
             if (nomClase != null) {
                 ArrayList<String> padres = (ArrayList<String>) $2.obj;
                 if (padres != null) {
-                    for (String padre : padres) {
-                        int refPadre = TablaSimbolos.buscarPorMangling(padre + ":main");
-                        if (refPadre == TablaSimbolos.LEXEMA_NO_ENCONTRADO || !"nombre_clase".equals(TablaSimbolos.obtenerAtributo(refPadre, TablaSimbolos.USO))) {
+                    ArrayList<String> padresValidos = new ArrayList<>();
+                    for (int i = 0; i < padres.size(); i++) {
+                        String padre = padres.get(i);
+                        String clavePadre = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + padre;
+                        if (!TablaSimbolos.existeSimbolo(clavePadre) || !"nombre_clase".equals(TablaSimbolos.obtenerUso(clavePadre))) {
                             agregarErrorSemantico("Clase base '" + padre + "' especificada en EXTENDS no declarada");
+                        } else if (TablaSimbolos.hayCicloHerencia(nomClase, padre)) {
+                            agregarErrorSemantico("Herencia circular detectada entre la clase '" + nomClase + "' y '" + padre + "'");
+                        } else if (padresValidos.contains(padre)) {
+                            agregarErrorSemantico("Clase base '" + padre + "' duplicada en EXTENDS de la clase '" + nomClase + "'");
+                        } else {
+                            padresValidos.add(padre);
                         }
                     }
-                    TablaSimbolos.registrarHerencia(nomClase + ":main", padres);
+                    if (claseActualValida) {
+                        String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+                        TablaSimbolos.registrarHerencia(claveClase, padresValidos);
+                    }
                 }
             }
             imprimirRegla("herencia_opcional");
@@ -405,18 +405,18 @@ atributo_clase
             ArrayList<String> variables = (ArrayList<String>) $2.obj;
             ArrayList<String> exportTo = ($3 != null && $3.obj != null) ? (ArrayList<String>) $3.obj : null;
             String nomClase = obtenerClaseDeAmbito(ambitoActual);
-            String claseMangled = (nomClase != null) ? nomClase + ":main" : null;
+            String claseClave = (nomClase != null) ? TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase : null;
 
             if (variables != null) {
                 for (int i = 0; i < variables.size(); i++) {
                     String nombreVar = variables.get(i);
-                    int idAtr = TablaSimbolos.declararVariable(nombreVar, tipoDato, "atributo", ambitoActual);
-                    if (idAtr != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
-                        if (claseMangled != null) {
-                            TablaSimbolos.agregarAtributoAClase(claseMangled, nombreVar, tipoDato);
+                    String claveAtr = TablaSimbolos.declararVariable(nombreVar, tipoDato, "atributo", ambitoActual);
+                    if (claveAtr != null) {
+                        if (claseClave != null) {
+                            TablaSimbolos.agregarAtributoAClase(claseClave, nombreVar);
                         }
                         if (exportTo != null) {
-                            TablaSimbolos.registrarExport(idAtr, exportTo);
+                            TablaSimbolos.registrarExport(claveAtr, exportTo);
                         }
                     }
                 }
@@ -431,17 +431,15 @@ metodo_clase
         {
             String mangling = obtenerFuncionActualMangled();
             if (mangling != null) {
-                int refMetodo = TablaSimbolos.buscarPorMangling(mangling);
-                String tieneRet = TablaSimbolos.obtenerAtributo(refMetodo, "TIENE_RET");
-                if (!"true".equals(tieneRet)) {
-                    String tipo = TablaSimbolos.obtenerAtributo(refMetodo, TablaSimbolos.TIPO);
+                Boolean tieneRet = (Boolean) TablaSimbolos.obtenerAtributo(mangling, "TIENE_RET");
+                if (!Boolean.TRUE.equals(tieneRet)) {
+                    String tipo = TablaSimbolos.obtenerTipo(mangling);
                     String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0$s";
                     GeneradorTerceto.crearTerceto("RET", valDef, "-", tipo);
                 }
-                GeneradorTerceto.crearTerceto("FIN_METODO", mangling, "-");
                 if ($9 != null && $9.obj != null) {
                     ArrayList<String> exports = (ArrayList<String>) $9.obj;
-                    TablaSimbolos.registrarExport(refMetodo, exports);
+                    TablaSimbolos.registrarExport(mangling, exports);
                 }
             }
             salirAmbito();
@@ -451,11 +449,9 @@ metodo_clase
         {
             String mangling = obtenerFuncionActualMangled();
             if (mangling != null) {
-                int refMetodo = TablaSimbolos.buscarPorMangling(mangling);
-                GeneradorTerceto.crearTerceto("FIN_METODO", mangling, "-");
                 if ($8 != null && $8.obj != null) {
                     ArrayList<String> exports = (ArrayList<String>) $8.obj;
-                    TablaSimbolos.registrarExport(refMetodo, exports);
+                    TablaSimbolos.registrarExport(mangling, exports);
                 }
             }
             salirAmbito();
@@ -465,12 +461,13 @@ metodo_clase
 encabezado_metodo
     : tipo IDENTIFICADOR
         {
-            int ref = $2.ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            int idMet = TablaSimbolos.declararVariable(nombre, $1.sval, "metodo", ambitoActual);
-            String mangling = nombre + ambitoActual;
-            GeneradorTerceto.crearTerceto("METODO", mangling, "-");
+            String nombre = $2.sval;
+            String claveMet = TablaSimbolos.declararVariable(nombre, $1.sval, "metodo", ambitoActual);
+            if (claveMet != null) {
+                TablaSimbolos.agregarAtributo(claveMet, "TIENE_RET", Boolean.FALSE);
+            }
             entrarAmbito(nombre);
+            GeneradorTerceto.iniciarAmbito(ambitoActual);
             $$ = $2;
         }
     ;
@@ -478,12 +475,13 @@ encabezado_metodo
 encabezado_metodo_auto
     : AUTO IDENTIFICADOR
         {
-            int ref = $2.ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            int idMet = TablaSimbolos.declararVariable(nombre, "auto", "metodo", ambitoActual);
-            String mangling = nombre + ambitoActual;
-            GeneradorTerceto.crearTerceto("METODO", mangling, "-");
+            String nombre = $2.sval;
+            String claveMet = TablaSimbolos.declararVariable(nombre, "auto", "metodo", ambitoActual);
+            if (claveMet != null) {
+                TablaSimbolos.agregarAtributo(claveMet, "TIENE_RET", Boolean.FALSE);
+            }
             entrarAmbito(nombre);
+            GeneradorTerceto.iniciarAmbito(ambitoActual);
             $$ = $2;
         }
     ;
@@ -510,10 +508,9 @@ exportacion_opcional
 declaracion_objeto
     : IDENTIFICADOR lista_identificadores ';'
         {
-            int refClase = $1.ival;
-            String nomClase = TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.LEXEMA);
-            int idClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
-            if (idClase == TablaSimbolos.LEXEMA_NO_ENCONTRADO || !"nombre_clase".equals(TablaSimbolos.obtenerAtributo(idClase, TablaSimbolos.USO))) {
+            String nomClase = $1.sval;
+            String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+            if (!TablaSimbolos.existeSimbolo(claveClase) || !"nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase))) {
                 agregarErrorSemantico("Clase '" + nomClase + "' no declarada o no es una clase valida");
             } else {
                 ArrayList<String> variables = (ArrayList<String>) $2.obj;
@@ -540,9 +537,9 @@ declaracion_comptime
             if (variables != null) {
                 for (int i = 0; i < variables.size(); i++) {
                     String nombreVar = variables.get(i);
-                    int id = TablaSimbolos.declararVariable(nombreVar, tipoDato, "variable", ambitoActual);
-                    if (id != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
-                        TablaSimbolos.agregarAtributo(id, "COMPTIME", "true");
+                    String clave = TablaSimbolos.declararVariable(nombreVar, tipoDato, "variable", ambitoActual);
+                    if (clave != null) {
+                        TablaSimbolos.agregarAtributo(clave, "COMPTIME", Boolean.TRUE);
                     }
                 }
             }
@@ -580,13 +577,11 @@ asignacion
     : IDENTIFICADOR ASIGNAR expresion
         {
             if ($3 != null && $3.sval != null) {
-                int ref = $1.ival;
-                String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-                int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
-                if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
-                    boolean esComp = TablaSimbolos.esComptime(idVar);
-                    String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
-                    String tipoVar = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.TIPO);
+                String lexema = $1.sval;
+                String claveVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+                if (claveVar != null) {
+                    boolean esComp = TablaSimbolos.esComptime(claveVar);
+                    String tipoVar = TablaSimbolos.obtenerTipo(claveVar);
                     String tipoExp = (String) $3.obj;
 
                     if (esComp) {
@@ -595,7 +590,7 @@ asignacion
                         } else {
                             if (tipoExp != null) {
                                 if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                                    TablaSimbolos.guardarValorComptime(idVar, $3.sval);
+                                    TablaSimbolos.guardarValorComptime(claveVar, $3.sval);
                                 } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
                                     agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
                                 } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
@@ -608,7 +603,7 @@ asignacion
                     } else {
                         if (tipoExp != null) {
                             if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                                GeneradorTerceto.crearTerceto(":=", mangling, $3.sval, tipoVar);
+                                GeneradorTerceto.crearTerceto(":=", claveVar, $3.sval, tipoVar);
                             } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
                                 agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
                             } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
@@ -647,57 +642,54 @@ asignacion
 acceso_posicional
     : IDENTIFICADOR '[' CTE_SHORTINT ']'
         {
-            int refObj = $1.ival;
-            String nomObj = TablaSimbolos.obtenerAtributo(refObj, TablaSimbolos.LEXEMA);
-            int idObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
+            String nomObj = $1.sval;
+            String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
 
-            if (idObj == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+            if (claveObj == null) {
                 agregarErrorSemantico("Objeto '" + nomObj + "' no declarado o no visible en el ambito actual (" + ambitoActual + ")");
                 $$ = new ParserVal();
             } else {
-                String uso = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.USO);
-                String nomClase = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.TIPO);
-                int refClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+                String uso = TablaSimbolos.obtenerUso(claveObj);
+                String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+                String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
                 boolean esObjeto = ("objeto".equals(uso) || "parametro".equals(uso)) && 
-                    (refClase != TablaSimbolos.LEXEMA_NO_ENCONTRADO && "nombre_clase".equals(TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.USO)));
+                    (TablaSimbolos.existeSimbolo(claveClase) && "nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase)));
 
                 if (!esObjeto) {
                     agregarErrorSemantico("El identificador '" + nomObj + "' no es un objeto (uso actual: " + uso + ")");
                     $$ = new ParserVal();
                 } else {
-                    String claseMangled = nomClase + ":main";
-                    int refConst = $3.ival;
-                    String lexConst = TablaSimbolos.obtenerAtributo(refConst, TablaSimbolos.LEXEMA);
+                    String lexConst = $3.sval;
                     int idx = Integer.parseInt(lexConst);
-                    int cantAtr = TablaSimbolos.obtenerCantidadAtributosClase(claseMangled);
+                    ArrayList<String> atrs = TablaSimbolos.obtenerAtributosClase(claveClase);
+                    int cantAtr = atrs.size();
 
                     if (idx < 0 || idx >= cantAtr) {
                         agregarErrorSemantico("Indice posicional [" + idx + "$s] fuera de rango para la clase '" + nomClase + "' (cantidad de atributos: " + cantAtr + ")");
                         $$ = new ParserVal();
                     } else {
-                        String nomAtr = TablaSimbolos.obtenerNombreAtributoClase(claseMangled, idx);
-                        String tipoAtr = TablaSimbolos.obtenerTipoAtributoClase(claseMangled, idx);
-                        int idAtr = TablaSimbolos.buscarPorMangling(nomAtr + ":main:" + nomClase);
+                        String nomAtr = atrs.get(idx);
+                        String claveAtr = claveClase + TablaSimbolos.SEPARADOR + nomAtr;
+                        String tipoAtr = TablaSimbolos.obtenerTipo(claveAtr);
 
                         // Chequeo de visibilidad (Tema 26)
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
                         boolean accesoValido = true;
                         if (claseActual != null && !claseActual.equals(nomClase)) {
-                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claseActual + ":main");
+                            String claveClaseActual = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + claseActual;
+                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claveClaseActual);
                             if (imports == null || !imports.contains(nomClase)) {
                                 agregarErrorSemantico("La clase '" + claseActual + "' no importa a la clase '" + nomClase + "'");
                                 accesoValido = false;
-                            } else if (!TablaSimbolos.estaExportadoA(idAtr, claseActual)) {
+                            } else if (!TablaSimbolos.estaExportadoA(claveAtr, claseActual)) {
                                 agregarErrorSemantico("El atributo '" + nomAtr + "' de la clase '" + nomClase + "' no esta exportado a la clase '" + claseActual + "'");
                                 accesoValido = false;
                             }
                         }
 
                         if (accesoValido) {
-                            String manglingObj = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.MANGLING);
-                            ParserVal pv = new ParserVal(manglingObj + "[" + idx + "$s]");
+                            ParserVal pv = new ParserVal(claveObj + "[" + idx + "$s]");
                             pv.obj = tipoAtr;
-                            pv.ival = idAtr;
                             $$ = pv;
                         } else {
                             $$ = new ParserVal();
@@ -708,46 +700,41 @@ acceso_posicional
         }
     | IDENTIFICADOR '[' IDENTIFICADOR ']'
         {
-            int refObj = $1.ival;
-            String nomObj = TablaSimbolos.obtenerAtributo(refObj, TablaSimbolos.LEXEMA);
-            int idObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
+            String nomObj = $1.sval;
+            String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
 
-            if (idObj == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+            if (claveObj == null) {
                 agregarErrorSemantico("Objeto '" + nomObj + "' no declarado o no visible en el ambito actual (" + ambitoActual + ")");
                 $$ = new ParserVal();
             } else {
-                String uso = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.USO);
-                String nomClase = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.TIPO);
-                int refClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+                String uso = TablaSimbolos.obtenerUso(claveObj);
+                String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+                String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
                 boolean esObjeto = ("objeto".equals(uso) || "parametro".equals(uso)) && 
-                    (refClase != TablaSimbolos.LEXEMA_NO_ENCONTRADO && "nombre_clase".equals(TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.USO)));
+                    (TablaSimbolos.existeSimbolo(claveClase) && "nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase)));
 
                 if (!esObjeto) {
                     agregarErrorSemantico("El identificador '" + nomObj + "' no es un objeto (uso actual: " + uso + ")");
                     $$ = new ParserVal();
                 } else {
-                    String claseMangled = nomClase + ":main";
-                    int refIdx = $3.ival;
-                    String nomIdx = TablaSimbolos.obtenerAtributo(refIdx, TablaSimbolos.LEXEMA);
-                    int idVarIdx = TablaSimbolos.buscarIdentificador(nomIdx, ambitoActual);
+                    String nomIdx = $3.sval;
+                    String claveVarIdx = TablaSimbolos.buscarIdentificador(nomIdx, ambitoActual);
 
-                    if (idVarIdx == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                    if (claveVarIdx == null) {
                         agregarErrorSemantico("Variable de indice '" + nomIdx + "' no declarada");
                         $$ = new ParserVal();
                     } else {
-                        String tipoIdx = TablaSimbolos.obtenerAtributo(idVarIdx, TablaSimbolos.TIPO);
+                        String tipoIdx = TablaSimbolos.obtenerTipo(claveVarIdx);
                         if (!"SHORTINT".equals(tipoIdx)) {
                             agregarErrorSemantico("El indice de acceso posicional debe ser de tipo SHORTINT (se encontro: " + tipoIdx + ")");
                             $$ = new ParserVal();
                         } else {
-                            String manglingIdx = TablaSimbolos.obtenerAtributo(idVarIdx, TablaSimbolos.MANGLING);
-                            String manglingObj = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.MANGLING);
-                            String tipoDefecto = TablaSimbolos.obtenerTipoAtributoClase(claseMangled, 0);
+                            ArrayList<String> atrs = TablaSimbolos.obtenerAtributosClase(claveClase);
+                            String tipoDefecto = (!atrs.isEmpty()) ? TablaSimbolos.obtenerTipo(claveClase + TablaSimbolos.SEPARADOR + atrs.get(0)) : "SHORTINT";
                             if (tipoDefecto == null) tipoDefecto = "SHORTINT";
 
-                            ParserVal pv = new ParserVal(manglingObj + "[" + manglingIdx + "]");
+                            ParserVal pv = new ParserVal(claveObj + "[" + claveVarIdx + "]");
                             pv.obj = tipoDefecto;
-                            pv.ival = idObj;
                             $$ = pv;
                         }
                     }
@@ -901,18 +888,15 @@ termino
 factor
     : IDENTIFICADOR 
         {
-            int ref = $1.ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
-            if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
-                String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
-                String tipo = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.TIPO);
-                boolean esComp = TablaSimbolos.esComptime(idVar);
+            String lexema = $1.sval;
+            String claveVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+            if (claveVar != null) {
+                String tipo = TablaSimbolos.obtenerTipo(claveVar);
+                boolean esComp = TablaSimbolos.esComptime(claveVar);
                 if (esComp) {
-                    if (TablaSimbolos.tieneValorComptime(idVar)) {
-                        String val = TablaSimbolos.obtenerValorComptime(idVar);
+                    if (TablaSimbolos.tieneValorComptime(claveVar)) {
+                        String val = TablaSimbolos.obtenerValorComptime(claveVar);
                         ParserVal pv = new ParserVal(val);
-                        pv.ival = idVar;
                         pv.obj = tipo;
                         $$ = pv;
                     } else {
@@ -920,8 +904,7 @@ factor
                         $$ = new ParserVal();
                     }
                 } else {
-                    ParserVal pv = new ParserVal(mangling);
-                    pv.ival = idVar;
+                    ParserVal pv = new ParserVal(claveVar);
                     pv.obj = tipo;
                     $$ = pv;
                 }
@@ -932,55 +915,50 @@ factor
         }
     | CTE_SHORTINT
         {
-            int id = $1.ival;
-            String lexema = TablaSimbolos.obtenerAtributo(id, TablaSimbolos.LEXEMA);
+            String lexema = $1.sval;
             int valor = Integer.parseInt(lexema);
             if (valor > AnalizadorLexico.ValorMaximoInt) {
                 yyerror("Constante shortint positiva fuera de rango (" + lexema + "). Rango permitido: [-128, 127]");
             }
-            TablaSimbolos.agregarAtributo(id, TablaSimbolos.TIPO, "SHORTINT");
+            TablaSimbolos.agregarAtributo(lexema, TablaSimbolos.TIPO, "SHORTINT");
             ParserVal pv = new ParserVal(lexema);
-            pv.ival = id;
             pv.obj = "SHORTINT";
             $$ = pv;
         }
     | CTE_SINGLEF
         {
-            int id = $1.ival;
-            String lexema = TablaSimbolos.obtenerAtributo(id, TablaSimbolos.LEXEMA);
+            String lexema = $1.sval;
             double valor = Double.parseDouble(lexema);
             if (valor != 0.0 && (valor < AnalizadorLexico.ValorMinimoFloat || valor > AnalizadorLexico.ValorMaximoFloat)) {
                 yyerror("Constante singlef fuera de rango (" + lexema + ")");
             }
-            TablaSimbolos.agregarAtributo(id, TablaSimbolos.TIPO, "SINGLEF");
+            TablaSimbolos.agregarAtributo(lexema, TablaSimbolos.TIPO, "SINGLEF");
             ParserVal pv = new ParserVal(lexema);
-            pv.ival = id;
             pv.obj = "SINGLEF";
             $$ = pv;
         }
     | IDENTIFICADOR '(' ')'
         {
-            int ref = $1.ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            int idFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
-            if (idFunc == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+            String lexema = $1.sval;
+            String claveFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+            if (claveFunc == null) {
                 agregarErrorSemantico("Funcion '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
                 $$ = new ParserVal();
             } else {
-                String uso = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.USO);
+                String uso = TablaSimbolos.obtenerUso(claveFunc);
                 if (!"funcion".equals(uso)) {
                     agregarErrorSemantico("El identificador '" + lexema + "' no es una funcion (uso actual: " + uso + ")");
                     $$ = new ParserVal();
                 } else {
-                    String funcMangled = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.MANGLING);
-                    String tipoRetorno = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.TIPO);
-                    int cantEsperada = TablaSimbolos.obtenerCantidadParametros(funcMangled);
+                    String tipoRetorno = TablaSimbolos.obtenerTipo(claveFunc);
+                    ArrayList<String> paramsFormales = TablaSimbolos.obtenerParametros(claveFunc);
+                    int cantEsperada = paramsFormales.size();
 
                     if (cantEsperada != 0) {
                         agregarErrorSemantico("Cantidad incorrecta de parametros en invocacion a '" + lexema + "': se esperaban " + cantEsperada + " pero se recibieron 0");
                         $$ = new ParserVal();
                     } else {
-                        int idCall = GeneradorTerceto.crearTerceto("CALL", funcMangled, "-", tipoRetorno);
+                        int idCall = GeneradorTerceto.crearTerceto("CALL", claveFunc, "-", tipoRetorno);
                         ParserVal pv = new ParserVal("[" + idCall + "]");
                         pv.obj = tipoRetorno;
                         $$ = pv;
@@ -990,21 +968,20 @@ factor
         }
     | IDENTIFICADOR '(' lista_expresiones ')'
         {
-            int ref = $1.ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            int idFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
-            if (idFunc == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+            String lexema = $1.sval;
+            String claveFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+            if (claveFunc == null) {
                 agregarErrorSemantico("Funcion '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
                 $$ = new ParserVal();
             } else {
-                String uso = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.USO);
+                String uso = TablaSimbolos.obtenerUso(claveFunc);
                 if (!"funcion".equals(uso)) {
                     agregarErrorSemantico("El identificador '" + lexema + "' no es una funcion (uso actual: " + uso + ")");
                     $$ = new ParserVal();
                 } else {
-                    String funcMangled = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.MANGLING);
-                    String tipoRetorno = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.TIPO);
-                    int cantEsperada = TablaSimbolos.obtenerCantidadParametros(funcMangled);
+                    String tipoRetorno = TablaSimbolos.obtenerTipo(claveFunc);
+                    ArrayList<String> paramsFormales = TablaSimbolos.obtenerParametros(claveFunc);
+                    int cantEsperada = paramsFormales.size();
                     ArrayList<ParserVal> paramsReales = ($3 != null && $3.obj != null) ? (ArrayList<ParserVal>) $3.obj : new ArrayList<>();
                     int cantRecibida = paramsReales.size();
 
@@ -1014,8 +991,9 @@ factor
                     } else {
                         boolean paramsOk = true;
                         for (int i = 0; i < cantEsperada; i++) {
-                            String tipoFormal = TablaSimbolos.obtenerTipoParametro(funcMangled, i);
-                            String nomFormal = TablaSimbolos.obtenerNombreParametro(funcMangled, i);
+                            String nomFormal = paramsFormales.get(i);
+                            String claveFormal = claveFunc + TablaSimbolos.SEPARADOR + nomFormal;
+                            String tipoFormal = TablaSimbolos.obtenerTipo(claveFormal);
                             ParserVal pReal = paramsReales.get(i);
                             String tipoReal = (pReal != null) ? (String) pReal.obj : null;
 
@@ -1023,12 +1001,12 @@ factor
                                 agregarErrorSemantico("Incompatibilidad de tipos en parametro " + (i + 1) + " al invocar a '" + lexema + "': se esperaba " + tipoFormal + " pero se recibio " + tipoReal);
                                 paramsOk = false;
                             } else if (pReal != null && pReal.sval != null) {
-                                GeneradorTerceto.crearTerceto(":=", nomFormal, pReal.sval, tipoFormal);
+                                GeneradorTerceto.crearTerceto(":=", claveFormal, pReal.sval, tipoFormal);
                             }
                         }
 
                         if (paramsOk) {
-                            int idCall = GeneradorTerceto.crearTerceto("CALL", funcMangled, "-", tipoRetorno);
+                            int idCall = GeneradorTerceto.crearTerceto("CALL", claveFunc, "-", tipoRetorno);
                             ParserVal pv = new ParserVal("[" + idCall + "]");
                             pv.obj = tipoRetorno;
                             $$ = pv;
@@ -1061,58 +1039,57 @@ factor
 invocacion_metodo
     : IDENTIFICADOR '.' IDENTIFICADOR '(' ')'
         {
-            int refObj = $1.ival;
-            String nomObj = TablaSimbolos.obtenerAtributo(refObj, TablaSimbolos.LEXEMA);
-            int idObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
+            String nomObj = $1.sval;
+            String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
 
-            if (idObj == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+            if (claveObj == null) {
                 agregarErrorSemantico("Objeto '" + nomObj + "' no declarado o no visible en el ambito actual (" + ambitoActual + ")");
                 $$ = new ParserVal();
             } else {
-                String uso = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.USO);
-                String nomClase = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.TIPO);
-                int refClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+                String uso = TablaSimbolos.obtenerUso(claveObj);
+                String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+                String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
                 boolean esObjeto = ("objeto".equals(uso) || "parametro".equals(uso)) && 
-                    (refClase != TablaSimbolos.LEXEMA_NO_ENCONTRADO && "nombre_clase".equals(TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.USO)));
+                    (TablaSimbolos.existeSimbolo(claveClase) && "nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase)));
 
                 if (!esObjeto) {
                     agregarErrorSemantico("El identificador '" + nomObj + "' no es un objeto (uso actual: " + uso + ")");
                     $$ = new ParserVal();
                 } else {
-                    int refMetodo = $3.ival;
-                    String nomMetodo = TablaSimbolos.obtenerAtributo(refMetodo, TablaSimbolos.LEXEMA);
+                    String nomMetodo = $3.sval;
 
                     // Buscar metodo con herencia multiple (Tema 30 - Desambiguado Opcion 1)
-                    int idMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
-                    if (idMet == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                    String claveMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
+                    if (claveMet == null) {
                         agregarErrorSemantico("Metodo '" + nomMetodo + "' no encontrado en la clase '" + nomClase + "' ni en su jerarquia de herencia");
                         $$ = new ParserVal();
                     } else {
                         // Chequeo de visibilidad (Tema 26)
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
                         boolean accesoValido = true;
-                        String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.AMBITO));
+                        String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAmbito(claveMet));
                         if (claseActual != null && claseDueniaMetodo != null && !claseActual.equals(claseDueniaMetodo)) {
-                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claseActual + ":main");
+                            String claveClaseActual = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + claseActual;
+                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claveClaseActual);
                             if (imports == null || !imports.contains(claseDueniaMetodo)) {
                                 agregarErrorSemantico("La clase '" + claseActual + "' no importa a la clase '" + claseDueniaMetodo + "'");
                                 accesoValido = false;
-                            } else if (!TablaSimbolos.estaExportadoA(idMet, claseActual)) {
+                            } else if (!TablaSimbolos.estaExportadoA(claveMet, claseActual)) {
                                 agregarErrorSemantico("El metodo '" + nomMetodo + "' de la clase '" + claseDueniaMetodo + "' no esta exportado a la clase '" + claseActual + "'");
                                 accesoValido = false;
                             }
                         }
 
                         if (accesoValido) {
-                            String metodoMangled = TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.MANGLING);
-                            String tipoRetorno = TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.TIPO);
-                            int cantEsperada = TablaSimbolos.obtenerCantidadParametros(metodoMangled);
+                            String tipoRetorno = TablaSimbolos.obtenerTipo(claveMet);
+                            ArrayList<String> paramsFormales = TablaSimbolos.obtenerParametros(claveMet);
+                            int cantEsperada = paramsFormales.size();
 
                             if (cantEsperada != 0) {
                                 agregarErrorSemantico("Cantidad incorrecta de parametros en invocacion a metodo '" + nomMetodo + "': se esperaban " + cantEsperada + " pero se recibieron 0");
                                 $$ = new ParserVal();
                             } else {
-                                int idCall = GeneradorTerceto.crearTerceto("CALL", metodoMangled, "-", tipoRetorno);
+                                int idCall = GeneradorTerceto.crearTerceto("CALL", claveMet, "-", tipoRetorno);
                                 ParserVal pv = new ParserVal("[" + idCall + "]");
                                 pv.obj = tipoRetorno;
                                 $$ = pv;
@@ -1126,51 +1103,50 @@ invocacion_metodo
         }
     | IDENTIFICADOR '.' IDENTIFICADOR '(' lista_expresiones ')'
         {
-            int refObj = $1.ival;
-            String nomObj = TablaSimbolos.obtenerAtributo(refObj, TablaSimbolos.LEXEMA);
-            int idObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
+            String nomObj = $1.sval;
+            String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
 
-            if (idObj == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+            if (claveObj == null) {
                 agregarErrorSemantico("Objeto '" + nomObj + "' no declarado o no visible en el ambito actual (" + ambitoActual + ")");
                 $$ = new ParserVal();
             } else {
-                String uso = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.USO);
-                String nomClase = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.TIPO);
-                int refClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+                String uso = TablaSimbolos.obtenerUso(claveObj);
+                String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+                String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
                 boolean esObjeto = ("objeto".equals(uso) || "parametro".equals(uso)) && 
-                    (refClase != TablaSimbolos.LEXEMA_NO_ENCONTRADO && "nombre_clase".equals(TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.USO)));
+                    (TablaSimbolos.existeSimbolo(claveClase) && "nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase)));
 
                 if (!esObjeto) {
                     agregarErrorSemantico("El identificador '" + nomObj + "' no es un objeto (uso actual: " + uso + ")");
                     $$ = new ParserVal();
                 } else {
-                    int refMetodo = $3.ival;
-                    String nomMetodo = TablaSimbolos.obtenerAtributo(refMetodo, TablaSimbolos.LEXEMA);
+                    String nomMetodo = $3.sval;
 
-                    int idMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
-                    if (idMet == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                    String claveMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
+                    if (claveMet == null) {
                         agregarErrorSemantico("Metodo '" + nomMetodo + "' no encontrado en la clase '" + nomClase + "' ni en su jerarquia de herencia");
                         $$ = new ParserVal();
                     } else {
                         // Chequeo de visibilidad (Tema 26)
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
                         boolean accesoValido = true;
-                        String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.AMBITO));
+                        String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAmbito(claveMet));
                         if (claseActual != null && claseDueniaMetodo != null && !claseActual.equals(claseDueniaMetodo)) {
-                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claseActual + ":main");
+                            String claveClaseActual = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + claseActual;
+                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claveClaseActual);
                             if (imports == null || !imports.contains(claseDueniaMetodo)) {
                                 agregarErrorSemantico("La clase '" + claseActual + "' no importa a la clase '" + claseDueniaMetodo + "'");
                                 accesoValido = false;
-                            } else if (!TablaSimbolos.estaExportadoA(idMet, claseActual)) {
+                            } else if (!TablaSimbolos.estaExportadoA(claveMet, claseActual)) {
                                 agregarErrorSemantico("El metodo '" + nomMetodo + "' de la clase '" + claseDueniaMetodo + "' no esta exportado a la clase '" + claseActual + "'");
                                 accesoValido = false;
                             }
                         }
 
                         if (accesoValido) {
-                            String metodoMangled = TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.MANGLING);
-                            String tipoRetorno = TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.TIPO);
-                            int cantEsperada = TablaSimbolos.obtenerCantidadParametros(metodoMangled);
+                            String tipoRetorno = TablaSimbolos.obtenerTipo(claveMet);
+                            ArrayList<String> paramsFormales = TablaSimbolos.obtenerParametros(claveMet);
+                            int cantEsperada = paramsFormales.size();
                             ArrayList<ParserVal> paramsReales = ($5 != null && $5.obj != null) ? (ArrayList<ParserVal>) $5.obj : new ArrayList<>();
                             int cantRecibida = paramsReales.size();
 
@@ -1180,8 +1156,9 @@ invocacion_metodo
                             } else {
                                 boolean paramsOk = true;
                                 for (int i = 0; i < cantEsperada; i++) {
-                                    String tipoFormal = TablaSimbolos.obtenerTipoParametro(metodoMangled, i);
-                                    String nomFormal = TablaSimbolos.obtenerNombreParametro(metodoMangled, i);
+                                    String nomFormal = paramsFormales.get(i);
+                                    String claveFormal = claveMet + TablaSimbolos.SEPARADOR + nomFormal;
+                                    String tipoFormal = TablaSimbolos.obtenerTipo(claveFormal);
                                     ParserVal pReal = paramsReales.get(i);
                                     String tipoReal = (pReal != null) ? (String) pReal.obj : null;
 
@@ -1189,12 +1166,12 @@ invocacion_metodo
                                         agregarErrorSemantico("Incompatibilidad de tipos en parametro " + (i + 1) + " al invocar metodo '" + nomMetodo + "': se esperaba " + tipoFormal + " pero se recibio " + tipoReal);
                                         paramsOk = false;
                                     } else if (pReal != null && pReal.sval != null) {
-                                        GeneradorTerceto.crearTerceto(":=", nomFormal, pReal.sval, tipoFormal);
+                                        GeneradorTerceto.crearTerceto(":=", claveFormal, pReal.sval, tipoFormal);
                                     }
                                 }
 
                                 if (paramsOk) {
-                                    int idCall = GeneradorTerceto.crearTerceto("CALL", metodoMangled, "-", tipoRetorno);
+                                    int idCall = GeneradorTerceto.crearTerceto("CALL", claveMet, "-", tipoRetorno);
                                     ParserVal pv = new ParserVal("[" + idCall + "]");
                                     pv.obj = tipoRetorno;
                                     $$ = pv;
@@ -1233,13 +1210,11 @@ unica
     : IDENTIFICADOR '=' '(' expresion ')'
         {
             if ($4 != null && $4.sval != null) {
-                int ref = $1.ival;
-                String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-                int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
-                if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
-                    boolean esComp = TablaSimbolos.esComptime(idVar);
-                    String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
-                    String tipoVar = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.TIPO);
+                String lexema = $1.sval;
+                String claveVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+                if (claveVar != null) {
+                    boolean esComp = TablaSimbolos.esComptime(claveVar);
+                    String tipoVar = TablaSimbolos.obtenerTipo(claveVar);
                     String tipoExp = (String) $4.obj;
 
                     if (esComp) {
@@ -1249,7 +1224,7 @@ unica
                         } else {
                             if (tipoExp != null) {
                                 if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                                    TablaSimbolos.guardarValorComptime(idVar, $4.sval);
+                                    TablaSimbolos.guardarValorComptime(claveVar, $4.sval);
                                     ParserVal pv = new ParserVal($4.sval);
                                     pv.obj = tipoVar;
                                     $$ = pv;
@@ -1270,7 +1245,7 @@ unica
                     } else {
                         if (tipoExp != null) {
                             if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                                int idTerceto = GeneradorTerceto.crearTerceto(":=", mangling, $4.sval, tipoVar);
+                                int idTerceto = GeneradorTerceto.crearTerceto(":=", claveVar, $4.sval, tipoVar);
                                 ParserVal pv = new ParserVal("[" + idTerceto + "]");
                                 pv.obj = tipoVar;
                                 $$ = pv;
@@ -1306,23 +1281,19 @@ unica
 numero_negativo
     : '-' CTE_SHORTINT
         {
-            int id_pos = $2.ival;
-            String lexema_pos = TablaSimbolos.obtenerAtributo(id_pos, TablaSimbolos.LEXEMA);
-            int id_neg = TablaSimbolos.convertirANegativo(lexema_pos);
-            TablaSimbolos.agregarAtributo(id_neg, TablaSimbolos.TIPO, "SHORTINT");
-            ParserVal pv = new ParserVal("-" + lexema_pos);
-            pv.ival = id_neg;
+            String lexemaPos = $2.sval;
+            String claveNeg = TablaSimbolos.convertirANegativo(lexemaPos);
+            TablaSimbolos.agregarAtributo(claveNeg, TablaSimbolos.TIPO, "SHORTINT");
+            ParserVal pv = new ParserVal("-" + lexemaPos);
             pv.obj = "SHORTINT";
             $$ = pv;
         }
     | '-' CTE_SINGLEF
         {
-            int id_pos = $2.ival;
-            String lexema_pos = TablaSimbolos.obtenerAtributo(id_pos, TablaSimbolos.LEXEMA);
-            int id_neg = TablaSimbolos.convertirANegativo(lexema_pos);
-            TablaSimbolos.agregarAtributo(id_neg, TablaSimbolos.TIPO, "SINGLEF");
-            ParserVal pv = new ParserVal("-" + lexema_pos);
-            pv.ival = id_neg;
+            String lexemaPos = $2.sval;
+            String claveNeg = TablaSimbolos.convertirANegativo(lexemaPos);
+            TablaSimbolos.agregarAtributo(claveNeg, TablaSimbolos.TIPO, "SINGLEF");
+            ParserVal pv = new ParserVal("-" + lexemaPos);
             pv.obj = "SINGLEF";
             $$ = pv;
         }
@@ -1536,9 +1507,7 @@ condicion_iteracion
 sentencia_pout
     : POUT '(' CADENA ')'
         {
-            int ref = $3.ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            GeneradorTerceto.crearTerceto("POUT", lexema, "-");
+            GeneradorTerceto.crearTerceto("POUT", $3.sval, "-");
         }
     | POUT '(' expresion ')'
         {
@@ -1557,22 +1526,22 @@ sentencia_ret
             if (funcionActual == null) {
                 agregarErrorSemantico("Sentencia RET fuera del cuerpo de una funcion");
             } else {
-                int idFunc = TablaSimbolos.buscarPorMangling(funcionActual);
-                String tipoDeclarado = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.TIPO);
+                String claveFunc = funcionActual;
+                String tipoDeclarado = TablaSimbolos.obtenerTipo(claveFunc);
                 String tipoExp = ($3 != null) ? (String) $3.obj : null;
-                TablaSimbolos.agregarAtributo(idFunc, "TIENE_RET", "true");
+                TablaSimbolos.agregarAtributo(claveFunc, "TIENE_RET", Boolean.TRUE);
 
                 if (cant_retornos_auto >= 0) {
                     cant_retornos_auto++;
                     if ("auto".equals(tipoDeclarado)) {
-                        TablaSimbolos.agregarAtributo(idFunc, TablaSimbolos.TIPO, tipoExp);
+                        TablaSimbolos.agregarAtributo(claveFunc, TablaSimbolos.TIPO, tipoExp);
                     } else if (tipoExp != null && !tipoDeclarado.equals(tipoExp)) {
-                        TablaSimbolos.agregarAtributo(idFunc, TablaSimbolos.TIPO, "SINGLEF");
+                        TablaSimbolos.agregarAtributo(claveFunc, TablaSimbolos.TIPO, "SINGLEF");
                     }
                 } else {
                     if (tipoDeclarado != null && tipoExp != null && !tipoDeclarado.equals(tipoExp)) {
                         agregarErrorSemantico("Tipo de retorno incompatible en funcion '" + 
-                            TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.LEXEMA) + 
+                            TablaSimbolos.obtenerNombre(claveFunc) + 
                             "': se esperaba " + tipoDeclarado + " pero se retorno " + tipoExp);
                     }
                 }
@@ -1593,40 +1562,42 @@ static Parser parser;
 static int cant_errores = 0;
 static int cant_errores_semanticos = 0;
 static int cant_retornos_auto = -1;
+static boolean claseActualValida = false;
 
-public static String ambitoActual = ":main";
+public static String ambitoActual = TablaSimbolos.AMBITO_GLOBAL;
 public static Stack<Integer> pilaSaltos = new Stack<>();
 
 public static String obtenerFuncionActualMangled() {
-    if (ambitoActual == null || ambitoActual.equals(":main")) {
+    if (ambitoActual == null || ambitoActual.equals(TablaSimbolos.AMBITO_GLOBAL)) {
         return null;
     }
-
-    int index = ambitoActual.lastIndexOf(':');
-    String nombreFuncion = ambitoActual.substring(index + 1);
-    String ambitoPadre = ambitoActual.substring(0, index);
-    return nombreFuncion + ambitoPadre;
+    return ambitoActual;
 }
 
 public static String obtenerClaseDeAmbito(String ambito) {
     if (ambito == null) return null;
-    String[] partes = ambito.split(":");
-    if (partes.length >= 3 && "main".equals(partes[1])) {
-        return partes[2];
+    String[] partes = ambito.split(TablaSimbolos.SEPARADOR);
+    if (partes.length >= 2 && TablaSimbolos.AMBITO_GLOBAL.equals(partes[0])) {
+        String posibleClase = partes[1];
+        String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + posibleClase;
+        if ("nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase))) {
+            return posibleClase;
+        }
     }
     return null;
 }
 
 public static void entrarAmbito(String nombre) {
-    ambitoActual = ambitoActual + ":" + nombre;
+    ambitoActual = ambitoActual + TablaSimbolos.SEPARADOR + nombre;
 }
 
 public static void salirAmbito() {
-    int index = ambitoActual.lastIndexOf(':');
+    pilaSaltos.clear();
+    int index = ambitoActual.lastIndexOf(TablaSimbolos.SEPARADOR);
     if (index > 0) {
         ambitoActual = ambitoActual.substring(0, index);
     } else {
-        ambitoActual = ":main";
+        ambitoActual = TablaSimbolos.AMBITO_GLOBAL;
     }
 }
 
@@ -1645,7 +1616,7 @@ public static boolean esConstante(ParserVal pv) {
     if (pv == null || pv.sval == null) {
         return false;
     }
-    return !pv.sval.startsWith("[") && !pv.sval.contains(":");
+    return !pv.sval.startsWith("[") && !pv.sval.contains(TablaSimbolos.SEPARADOR);
 }
 
 public static String evaluarOperacionEstatica(String op, String val1, String val2, String tipo) {
@@ -1712,7 +1683,11 @@ public static void main(String[] args) {
 
     System.out.println("Compilando archivo: " + ruta);
     try {
-        ambitoActual = ":main";
+        ambitoActual = TablaSimbolos.AMBITO_GLOBAL;
+        TablaSimbolos.reiniciar();
+        GeneradorTerceto.reiniciar();
+        GeneradorTerceto.iniciarAmbito(ambitoActual);
+        claseActualValida = false;
         pilaSaltos.clear();
         cant_retornos_auto = -1;
         cant_errores = 0;
@@ -1721,6 +1696,7 @@ public static void main(String[] args) {
                 new InputStreamReader(new FileInputStream(ruta), java.nio.charset.StandardCharsets.UTF_8)));
         parser = new Parser(debug);
         parser.yyparse(); 
+        TablaSimbolos.purgarIdentificadoresSinDeclarar();
         TablaSimbolos.imprimirTabla();
         GeneradorTerceto.imprimirTercetos();
     } catch (Exception e) {
@@ -1733,7 +1709,11 @@ int yylex() {
     if (token <= 0) {
         return 0; // EOF para byacc/j
     }
-    yylval = new ParserVal(AnalizadorLexico.referenciaTablaSimbolos);
+    if (AnalizadorLexico.referenciaTablaSimbolos != null) {
+        yylval = new ParserVal(AnalizadorLexico.referenciaTablaSimbolos);
+    } else {
+        yylval = new ParserVal();
+    }
     return token;
 }
 

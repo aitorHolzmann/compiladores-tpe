@@ -304,6 +304,14 @@ END
    - Detección de variable **redeclarada en el mismo ámbito** (permitiendo *shadowing* en ámbitos diferentes).
 5. Emitir los tercetos utilizando los nombres mangledos (`a:main`, `a:main:sumar`) para eliminar cualquier ambigüedad en el código intermedio.
 
+> [!IMPORTANT]
+> **Actualización Post-Consulta Docente (Rediseño Estructural de la Tabla de Símbolos y Name Mangling):**  
+> Durante la consulta de revisión previa a la entrega (07/11), la profesora a cargo indicó expresamente dos correcciones fundamentales sobre el esquema original de este Hito:
+> 1. **Estructura e indexación**: La `TablaSimbolos` pasa a indexarse directamente por una clave `String` correspondiente al símbolo con mangling (`Map<String, Map<String, Object>>`) o lexema constante (`5`, `"hola"`), eliminando las claves numéricas artificiales (`Integer`) y los atributos redundantes (`LEXEMA`, `MANGLING`, `AMBITO`).
+> 2. **Formato de Name Mangling**: En lugar del orden `simbolo:main:ambito` sugerido como ejemplo en `Tp3.pdf`, se adoptó **`main@ambito@simbolo`** (ámbito primero, separador `@`), lo que unifica el nombre del ámbito con la clave de las funciones/clases y optimiza la resolución jerárquica a $O(1)$ por nivel.
+> 
+> Todos los detalles técnicos, análisis de complejidad, justificaciones de diseño, ciclo de vida léxico-sintáctico y preguntas de examen de esta actualización se encuentran desarrollados en profundidad en la sección final: **[📌 Correcciones de Consulta: Rediseño de Tabla de Símbolos y Name Mangling (`main@ambito@simbolo`)](#-correcciones-de-consulta-rediseño-de-tabla-de-símbolos-y-name-mangling-mainambitosimbolo)**.
+
 ---
 
 ### 3.2. Decisiones de Diseño y Preguntas Conceptuales
@@ -1102,7 +1110,7 @@ Compilacion finalizada con 3 error(es) sintactico(s) y 2 error(es) semantico(s)
 #### 6.1.1. Objetivo Técnico
 Permitir la definición de funciones con tipos explícitos (`SHORTINT`, `SINGLEF`) y funciones con tipo inferido (`AUTO FUNCTION`), soportando:
 1. Parámetros formales registrados en la Tabla de Símbolos dentro del ámbito local de la función y asociados en su firma ordenada.
-2. Emisión de tercetos delimitadores: `( FUNCION , nombre:mangled , - )` e inicio/fin claramente delimitados.
+2. Agrupación estructural de tercetos por ámbito en `Map<String, ArrayList<Terceto>>` sin pseudo-tercetos delimitadores (Opción 1 de `Tp3.pdf`).
 3. Tercetos de retorno: `( RET , expresion , - )` y generación automática de retorno por defecto si una función con tipo explícito carece de `RET`.
 4. Pasaje de parámetros por copia: emisión de tercetos de asignación `( := , pFormal:mangled , pReal )` previo al terceto de invocación `( CALL , f:mangled , - )`.
 5. Inferencia del tipo más abarcativo en `AUTO FUNCTION` (Tema 21) según las especificaciones de `Tp3.pdf`.
@@ -1149,15 +1157,18 @@ Permitir la definición de funciones con tipos explícitos (`SHORTINT`, `SINGLEF
 
 ---
 
-##### ❓ Pregunta 4: ¿Cómo delimitamos las funciones en los Tercetos según lo exigido por `Tp3.pdf`?
+##### ❓ Pregunta 4: ¿Cómo organizamos el código intermedio de las funciones y métodos según las opciones de `Tp3.pdf`?
 * **Respuesta para la defensa:**  
-  `Tp3.pdf` establece que para las funciones se debe generar el código intermedio en una única estructura junto con el programa principal o en estructuras independientes, *"con algún delimitador que permita determinar claramente el inicio y fin de cada una"*.
+  `Tp3.pdf` establece textualmente:
+  > *"Para las funciones y métodos se deberá generar el código intermedio en una única estructura junto con el programa principal (con algún delimitador que permita determinar claramente el inicio y fin de cada una), o bien en estructuras independientes."*
   
-  Emitimos los tercetos delimitadores:
-  - `( FUNCION , nombre:mangled , - )` al inicio del bloque de la función.
-  - `( FIN_FUNCION , nombre:mangled , - )` al concluir la función.
+  Adoptamos la **Opción 1 de estructuras independientes**, almacenando los tercetos en un mapa ordenado `Map<String, ArrayList<Terceto>> tercetosPorAmbito` (`LinkedHashMap`), indexado por la clave del ámbito (`"main"`, `"main@suma"`, `"main@c_base1@m_base1"`).
   
-  Además, si una función con tipo estático no contiene ninguna sentencia `RET` explícita, el compilador emite automáticamente un valor de retorno por defecto (`0$s` para `SHORTINT` o `0.0` para `SINGLEF`) antes de `FIN_FUNCION`, cumpliendo con la pauta de la cátedra.
+  **Ventajas decisivas para la defensa:**
+  1. **Eliminación de pseudo-tercetos delimitadores:** No se requiere emitir instrucciones artificiales como `FUNCION`, `FIN_FUNCION`, `METODO` o `FIN_METODO` que luego deberían filtrarse o generar saltos incondicionales para no ser ejecutadas secuencialmente por el runtime.
+  2. **Resolución natural del anidamiento (interleaving):** Si una función o método contiene funciones locales o anidadas (`main@f1@f2`), en una lista única sus tercetos quedarían intercalados rompiendo la continuidad lineal del cuerpo de `f1`. Con estructuras separadas por ámbito, cada función y método acumula su código en su propia lista independiente sin importar el orden de anidamiento sintáctico.
+  3. **Numeración local y modularidad (`0..N-1`):** Cada ámbito inicia sus índices de tercetos en `0`. Las referencias cruzadas `[i]` y los saltos de control de flujo (`BF`, `BI` del backpatching) son estrictamente locales a su lista, facilitando la futura generación de código Assembler (TP4) donde cada función se traduce como una subrutina o etiqueta aislada (`CALL main@suma` salta directamente a la rutina `main@suma`).
+  4. **Retorno por defecto:** Si una función con tipo estático no contiene una sentencia `RET` explícita en su cuerpo, el compilador emite automáticamente un terceto de retorno por defecto (`RET , 0$s , -` para `SHORTINT` o `RET , 0.0 , -` para `SINGLEF`) al final de la lista de ese ámbito.
 
 ---
 
@@ -1168,8 +1179,8 @@ Permitir la definición de funciones con tipos explícitos (`SHORTINT`, `SINGLEF
   2. MIENTRAS se analiza el cuerpo, las reglas hijas se reducen **mucho antes**:
      - `parametro_formal : tipo IDENTIFICADOR`: sus únicos símbolos son `$1` y `$2`. No puede ver el `$1` de la regla padre que aún no redujo sin usar trucos de pila (`$-2`), prohibidos por la cátedra.
      - `sentencia_ret : RET '(' expresion ')'`: está anidada dentro de las sentencias ejecutables. Sus símbolos son `$1` y `$3`. Necesita saber en qué función se encuentra para chequear el tipo de retorno o acumular la inferencia en `AUTO`.
-     - Si alguien escribe un `RET` en el programa principal (`:main`), ¿cómo detectamos que no está en ninguna función?
-  3. `obtenerFuncionActualMangled()` resuelve esto de forma natural leyendo `ambitoActual` (que vale por ejemplo `:main:suma`). Extrae el nombre de la función y su ámbito padre (`suma:main`) en $O(1)$ en cualquier punto intermedio de la compilación, sin necesidad de pilas paralelas.
+     - Si alguien escribe un `RET` en el programa principal (`main`), ¿cómo detectamos que no está en ninguna función?
+  3. `obtenerFuncionActualMangled()` resuelve esto de forma natural leyendo `ambitoActual` (que vale por ejemplo `main@suma`). Extrae el nombre mangled en $O(1)$ en cualquier punto intermedio de la compilación, sin necesidad de pilas paralelas.
 
 ---
 
@@ -1180,7 +1191,6 @@ Permitir la definición de funciones con tipos explícitos (`SHORTINT`, `SINGLEF
   2. **Reglas de gramática de error (recuperación sintáctica):** Su objetivo primordial NO es generar código para ejecución posterior (porque al registrar un error sintáctico con `cant_errores > 0`, el compilador abortará la generación de Assembler en el TP4). Su misión es:
      - Emitir el error exacto con número de línea (`yyerror(...)`).
      - **Recuperar la sincronización del autómata** y limpiar el estado (`salirAmbito()`) para que los errores sintácticos no se propaguen como falsos errores semánticos en las líneas siguientes.
-     - Emitir `FIN_FUNCION` para no dejar abierto un bloque inconcluso en el código intermedio.
   Por eso, omitir la inyección de retornos por defecto en código sintácticamente roto es correcto: no se debe parchar código inválido destinado a descartarse.
 
 ---
@@ -1259,57 +1269,62 @@ end
 
 **Tercetos generados y verificados:**
 ```text
-0 ( FUNCION , suma:main , - )
-1 ( + , p1:main:suma , p2:main:suma )
-2 ( := , acumulador:main:suma , [1] )
-3 ( RET , acumulador:main:suma , - )
-4 ( FIN_FUNCION , suma:main , - )
-5 ( FUNCION , cuadrado:main , - )
-6 ( * , num:main:cuadrado , num:main:cuadrado )
-7 ( RET , [6] , - )
-8 ( FIN_FUNCION , cuadrado:main , - )
-9 ( FUNCION , max_abarcativo:main , - )
-10 ( tos , val_float:main:max_abarcativo , - )
-11 ( > , [10] , val_entero:main:max_abarcativo )
-12 ( BF , [11] , [15] )
-13 ( RET , val_float:main:max_abarcativo , - )
-14 ( BI , [16] , - )
-15 ( RET , val_entero:main:max_abarcativo , - )
-16 ( FIN_FUNCION , max_abarcativo:main , - )
-17 ( FUNCION , sin_retorno:main , - )
-18 ( + , p:main:sin_retorno , 1 )
-19 ( := , p:main:sin_retorno , [18] )
-20 ( RET , 0$s , - )
-21 ( FIN_FUNCION , sin_retorno:main , - )
-22 ( := , a:main , 10 )
-23 ( := , b:main , 20 )
-24 ( := , x:main , 1.5 )
-25 ( := , y:main , 3.5 )
-26 ( := , p1:main:suma , a:main )
-27 ( := , p2:main:suma , b:main )
-28 ( CALL , suma:main , - )
-29 ( := , res_short:main , [28] )
-30 ( := , num:main:cuadrado , 5 )
-31 ( CALL , cuadrado:main , - )
-32 ( := , res_short:main , [31] )
-33 ( := , val_entero:main:max_abarcativo , a:main )
-34 ( := , val_float:main:max_abarcativo , y:main )
-35 ( CALL , max_abarcativo:main , - )
-36 ( := , res_single:main , [35] )
-37 ( := , p1:main:suma , 2 )
-38 ( := , p2:main:suma , 3 )
-39 ( CALL , suma:main , - )
-40 ( + , [39] , 4 )
-41 ( := , res_short:main , [40] )
-42 ( := , b:main , 5 )
-43 ( := , p1:main:suma , a:main )
-44 ( := , p2:main:suma , [42] )
-45 ( CALL , suma:main , - )
-46 ( := , res_short:main , [45] )
-47 ( := , p:main:sin_retorno , a:main )
-48 ( CALL , sin_retorno:main , - )
-49 ( := , res_short:main , [48] )
-50 ( POUT , "Fin de pruebas funciones ok" , - )
+----------------------------------------
+         CODIGO INTERMEDIO (TERCETOS)   
+----------------------------------------
+Ambito: main@suma
+0 ( + , main@suma@p1 , main@suma@p2 )
+1 ( := , main@suma@acumulador , [0] )
+2 ( RET , main@suma@acumulador , - )
+----------------------------------------
+Ambito: main@cuadrado
+0 ( * , main@cuadrado@num , main@cuadrado@num )
+1 ( RET , [0] , - )
+----------------------------------------
+Ambito: main@max_abarcativo
+0 ( tos , main@max_abarcativo@val_float , - )
+1 ( > , [0] , main@max_abarcativo@val_entero )
+2 ( BF , [1] , [5] )
+3 ( RET , main@max_abarcativo@val_float , - )
+4 ( BI , [6] , - )
+5 ( RET , main@max_abarcativo@val_entero , - )
+----------------------------------------
+Ambito: main@sin_retorno
+0 ( + , main@sin_retorno@p , 1 )
+1 ( := , main@sin_retorno@p , [0] )
+2 ( RET , 0$s , - )
+----------------------------------------
+Ambito: main
+0 ( := , main@a , 10 )
+1 ( := , main@b , 20 )
+2 ( := , main@x , 1.5 )
+3 ( := , main@y , 3.5 )
+4 ( := , main@suma@p1 , main@a )
+5 ( := , main@suma@p2 , main@b )
+6 ( CALL , main@suma , - )
+7 ( := , main@res_short , [6] )
+8 ( := , main@cuadrado@num , 5 )
+9 ( CALL , main@cuadrado , - )
+10 ( := , main@res_short , [9] )
+11 ( := , main@max_abarcativo@val_entero , main@a )
+12 ( := , main@max_abarcativo@val_float , main@y )
+13 ( CALL , main@max_abarcativo , - )
+14 ( := , main@res_single , [13] )
+15 ( := , main@suma@p1 , 2 )
+16 ( := , main@suma@p2 , 3 )
+17 ( CALL , main@suma , - )
+18 ( + , [17] , 4 )
+19 ( := , main@res_short , [18] )
+20 ( := , main@b , 5 )
+21 ( := , main@suma@p1 , main@a )
+22 ( := , main@suma@p2 , [20] )
+23 ( CALL , main@suma , - )
+24 ( := , main@res_short , [23] )
+25 ( := , main@sin_retorno@p , main@a )
+26 ( CALL , main@sin_retorno , - )
+27 ( := , main@res_short , [26] )
+28 ( POUT , "Fin de pruebas funciones ok" , - )
+----------------------------------------
 ```
 
 ---
@@ -1629,7 +1644,7 @@ En este sub-hito se completan todos los temas asignados al Grupo 20 relacionados
   2. Si no se encuentra, se consulta la lista `EXTENDS` almacenada en la Tabla de Símbolos (`HEREDA_0`, `HEREDA_1`, etc.) en estricto orden de izquierda a derecha.
   3. La primera coincidencia encontrada es la que se selecciona.
   
-  En `TablaSimbolos.java`, esto se implementó con el método recursivo `buscarMiembroEnJerarquia(nomClase, nombreMiembro, visitados)`, que además mantiene un `Set<String> visitados` para proteger al compilador contra ciclos de herencia.
+  En `TablaSimbolos.java`, esto se implementó con el método recursivo `buscarMiembroEnJerarquia(nomClase, nombreMiembro)`. No requiere ningún conjunto auxiliar `visitados` en tiempo de búsqueda porque la ausencia de ciclos (directos y transitivos) se valida estrictamente en tiempo de compilación al procesar la cláusula `EXTENDS` con `TablaSimbolos.hayCicloHerencia(nomClase, padre)`. Al garantizar que la jerarquía es un grafo acíclico dirigido (DAG) finito, la recursión termina de forma determinística en pasos finitos.
 
 ---
 
@@ -1760,37 +1775,38 @@ Compilacion finalizada con 0 error(es) sintactico(s) y 0 error(es) semantico(s)
 ----------------------------------------
          CODIGO INTERMEDIO (TERCETOS)   
 ----------------------------------------
-0 ( METODO , m_base1:main:c_base1 , - )
-1 ( RET , b1_atr0:main:c_base1 , - )
-2 ( FIN_METODO , m_base1:main:c_base1 , - )
-3 ( METODO , m_base2:main:c_base2 , - )
-4 ( + , x:main:c_base2:m_base2 , 1 )
-5 ( RET , [4] , - )
-6 ( FIN_METODO , m_base2:main:c_base2 , - )
-7 ( METODO , m_propio:main:c_derivada , - )
-8 ( RET , 100 , - )
-9 ( FIN_METODO , m_propio:main:c_derivada , - )
-10 ( METODO , m_cliente:main:c_cliente , - )
-11 ( := , obj_b1:main:c_cliente:m_cliente[0$s] , 10 )
-12 ( CALL , m_base1:main:c_base1 , - )
-13 ( RET , 0 , - )
-14 ( FIN_METODO , m_cliente:main:c_cliente , - )
-15 ( := , b:main[0$s] , 25 )
-16 ( := , b:main[1$s] , 3.14 )
-17 ( := , r_short:main , b:main[0$s] )
-18 ( := , r_single:main , b:main[1$s] )
-19 ( := , idx:main , 0 )
-20 ( := , d:main[idx:main] , 42 )
-21 ( CALL , m_base1:main:c_base1 , - )
-22 ( := , r_short:main , [21] )
-23 ( := , x:main:c_base2:m_base2 , 5 )
-24 ( CALL , m_base2:main:c_base2 , - )
-25 ( := , r_short:main , [24] )
-26 ( CALL , m_propio:main:c_derivada , - )
-27 ( := , r_short:main , [26] )
-28 ( := , obj_b1:main:c_cliente:m_cliente , b:main )
-29 ( CALL , m_cliente:main:c_cliente , - )
-30 ( POUT , "Fin de pruebas clases ok" , - )
+Ambito: main@c_base1@m_base1
+0 ( RET , main@c_base1@b1_atr0 , - )
+----------------------------------------
+Ambito: main@c_base2@m_base2
+0 ( + , main@c_base2@m_base2@x , 1 )
+1 ( RET , [0] , - )
+----------------------------------------
+Ambito: main@c_derivada@m_propio
+0 ( RET , 100 , - )
+----------------------------------------
+Ambito: main@c_cliente@m_cliente
+0 ( := , main@c_cliente@m_cliente@obj_b1[0$s] , 10 )
+1 ( CALL , main@c_base1@m_base1 , - )
+2 ( RET , 0 , - )
+----------------------------------------
+Ambito: main
+0 ( := , main@b[0$s] , 25 )
+1 ( := , main@b[1$s] , 3.14 )
+2 ( := , main@r_short , main@b[0$s] )
+3 ( := , main@r_single , main@b[1$s] )
+4 ( := , main@idx , 0 )
+5 ( := , main@d[main@idx] , 42 )
+6 ( CALL , main@c_base1@m_base1 , - )
+7 ( := , main@r_short , [6] )
+8 ( := , main@c_base2@m_base2@x , 5 )
+9 ( CALL , main@c_base2@m_base2 , - )
+10 ( := , main@r_short , [9] )
+11 ( CALL , main@c_derivada@m_propio , - )
+12 ( := , main@r_short , [11] )
+13 ( := , main@c_cliente@m_cliente@obj_b1 , main@b )
+14 ( CALL , main@c_cliente@m_cliente , - )
+15 ( POUT , "Fin de pruebas clases ok" , - )
 ----------------------------------------
 ```
 
@@ -1898,6 +1914,484 @@ Error semantico (linea 77): El identificador 'r_entero' no es un objeto (uso act
 Error semantico (linea 80): Incompatibilidad de tipos en la asignacion a 'b:main[0$s]': no se puede asignar SINGLEF a SHORTINT sin conversion explicita 'tos'
 Compilacion finalizada con 0 error(es) sintactico(s) y 13 error(es) semantico(s)
 ```
+
+---
+
+## 📌 Correcciones de Consulta: Rediseño de Tabla de Símbolos y Name Mangling (`main@ambito@simbolo`)
+
+### 1. Motivación y Contexto de la Consulta Docente
+
+Durante la sesión de consulta previa a la entrega formal (07/11), la profesora de la cátedra revisó el diseño de la Tabla de Símbolos y la representación de ámbitos e indicó dos modificaciones estructurales esenciales:
+1. **Indexación directa por símbolo decorado**: En lugar de asignar un identificador numérico entero artificial a cada fila (`Map<Integer, Map<String, String>>`), la tabla debe indexarse directamente por su nombre mangledo en formato `String` (`Map<String, Map<String, Object>>`), o por el lexema literal en el caso de constantes y cadenas.
+2. **Convención de Name Mangling con `@` y ámbito primero**: La cátedra solicitó el formato `main@ambito@simbolo` (por ejemplo `main@suma@p1`, `main@c_base1@b1_atr0`) utilizando `@` como delimitador, en contraposición al esquema previo `simbolo:main:ambito`.
+
+> [!NOTE]
+> **Nota de Defensa Oral (Discrepancia con `Tp3.pdf`):**  
+> En la página 2 de la consigna formal `Tp3.pdf` se ejemplifica textualmente que *"el nombre del símbolo llevará, a continuación de su nombre original, la identificación del ámbito"* (ejemplo: `a:main:aa`).  
+> Sin embargo, durante la consulta de laboratorio la docente a cargo solicitó explícitamente invertir el orden (`main@aa@a`) para que el ámbito actúe como prefijo jerárquico natural y simplifique la resolución estática. Se adoptó este formato por indicación directa de la cátedra.
+
+---
+
+### 2. Nueva Arquitectura: `Map<String, Map<String, Object>>`
+
+La tabla se define en `TablaSimbolos.java` utilizando una colección `LinkedHashMap` para garantizar un orden de iteración e impresión predecible y determinístico:
+
+```java
+private static final Map<String, Map<String, Object>> tabla_simbolos = new LinkedHashMap<>();
+```
+
+#### Convención de Claves Únicas
+
+| Tipo de Entrada | Formato de Clave | Ejemplos |
+| :--- | :--- | :--- |
+| **Ámbito global** | `main` | `ambitoActual = "main"` |
+| **Identificador declarado** | `ambitoActual + "@" + lexema` | `main@a`, `main@suma@acumulador`, `main@c_base1@b1_atr0` |
+| **Programa principal** | `main@<nombre>` | `main@programa_funciones_ok` |
+| **Constante numérica** | Lexema tal cual | `1`, `5`, `-3`, `1.5`, `3.14` |
+| **Cadena de texto** | Lexema delimitado por comillas | `"Fin de pruebas funciones ok"`, `"hola mundo"` |
+
+#### Propiedad Fundamental de las Claves
+El ámbito de cualquier bloque (función, método o clase) coincide exactamente con la clave de su declaración:
+- La función `suma` declarada en `main` tiene clave `main@suma`.
+- Al parsear su cuerpo, `ambitoActual` se convierte en `"main@suma"`.
+- Por ende, un parámetro formal `p1` adquiere la clave `main@suma@p1`.
+- Para obtener la entrada de la función actual dentro de su propio cuerpo ya no se requiere buscar nada: su clave es directamente `ambitoActual`.
+
+---
+
+### 3. Eliminación de Atributos Redundantes y Optimización de Complejidad
+
+En el diseño anterior, cada entrada guardaba como campos independientes `LEXEMA`, `MANGLING` y `AMBITO`. Esto introducía redundancia de datos y una penalización grave de rendimiento durante la resolución de identificadores.
+
+#### Métodos de Derivación Funcional en $O(1)$
+Tanto el nombre léxico original como el ámbito se derivan en tiempo constante a partir de la propia clave:
+```java
+public static String obtenerNombre(String clave) {
+    if (clave == null) return null;
+    int idx = clave.lastIndexOf(SEPARADOR);
+    return (idx >= 0) ? clave.substring(idx + 1) : clave;
+}
+
+public static String obtenerAmbito(String clave) {
+    if (clave == null) return "";
+    int idx = clave.lastIndexOf(SEPARADOR);
+    return (idx >= 0) ? clave.substring(0, idx) : "";
+}
+```
+
+#### Comparativa de Complejidad Algorítmica en la Búsqueda
+
+- **Diseño anterior (Búsqueda Lineal):** Por cada nivel de ámbito que se ascendía en la jerarquía, el compilador recorría linealmente **todas** las entradas de la tabla comparando strings. Si la tabla tenía $N$ símbolos y la profundidad de anidamiento era $k$, la búsqueda costaba $O(N \cdot k)$.
+- **Diseño nuevo (Búsqueda por Clave Hash):** En cada nivel de ámbito se realiza una consulta directa `tabla_simbolos.containsKey(...)`. Dado que el acceso en una tabla hash es $O(1)$ promedio, el costo total de resolución pasa a ser estrictamente proporcional a los niveles de anidamiento: $O(k)$.
+
+```java
+public static String buscarIdentificador(String nombre, String ambito) {
+    String ambitoBusqueda = ambito;
+    while (ambitoBusqueda != null) {
+        String clave = ambitoBusqueda + SEPARADOR + nombre;
+        if (tabla_simbolos.containsKey(clave)) {
+            return clave;
+        }
+        int ultimo = ambitoBusqueda.lastIndexOf(SEPARADOR);
+        ambitoBusqueda = (ultimo > 0) ? ambitoBusqueda.substring(0, ultimo) : null;
+    }
+    return null;
+}
+```
+
+---
+
+### 4. Atributos Tipados (`Object`) y Listas de Lexemas (`ArrayList<String>`)
+
+En el diseño original, las listas de elementos (parámetros formales, atributos de clase, clases base de herencia múltiple, imports y exports) se modelaban mediante contadores numéricos y cadenas separadas por coma (`CSV`) o claves indexadas (`CANT_PARAMS`, `PARAM_TIPO_i`, `PARAM_NOMBRE_i`, `CANT_ATRIBUTOS`, `ATR_NOMBRE_i`, `HEREDA_i`, `IMPORT_i`).
+
+Siguiendo las directivas de la docente, el nuevo modelo aprovecha el polimorfismo de `Object` y agrupa los elementos en listas de tipo `ArrayList<String>`:
+
+| Atributo | Tipo Java | Propósito |
+| :--- | :--- | :--- |
+| `PARAMETROS` | `ArrayList<String>` | Lista de nombres léxicos de los parámetros formales en orden de declaración. |
+| `ATRIBUTOS` | `ArrayList<String>` | Lista de nombres léxicos de atributos de clase (define el orden para el Tema 29). |
+| `HERENCIA` | `ArrayList<String>` | Clases base en la cláusula `EXTENDS` (define el orden de búsqueda del Tema 30). |
+| `IMPORTS` | `ArrayList<String>` | Clases autorizadas en la cláusula `IMPORT FROM` (Tema 26). |
+| `EXPORT_TO` | `ArrayList<String>` | Clases destinatarias en la cláusula `EXPORT TO` de atributos o métodos (Tema 26). |
+| `TIENE_RET` | `Boolean` | Indica si una función o método ejecutó al menos un retorno sintáctico válido. |
+| `COMPTIME` | `Boolean` | Marca si un identificador corresponde a una variable estática de compilación. |
+| `OCURRENCIAS` | `Integer` | Contador de apariciones de constantes numéricas y literales de cadena. |
+
+#### El Principio de "Única Fuente de Verdad"
+Las listas `PARAMETROS` y `ATRIBUTOS` guardan **únicamente los lexemas**, sin duplicar el tipo de dato.  
+Si se guardara el tipo tanto en la lista de la cabecera como en la entrada propia del símbolo, existiría riesgo de inconsistencia. El compilador consulta el tipo del parámetro o atributo formal directamente en su clave de tabla de símbolos:
+- Para el parámetro `i` de una función: `claveParam = claveFuncion + "@" + params.get(i)` $\rightarrow$ `obtenerTipo(claveParam)`.
+- Para el atributo `i` de una clase: `claveAtr = claveClase + "@" + atrs.get(i)` $\rightarrow$ `obtenerTipo(claveAtr)`.
+
+---
+
+### 5. Ciclo de Vida de Identificadores: Léxico $\rightarrow$ Sintáctico y Purga Final
+
+El ciclo de vida respeta estrictamente lo expuesto en las diapositivas teóricas de la cátedra (`semantica_asociada_alcance_variables.pdf`):
+
+```mermaid
+flowchart TD
+    A["Analizador Léxico (AS3)<br/>Lee identificador 'x'"] -->|"agregarIdentificador('x')<br/>yylval.sval = 'x'"| B["Entrada temporal sin ámbito<br/>clave: 'x' (atributos vacíos)"]
+    B --> C{"¿Qué ocurre en el Sintáctico?"}
+    C -->|"Regla declarativa<br/>declararVariable('x', tipo, uso, ambito)"| D["1. tabla_simbolos.remove('x')<br/>2. tabla_simbolos.put('main@f@x', atributos)<br/>Símbolo declarado con mangling"]
+    C -->|"Regla ejecutable o identificador no declarado"| E["La entrada 'x' permanece sin ámbito<br/>Se reporta error semántico si corresponde"]
+    D --> F["Fin de yyparse()"]
+    E --> G["purgarIdentificadoresSinDeclarar()<br/>Itera la tabla y elimina claves sin '@'<br/>cuyo mapa de atributos esté vacío"]
+    G --> F
+    F --> H["Tabla de Símbolos final limpia<br/>Solo identificadores declarados con ámbito,<br/>constantes y cadenas"]
+```
+
+1. **Detección Léxica (`AS3`)**: El autómata finito reconoce la secuencia de caracteres del identificador. Al no poseer contexto sintáctico ni noción de ámbito, registra la entrada cruda mediante `TablaSimbolos.agregarIdentificador(lexema)` y asigna `yylval = new ParserVal(lexema)` para que viaje en `sval`.
+2. **Declaración Sintáctica (`declararVariable`)**: Cuando el parser procesa la producción de declaración, conoce el tipo, el uso y el ámbito actual. Verifica que no haya redeclaración en ese mismo ámbito, remueve la clave cruda temporal que dejó el léxico (`tabla_simbolos.remove(nombre)`) e inserta la clave definitiva con mangling (`ambito + "@" + nombre`).
+3. **Purga Final (`purgarIdentificadoresSinDeclarar`)**: Los identificadores referenciados en sentencias ejecutables o aquellos con errores sintácticos/semánticos que nunca fueron declarados habrán dejado una entrada en la tabla con atributos vacíos y sin `@`. Al terminar `yyparse()`, el método de purga limpia estas entradas huérfanas sin alterar las constantes ni cadenas (las cuales poseen `OCURRENCIAS` y `TIPO`).
+
+---
+
+### 6. Detalles Críticos de Implementación y Casos de Borde
+
+1. **`obtenerFuncionActualMangled()` en $O(1)$**: Dado que `ambitoActual` adopta exactamente la forma `main@funcion`, la función auxiliar simplemente verifica que no estemos en `main` y retorna directamente `ambitoActual`.
+2. **Protección de `COMPTIME` en `esConstante()`**: En BYacc/J, una expresión puede ser constante o una variable de runtime. El método `esConstante(ParserVal pv)` valida:
+   ```java
+   return !pv.sval.startsWith("[") && !pv.sval.contains(TablaSimbolos.SEPARADOR);
+   ```
+   Si no se verificara la ausencia de `@`, una variable declarada (ej. `main@x`) sería confundida con una constante literal y evaluada estáticamente por error.
+3. **Discriminación de Clases en `obtenerClaseDeAmbito()`**: Cuando un método se ejecuta dentro de un ámbito `main@ClaseA@metodo`, el analizador extrae el segmento `ClaseA` y valida fehacientemente que `TablaSimbolos.obtenerUso("main@ClaseA")` sea `"nombre_clase"`. Esto evita que funciones anidadas sean tratadas erróneamente como clases durante la verificación de visibilidad de `IMPORT FROM` / `EXPORT TO`.
+4. **Registro Temprano del Tipo de Constantes**: Conforme a la directiva de `Tp3.pdf` (*"Durante el Análisis Léxico debe quedar registrado el tipo de las constantes"*), las acciones semánticas `AS6` (`SHORTINT`), `AS8`/`AS9`/`AS10`/`AS14` (`SINGLEF`) y `AS12` (`CADENA`) invocan `agregarOBuscarConstante(lexema, tipo)`, asegurando que las constantes ingresen a la tabla con su tipo primitivo desde la fase léxica.
+
+---
+
+### 7. Preguntas de Examen para la Defensa Oral (Coloquio)
+
+#### ❓ Pregunta 1: ¿Por qué adoptaron la clave con mangling completo `main@func@var` en lugar de una tabla por cada ámbito o un identificador numérico?
+* **Respuesta para la defensa:**  
+  Adoptar una tabla plana con claves decoradas (`LinkedHashMap<String, Map<String, Object>>`) simplifica radicalmente la gestión de memoria y el acceso a los datos respecto a mantener un árbol o pila de tablas locales. Cada símbolo en el programa posee una clave unívoca global que coincide exactamente con el operando que requieren los tercetos y el código de máquina final. Además, al eliminar los identificadores numéricos artificiales, el analizador sintáctico opera directamente con los lexemas y referencias provistas por el léxico en `yylval.sval`, eliminando búsquedas redundantes y manteniendo un orden determinístico de inserción.
+
+#### ❓ Pregunta 2: ¿Por qué en la consigna de `Tp3.pdf` dice `simbolo:main:ambito` pero ustedes implementaron `main@ambito@simbolo`?
+* **Respuesta para la defensa:**  
+  En la consulta presencial de revisión previa a la entrega (07/11), la profesora de la cátedra nos indicó explícitamente adoptar el separador `@` y anteponer el ámbito al símbolo (`main@ambito@simbolo`). Esta estructura ofrece una ventaja algorítmica decisiva: el ámbito activo de una función o método coincide exactamente con la clave de la propia función (`main@suma`), lo que permite que el acceso a sus metadatos y la resolución jerárquica de identificadores de afuera hacia adentro sea directa y natural.
+
+#### ❓ Pregunta 3: ¿Qué ventaja de rendimiento ofrece este esquema en `buscarIdentificador` respecto al esquema anterior?
+* **Respuesta para la defensa:**  
+  En el esquema anterior, la tabla se iteraba completa con un bucle `for` en cada nivel de ámbito que se ascendía, resultando en una complejidad de $O(N \cdot k)$ donde $N$ es la cantidad total de símbolos y $k$ la profundidad de anidamiento. En el esquema actual, la búsqueda en cada nivel es un acceso por clave `containsKey` sobre un `LinkedHashMap`, que tiene un costo promedio de $O(1)$. En consecuencia, el costo de resolver cualquier identificador depende exclusivamente de la profundidad de anidamiento del código ($O(k)$), siendo completamente independiente de la cantidad de símbolos que tenga el programa.
+
+#### ❓ Pregunta 4: ¿Por qué en el atributo `PARAMETROS` guardan solo los nombres de los parámetros y no sus tipos de datos?
+* **Respuesta para la defensa:**  
+  Por el principio de diseño de la cátedra de tener una **única fuente de verdad**. Cada parámetro formal ya está dado de alta como una variable individual en la tabla de símbolos con clave `claveFuncion + "@" + param` y su correspondiente atributo `TIPO`. Si duplicáramos el tipo en la lista de parámetros de la función, tendríamos dos fuentes de datos para el mismo hecho semántico, con riesgo de desincronización. Al momento de chequear la invocación (`CALL`), el compilador toma el lexema de la lista en orden $i$ y consulta en $O(1)$ el tipo en la tabla de símbolos.
+
+#### ❓ Pregunta 5: ¿Por qué el léxico sigue insertando identificadores en la tabla si no conoce el ámbito en el que se declaran?
+* **Respuesta para la defensa:**  
+  Porque respeta textualmente la división de responsabilidades explicada en la filmina oficial de la cátedra (`semantica_asociada_alcance_variables.pdf`): el analizador léxico es un autómata finito sin contexto gramatical, por lo que su deber al reconocer un token de tipo identificador es darlo de alta en la tabla y retornar el lexema en `yylval.sval`. Luego, es el analizador sintáctico (que posee la memoria del autómata de pila y conoce el ámbito activo) el encargado de transformar esa entrada temporal en un símbolo formalmente declarado mediante `declararVariable`. Al finalizar la compilación, cualquier identificador que no llegó a declararse es purgado por `purgarIdentificadoresSinDeclarar()`.
+
+#### ❓ Pregunta 6: ¿Cómo interactúa el nuevo esquema de claves con la evaluación estática de `COMPTIME`?
+* **Respuesta para la defensa:**  
+  En `gram.y`, la función `esConstante(ParserVal pv)` utiliza la presencia del delimitador `@` como criterio determinante: los literales numéricos (`5`, `3.14`) no contienen `@`, mientras que cualquier identificador de variable o función mangledo siempre contiene `@` (`main@x`). Gracias a esto, el compilador puede diferenciar en tiempo constante un valor constante genuino de una variable de runtime, evitando que una variable común se intente plegar estáticamente en expresiones `COMPTIME`.
+
+---
+
+### 8. Casos de Prueba y Salidas Reales Verificadas
+
+A continuación se documentan las salidas exactas generadas por `compilador.jar` tras el rediseño completo de la Tabla de Símbolos.
+
+#### Caso A: Funciones y AUTO FUNCTION (`tests/test_hito6_funciones_ok.txt`)
+
+**Tabla de Símbolos:**
+```text
+=== TABLA DE SIMBOLOS ===
+main@programa_funciones_ok: {USO=nombre_programa, TIPO=programa}
+main@a: {USO=variable, TIPO=SHORTINT}
+main@b: {USO=variable, TIPO=SHORTINT}
+main@res_short: {USO=variable, TIPO=SHORTINT}
+main@x: {USO=variable, TIPO=SINGLEF}
+main@y: {USO=variable, TIPO=SINGLEF}
+main@res_single: {USO=variable, TIPO=SINGLEF}
+main@suma: {USO=funcion, TIPO=SHORTINT, TIENE_RET=true, PARAMETROS=[p1, p2]}
+main@suma@p1: {USO=parametro, TIPO=SHORTINT}
+main@suma@p2: {USO=parametro, TIPO=SHORTINT}
+main@suma@acumulador: {USO=variable, TIPO=SHORTINT}
+main@cuadrado: {USO=funcion, TIPO=SHORTINT, TIENE_RET=true, PARAMETROS=[num]}
+main@cuadrado@num: {USO=parametro, TIPO=SHORTINT}
+main@max_abarcativo: {USO=funcion, TIPO=SINGLEF, TIENE_RET=true, PARAMETROS=[val_entero, val_float]}
+main@max_abarcativo@val_entero: {USO=parametro, TIPO=SHORTINT}
+main@max_abarcativo@val_float: {USO=parametro, TIPO=SINGLEF}
+main@sin_retorno: {USO=funcion, TIPO=SHORTINT, TIENE_RET=false, PARAMETROS=[p]}
+main@sin_retorno@p: {USO=parametro, TIPO=SHORTINT}
+1: {TIPO=SHORTINT, OCURRENCIAS=1}
+10: {TIPO=SHORTINT, OCURRENCIAS=1}
+20: {TIPO=SHORTINT, OCURRENCIAS=1}
+1.5: {TIPO=SINGLEF, OCURRENCIAS=1}
+3.5: {TIPO=SINGLEF, OCURRENCIAS=1}
+5: {TIPO=SHORTINT, OCURRENCIAS=2}
+2: {TIPO=SHORTINT, OCURRENCIAS=1}
+3: {TIPO=SHORTINT, OCURRENCIAS=1}
+4: {TIPO=SHORTINT, OCURRENCIAS=1}
+"Fin de pruebas funciones ok": {TIPO=CADENA, OCURRENCIAS=1}
+```
+
+**Código Intermedio (Tercetos):**
+```text
+----------------------------------------
+         CODIGO INTERMEDIO (TERCETOS)   
+----------------------------------------
+Ambito: main@suma
+0 ( + , main@suma@p1 , main@suma@p2 )
+1 ( := , main@suma@acumulador , [0] )
+2 ( RET , main@suma@acumulador , - )
+----------------------------------------
+Ambito: main@cuadrado
+0 ( * , main@cuadrado@num , main@cuadrado@num )
+1 ( RET , [0] , - )
+----------------------------------------
+Ambito: main@max_abarcativo
+0 ( tos , main@max_abarcativo@val_float , - )
+1 ( > , [0] , main@max_abarcativo@val_entero )
+2 ( BF , [1] , [5] )
+3 ( RET , main@max_abarcativo@val_float , - )
+4 ( BI , [6] , - )
+5 ( RET , main@max_abarcativo@val_entero , - )
+----------------------------------------
+Ambito: main@sin_retorno
+0 ( + , main@sin_retorno@p , 1 )
+1 ( := , main@sin_retorno@p , [0] )
+2 ( RET , 0$s , - )
+----------------------------------------
+Ambito: main
+0 ( := , main@a , 10 )
+1 ( := , main@b , 20 )
+2 ( := , main@x , 1.5 )
+3 ( := , main@y , 3.5 )
+4 ( := , main@suma@p1 , main@a )
+5 ( := , main@suma@p2 , main@b )
+6 ( CALL , main@suma , - )
+7 ( := , main@res_short , [6] )
+8 ( := , main@cuadrado@num , 5 )
+9 ( CALL , main@cuadrado , - )
+10 ( := , main@res_short , [9] )
+11 ( := , main@max_abarcativo@val_entero , main@a )
+12 ( := , main@max_abarcativo@val_float , main@y )
+13 ( CALL , main@max_abarcativo , - )
+14 ( := , main@res_single , [13] )
+15 ( := , main@suma@p1 , 2 )
+16 ( := , main@suma@p2 , 3 )
+17 ( CALL , main@suma , - )
+18 ( + , [17] , 4 )
+19 ( := , main@res_short , [18] )
+20 ( := , main@b , 5 )
+21 ( := , main@suma@p1 , main@a )
+22 ( := , main@suma@p2 , [20] )
+23 ( CALL , main@suma , - )
+24 ( := , main@res_short , [23] )
+25 ( := , main@sin_retorno@p , main@a )
+26 ( CALL , main@sin_retorno , - )
+27 ( := , main@res_short , [26] )
+28 ( POUT , "Fin de pruebas funciones ok" , - )
+----------------------------------------
+```
+
+#### Caso B: Clases, Herencia y Visibilidad (`tests/test_hito6_clases_ok.txt`)
+
+**Tabla de Símbolos:**
+```text
+=== TABLA DE SIMBOLOS ===
+main@programa_clases_ok: {USO=nombre_programa, TIPO=programa}
+main@c_base1: {USO=nombre_clase, TIPO=clase, ATRIBUTOS=[b1_atr0, b1_atr1]}
+main@c_base1@b1_atr0: {USO=atributo, TIPO=SHORTINT, EXPORT_TO=[c_cliente]}
+main@c_base1@b1_atr1: {USO=atributo, TIPO=SINGLEF, EXPORT_TO=[c_cliente]}
+main@c_base1@m_base1: {USO=metodo, TIPO=SHORTINT, TIENE_RET=true, EXPORT_TO=[c_cliente]}
+main@c_base2: {USO=nombre_clase, TIPO=clase, ATRIBUTOS=[b2_atr0]}
+main@c_base2@b2_atr0: {USO=atributo, TIPO=SHORTINT}
+main@c_base2@m_base2: {USO=metodo, TIPO=SHORTINT, TIENE_RET=true, PARAMETROS=[x]}
+main@c_base2@m_base2@x: {USO=parametro, TIPO=SHORTINT}
+1: {TIPO=SHORTINT, OCURRENCIAS=3}
+main@c_derivada: {USO=nombre_clase, TIPO=clase, ATRIBUTOS=[der_atr0], HERENCIA=[c_base1, c_base2]}
+main@c_derivada@der_atr0: {USO=atributo, TIPO=SHORTINT}
+main@c_derivada@m_propio: {USO=metodo, TIPO=SHORTINT, TIENE_RET=true}
+100: {TIPO=SHORTINT, OCURRENCIAS=1}
+main@c_cliente: {USO=nombre_clase, TIPO=clase, IMPORTS=[c_base1]}
+main@c_cliente@m_cliente: {USO=metodo, TIPO=SHORTINT, TIENE_RET=true, PARAMETROS=[obj_b1]}
+main@c_cliente@m_cliente@obj_b1: {USO=parametro, TIPO=c_base1}
+0: {TIPO=SHORTINT, OCURRENCIAS=5}
+10: {TIPO=SHORTINT, OCURRENCIAS=1}
+main@d: {USO=objeto, TIPO=c_derivada}
+main@b: {USO=objeto, TIPO=c_base1}
+main@cli: {USO=objeto, TIPO=c_cliente}
+main@r_short: {USO=variable, TIPO=SHORTINT}
+main@idx: {USO=variable, TIPO=SHORTINT}
+main@r_single: {USO=variable, TIPO=SINGLEF}
+25: {TIPO=SHORTINT, OCURRENCIAS=1}
+3.14: {TIPO=SINGLEF, OCURRENCIAS=1}
+42: {TIPO=SHORTINT, OCURRENCIAS=1}
+5: {TIPO=SHORTINT, OCURRENCIAS=1}
+"Fin de pruebas clases ok": {TIPO=CADENA, OCURRENCIAS=1}
+```
+
+**Código Intermedio (Tercetos):**
+```text
+----------------------------------------
+         CODIGO INTERMEDIO (TERCETOS)   
+----------------------------------------
+Ambito: main@c_base1@m_base1
+0 ( RET , main@c_base1@b1_atr0 , - )
+----------------------------------------
+Ambito: main@c_base2@m_base2
+0 ( + , main@c_base2@m_base2@x , 1 )
+1 ( RET , [0] , - )
+----------------------------------------
+Ambito: main@c_derivada@m_propio
+0 ( RET , 100 , - )
+----------------------------------------
+Ambito: main@c_cliente@m_cliente
+0 ( := , main@c_cliente@m_cliente@obj_b1[0$s] , 10 )
+1 ( CALL , main@c_base1@m_base1 , - )
+2 ( RET , 0 , - )
+----------------------------------------
+Ambito: main
+0 ( := , main@b[0$s] , 25 )
+1 ( := , main@b[1$s] , 3.14 )
+2 ( := , main@r_short , main@b[0$s] )
+3 ( := , main@r_single , main@b[1$s] )
+4 ( := , main@idx , 0 )
+5 ( := , main@d[main@idx] , 42 )
+6 ( CALL , main@c_base1@m_base1 , - )
+7 ( := , main@r_short , [6] )
+8 ( := , main@c_base2@m_base2@x , 5 )
+9 ( CALL , main@c_base2@m_base2 , - )
+10 ( := , main@r_short , [9] )
+11 ( CALL , main@c_derivada@m_propio , - )
+12 ( := , main@r_short , [11] )
+13 ( := , main@c_cliente@m_cliente@obj_b1 , main@b )
+14 ( CALL , main@c_cliente@m_cliente , - )
+15 ( POUT , "Fin de pruebas clases ok" , - )
+----------------------------------------
+```
+
+#### Caso C: Variables Estáticas `COMPTIME` (`tests/test_hito6_comptime_ok.txt`)
+
+**Tabla de Símbolos:**
+```text
+=== TABLA DE SIMBOLOS ===
+main@programa_comptime_ok: {USO=nombre_programa, TIPO=programa}
+main@c_entero1: {USO=variable, COMPTIME=true, TIPO=SHORTINT, VALOR_COMPTIME=4}
+main@c_entero2: {USO=variable, COMPTIME=true, TIPO=SHORTINT, VALOR_COMPTIME=10}
+main@c_entero3: {USO=variable, COMPTIME=true, TIPO=SHORTINT, VALOR_COMPTIME=20}
+main@c_float1: {USO=variable, COMPTIME=true, TIPO=SINGLEF, VALOR_COMPTIME=2.5}
+main@c_float2: {USO=variable, COMPTIME=true, TIPO=SINGLEF, VALOR_COMPTIME=4.0}
+main@r_entero1: {USO=variable, TIPO=SHORTINT}
+main@r_entero2: {USO=variable, TIPO=SHORTINT}
+main@r_float1: {USO=variable, TIPO=SINGLEF}
+3: {TIPO=SHORTINT, OCURRENCIAS=1}
+2.5: {TIPO=SINGLEF, OCURRENCIAS=1}
+7: {TIPO=SHORTINT, OCURRENCIAS=1}
+2: {TIPO=SHORTINT, OCURRENCIAS=1}
+1.5: {TIPO=SINGLEF, OCURRENCIAS=1}
+5: {TIPO=SHORTINT, OCURRENCIAS=1}
+1: {TIPO=SHORTINT, OCURRENCIAS=2}
+```
+
+**Código Intermedio (Tercetos):**
+```text
+----------------------------------------
+         CODIGO INTERMEDIO (TERCETOS)   
+----------------------------------------
+Ambito: main
+0 ( := , main@r_entero1 , 4 )
+1 ( := , main@r_entero2 , 25 )
+2 ( := , main@r_float1 , 4.0 )
+3 ( > , 4 , 1 )
+4 ( BF , [3] , [7] )
+5 ( + , main@r_entero1 , 1 )
+6 ( := , main@r_entero1 , [5] )
+7 ( POUT , 10 , - )
+----------------------------------------
+```
+
+---
+
+## 📌 Correcciones de Consulta (Segunda Parte): Tercetos por Ámbito y Detección Temprana de Ciclos de Herencia
+
+Durante la sesión de consulta y revisión previa a la entrega final de la Etapa 3, se definieron dos directivas arquitectónicas obligatorias para el diseño del código intermedio y la jerarquía de herencia múltiple:
+1. **Agrupación de tercetos por ámbito en estructuras independientes** (`Map<String, ArrayList<Terceto>>`), prescindiendo de pseudo-tercetos delimitadores.
+2. **Validación estática de ciclos de herencia en la cláusula `EXTENDS`**, garantizando que la estructura de herencia sea un grafo acíclico dirigido (DAG) y eliminando el conjunto `visitados` en la resolución de miembros.
+
+---
+
+### 1. Agrupación de Tercetos por Ámbito (`Map<String, ArrayList<Terceto>>`)
+
+#### 1.1. Fundamento y Alineación con `Tp3.pdf`
+En `Tp3.pdf`, la cátedra ofrece dos alternativas de representación para las subrutinas:
+> *"Para las funciones y métodos se deberá generar el código intermedio en una única estructura junto con el programa principal (con algún delimitador que permita determinar claramente el inicio y fin de cada una), o bien en estructuras independientes."*
+
+Inicialmente, el compilador utilizaba una única lista lineal `ArrayList<Terceto>` e insertaba pseudo-tercetos delimitadores como `( FUNCION , main@f , - )` y `( FIN_FUNCION , main@f , - )`. Este enfoque presentaba dos limitaciones severas:
+1. **Ruptura ante anidamiento de funciones (Interleaving):** Cuando una función `f1` contenía una función anidada `f2`, los tercetos de `f2` se emitían secuencialmente en el medio del cuerpo de `f1`, intercalando instrucciones ejecutables de ámbitos distintos dentro de un mismo bloque secuencial. Para el generador de Assembler (TP4), esto obligaba a emitir saltos incondicionales artificiales para "saltear" el código de las funciones anidadas.
+2. **Contaminación de referencias cruzadas y saltos globales:** Los índices de saltos (`BF`, `BI`) y referencias a temporales `[i]` dependían del tamaño acumulado de todo el programa en lugar de ser relativos a la subrutina en compilación.
+
+#### 1.2. Solución Adoptada: `tercetosPorAmbito`
+En `GeneradorTerceto.java` se reemplazó la lista única global por:
+```java
+// Tercetos almacenados por ambito (main, funciones, metodos)
+private static final Map<String, ArrayList<Terceto>> tercetosPorAmbito = new LinkedHashMap<>();
+```
+
+- **Mapeo directo con `ambitoActual`:** Cada vez que el parser entra a una función o método (`entrarAmbito(nombre)`), se invoca `GeneradorTerceto.iniciarAmbito(ambitoActual)`. Todas las operaciones de emisión (`crearTerceto`), lectura (`getTerceto`, `getProximoIndice`) y parcheo (`completarSalto`) operan sobre la lista obtenida dinámicamente mediante `Parser.ambitoActual`.
+- **Numeración local (`0..N-1`):** Cada subrutina comienza su numeración de tercetos en `0`. Las referencias `[i]` y los destinos de backpatching (`BF`, `BI`) son estrictamente locales al ámbito activo.
+- **Eliminación total de pseudo-tercetos:** Ya no se generan `FUNCION`, `FIN_FUNCION`, `METODO` ni `FIN_METODO`. El delimitador es puramente estructural en el `Map`, donde la clave mangled del ámbito identifica unívocamente la subrutina.
+- **Correspondencia 1 a 1 con `CALL`:** Una invocación `( CALL , main@suma , - )` apunta unívocamente a la entrada `"main@suma"` del mapa, preparando de forma transparente la generación de subrutinas y etiquetas en el TP4.
+
+---
+
+### 2. Detección Temprana de Ciclos de Herencia y Eliminación de `visitados`
+
+#### 2.1. Validación Estática al Reducir `EXTENDS`
+En la herencia múltiple (Tema 30), los ciclos de herencia (como `A extends A` o ciclos indirectos `A extends B` y `B extends A`) constituyen errores semánticos graves que deben ser interceptados y reportados en la propia declaración de la clase.
+
+Al reducir la regla `herencia_opcional : EXTENDS lista_identificadores ';'`, el compilador procesa cada identificador de clase base:
+1. Verifica que la clase base esté declarada y sea un `nombre_clase`. Si no está, emite `Clase base '<padre>' especificada en EXTENDS no declarada`.
+2. Invoca a `TablaSimbolos.hayCicloHerencia(nomClase, padre)` para validar si agregar dicho padre generaría un ciclo directo o indirecto:
+   - **Caso base 1 (reflexividad / autoherencia directa):** Si `nomClase.equals(nomClasePadre)`, retorna `true`.
+   - **Caso recursivo (transitividad):** Consulta los ancestros de `nomClasePadre` en `TablaSimbolos` mediante `obtenerHerencia` y llama recursivamente a `hayCicloHerencia(nomClase, ancestro)`. Si alguna rama alcanza a `nomClase`, retorna `true`.
+   - Si se detecta ciclo, se reporta: `Error semantico (linea X): Herencia circular detectada entre la clase '<nomClase>' y '<padre>'`.
+3. Chequea duplicados en la misma cláusula (`padresValidos.contains(padre)`).
+4. **Filtrado defensivo y guarda de redeclaración:** Solo los padres que superan todas las validaciones se incorporan a `padresValidos`. Además, se verifica la bandera `claseActualValida` (para no registrar herencia en clases que hayan sido redeclaradas erróneamente en el mismo ámbito).
+
+#### 2.2. Por qué se eliminó `Set<String> visitados` en `buscarMiembroEnJerarquia`
+Antes de este rediseño, `buscarMiembroEnJerarquia` recibía un conjunto `Set<String> visitados` para evitar recursión infinita durante la búsqueda de atributos o métodos en runtime si existían ciclos.
+
+Al realizar la detección y rechazo de ciclos estrictamente durante la reducción de `EXTENDS`, se establece un **invariante estructural** en la Tabla de Símbolos:
+> **Invariante:** Las listas `HERENCIA` en `TablaSimbolos` forman en todo momento un **Grafo Acíclico Dirigido (DAG) finito**.
+
+Dado que es imposible que existan ciclos en los datos almacenados, cualquier recorrido recursivo sobre los ancestros tiene garantizada su terminación en un número finito de pasos. Por lo tanto, `buscarMiembroEnJerarquia` se simplificó eliminando el parámetro y la sobrecarga de `visitados`, reduciendo el consumo de memoria y simplificando el código.
+
+---
+
+### 3. Preguntas de Examen para la Defensa Oral (Coloquio)
+
+#### ❓ Pregunta 1: ¿Por qué se pudo eliminar el conjunto `visitados` de `buscarMiembroEnJerarquia` sin riesgo de recursión infinita?
+* **Respuesta para la defensa:**  
+  Porque el compilador realiza una **validación estática a priori** al momento de reducir la producción sintáctica de `EXTENDS`.  
+  Antes de registrar cualquier relación de herencia en la Tabla de Símbolos, se invoca a `TablaSimbolos.hayCicloHerencia(nomClase, padre)`. Si el padre propuesto coincide con la clase hija (autoherencia directa `A extends A`) o si alguno de sus ancestros transita hacia la clase hija (ciclo indirecto `A extends B` y `B extends A`), se emite un error semántico y esa relación de herencia **nunca se agrega** a la lista `HERENCIA` de la clase.  
+  Como consecuencia directa, el grafo de herencia en la Tabla de Símbolos es formalmente un **Grafo Acíclico Dirigido (DAG)** en todo momento. En un DAG finito no existen lazos cerrados, lo que garantiza matemáticamente que cualquier recorrido recursivo de búsqueda de miembros terminará siempre en pasos finitos, tornando superfluo el conjunto `visitados`.
+
+---
+
+#### ❓ Pregunta 2: ¿Qué ocurre con la herencia diamante (`D extends B, C` donde ambas heredan de `A`)? ¿Es un ciclo? ¿Cómo lo maneja el compilador?
+* **Respuesta para la defensa:**  
+  Una herencia en forma de diamante **NO es un ciclo**, sino una bifurcación y convergencia válida dentro de un Grafo Acíclico Dirigido (DAG):  
+  - Los caminos son `D -> B -> A` y `D -> C -> A`.  
+  - En ningún punto una clase es ancestro de sí misma (`A` no desciende de `D`).  
+  
+  **Comportamiento en el compilador:**
+  1. `TablaSimbolos.hayCicloHerencia`: al evaluar `D extends B` y `D extends C`, recorre los ancestros de `B` (`A`) y de `C` (`A`). Ninguno de ellos es `D`, por lo que la función retorna `false` y la herencia se registra sin emitir ningún falso error.
+  2. `TablaSimbolos.buscarMiembroEnJerarquia`: si `D` accede a un miembro heredado de `A`, la búsqueda examina primero a `D`, luego a la lista `EXTENDS` de `D` en el orden de izquierda a derecha (**Desambiguado Opción 1** del Tema 30). Explora la rama de `B`, encuentra el miembro en `A` y lo retorna de inmediato sin necesidad de explorar redundantemente la rama de `C`, terminando de forma determinística y correcta.
+
+---
+
+#### ❓ Pregunta 3: ¿Por qué se prefirió `Map<String, ArrayList<Terceto>>` en lugar de una lista plana con tercetos delimitadores (`FUNCION`/`FIN_FUNCION`)?
+* **Respuesta para la defensa:**  
+  Por tres razones técnicas centrales:
+  1. **Alineación con la Opción 1 de `Tp3.pdf`:** La consigna permite explícitamente generar el código en estructuras independientes por función/método.
+  2. **Independencia ante anidamiento de subrutinas:** En un esquema de lista única plana, si una función `f1` define en su interior una función `f2`, los tercetos de `f2` quedan intercalados físicamente en medio de las instrucciones de `f1`. Esto rompe el flujo de control lineal y obligaría a inyectar saltos incondicionales para saltear el código anidado. Al separar por clave de ámbito en el mapa (`"main"`, `"main@f1"`, `"main@f1@f2"`), cada subrutina mantiene un bloque de código continuo y aislado.
+  3. **Localidad de índices y backpatching:** Cada ámbito posee su propio contador de tercetos (`0..N-1`). Los operandos temporales `[i]` y los saltos relativos de control de flujo (`BF [destino]`, `BI [destino]`) se resuelven dentro del espacio de la propia subrutina, desacoplando el código de cada función del tamaño del resto del programa y simplificando directamente la traducción a etiquetas Assembler en el TP4.
+
 
 
 

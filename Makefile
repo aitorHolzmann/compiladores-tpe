@@ -34,7 +34,7 @@ jar:
 	@javac --release 11 -encoding UTF-8 -d bin $(FUENTES)
 	@cp -r src/estructuras bin/src/
 	@jar --create --file compilador.jar --main-class src.compilador.Parser -C bin .
-	@echo "Listo: compilador.jar"s
+	@echo "Listo: compilador.jar"
 
 docker-test:
 	docker build -t $(IMAGEN) .devcontainer

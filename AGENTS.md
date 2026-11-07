@@ -134,11 +134,13 @@ java -cp bin src.compilador.Parser tests/prueba_gramatica
 
 
 ## 9. Etapa 3 — Generación de Código Intermedio por Tercetos
-- **Técnica asignada**: Tercetos. Estructura dinámica (`ArrayList<Terceto>`).
-- Los tercetos se imprimen con formato exacto de la cátedra: `N ( op , op1 , op2 )`.
+- **Técnica asignada**: Tercetos agrupados por ámbito en `Map<String, ArrayList<Terceto>>` (`LinkedHashMap`), indexado por la clave del ámbito (`"main"`, `"main@funcion"`, `"main@Clase@metodo"`, etc.).
+- Cada ámbito posee su propia lista de tercetos con numeración local iniciando en `0` (`0..N-1`).
+- **Sin pseudo-tercetos**: No se generan tercetos delimitadores (`FUNCION`/`FIN_FUNCION`/`METODO`/`FIN_METODO`); la separación estructural por ámbito en el `Map` delimita el código de funciones y métodos de forma limpia (Opción 1 de `Tp3.pdf`), evitando solapamiento en anidamientos y manteniendo las referencias `[i]` y saltos `BF`/`BI` estrictamente locales a cada ámbito.
+- Los tercetos se imprimen con formato exacto de la cátedra: `N ( op , op1 , op2 )`, precedidos por el encabezado de su ámbito (`Ambito: <nombre>`).
 - El operador de asignación en tercetos es `:=`.
-- **Backpatching**: se implementa con `Stack<Integer>` y producciones "marcador" vacías en Yacc.
-- **Name Mangling**: separador `:` estrictamente. Ejemplo: `variable:main:funcion`. Exigido textualmente por Tp3.pdf.
+- **Backpatching**: se implementa con `Stack<Integer>` y producciones "marcador" vacías en Yacc, resolviendo sobre los índices locales de la lista del ámbito activo.
+- **Name Mangling**: separador `@` con ámbito primero (ejemplo: `main@funcion@variable`). Indicado expresamente por la cátedra en la consulta de revisión previa a la entrega (07/11), reemplazando el ejemplo `simbolo:main:ambito` de `Tp3.pdf`.
 - **Referencia a la teoría**: `teoria/teoria_parte3/` (traducción dirigida por sintaxis, tercetos, sentencias de control, alcance de variables).
 
 ## 10. Chequeos Semánticos Obligatorios

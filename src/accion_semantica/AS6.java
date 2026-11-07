@@ -28,8 +28,8 @@ public class AS6 extends Accion_Semantica{
         int valor_int = Integer.parseInt(valor);
         // El lexico acepta hasta 128 (el -128 se resuelve con numero_negativo en la gramatica)
         if (valor_int <= Math.abs(AnalizadorLexico.ValorMinimoInt)) {
-            int id = TablaSimbolos.agregarOBuscarConstante(valor);
-            AnalizadorLexico.setReferenciaTablaSimbolos(id);
+            String clave = TablaSimbolos.agregarOBuscarConstante(valor, "SHORTINT");
+            AnalizadorLexico.setReferenciaTablaSimbolos(clave);
             return TablaPalabrasReservadas.obtenerIdentificador("CTE_SHORTINT");
         }
 

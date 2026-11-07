@@ -712,7 +712,7 @@ final static String yyrule[] = {
 "sentencia_ret : RET '(' expresion ')'",
 };
 
-//#line 1588 "gram.y"
+//#line 1557 "gram.y"
 
 /* CODIGO DE SOPORTE                                                         */
 
@@ -721,40 +721,42 @@ static Parser parser;
 static int cant_errores = 0;
 static int cant_errores_semanticos = 0;
 static int cant_retornos_auto = -1;
+static boolean claseActualValida = false;
 
-public static String ambitoActual = ":main";
+public static String ambitoActual = TablaSimbolos.AMBITO_GLOBAL;
 public static Stack<Integer> pilaSaltos = new Stack<>();
 
 public static String obtenerFuncionActualMangled() {
-    if (ambitoActual == null || ambitoActual.equals(":main")) {
+    if (ambitoActual == null || ambitoActual.equals(TablaSimbolos.AMBITO_GLOBAL)) {
         return null;
     }
-
-    int index = ambitoActual.lastIndexOf(':');
-    String nombreFuncion = ambitoActual.substring(index + 1);
-    String ambitoPadre = ambitoActual.substring(0, index);
-    return nombreFuncion + ambitoPadre;
+    return ambitoActual;
 }
 
 public static String obtenerClaseDeAmbito(String ambito) {
     if (ambito == null) return null;
-    String[] partes = ambito.split(":");
-    if (partes.length >= 3 && "main".equals(partes[1])) {
-        return partes[2];
+    String[] partes = ambito.split(TablaSimbolos.SEPARADOR);
+    if (partes.length >= 2 && TablaSimbolos.AMBITO_GLOBAL.equals(partes[0])) {
+        String posibleClase = partes[1];
+        String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + posibleClase;
+        if ("nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase))) {
+            return posibleClase;
+        }
     }
     return null;
 }
 
 public static void entrarAmbito(String nombre) {
-    ambitoActual = ambitoActual + ":" + nombre;
+    ambitoActual = ambitoActual + TablaSimbolos.SEPARADOR + nombre;
 }
 
 public static void salirAmbito() {
-    int index = ambitoActual.lastIndexOf(':');
+    pilaSaltos.clear();
+    int index = ambitoActual.lastIndexOf(TablaSimbolos.SEPARADOR);
     if (index > 0) {
         ambitoActual = ambitoActual.substring(0, index);
     } else {
-        ambitoActual = ":main";
+        ambitoActual = TablaSimbolos.AMBITO_GLOBAL;
     }
 }
 
@@ -773,7 +775,7 @@ public static boolean esConstante(ParserVal pv) {
     if (pv == null || pv.sval == null) {
         return false;
     }
-    return !pv.sval.startsWith("[") && !pv.sval.contains(":");
+    return !pv.sval.startsWith("[") && !pv.sval.contains(TablaSimbolos.SEPARADOR);
 }
 
 public static String evaluarOperacionEstatica(String op, String val1, String val2, String tipo) {
@@ -840,7 +842,11 @@ public static void main(String[] args) {
 
     System.out.println("Compilando archivo: " + ruta);
     try {
-        ambitoActual = ":main";
+        ambitoActual = TablaSimbolos.AMBITO_GLOBAL;
+        TablaSimbolos.reiniciar();
+        GeneradorTerceto.reiniciar();
+        GeneradorTerceto.iniciarAmbito(ambitoActual);
+        claseActualValida = false;
         pilaSaltos.clear();
         cant_retornos_auto = -1;
         cant_errores = 0;
@@ -849,6 +855,7 @@ public static void main(String[] args) {
                 new InputStreamReader(new FileInputStream(ruta), java.nio.charset.StandardCharsets.UTF_8)));
         parser = new Parser(debug);
         parser.yyparse(); 
+        TablaSimbolos.purgarIdentificadoresSinDeclarar();
         TablaSimbolos.imprimirTabla();
         GeneradorTerceto.imprimirTercetos();
     } catch (Exception e) {
@@ -861,7 +868,11 @@ int yylex() {
     if (token <= 0) {
         return 0; // EOF para byacc/j
     }
-    yylval = new ParserVal(AnalizadorLexico.referenciaTablaSimbolos);
+    if (AnalizadorLexico.referenciaTablaSimbolos != null) {
+        yylval = new ParserVal(AnalizadorLexico.referenciaTablaSimbolos);
+    } else {
+        yylval = new ParserVal();
+    }
     return token;
 }
 
@@ -872,7 +883,7 @@ void yyerror(String s) {
     cant_errores++;
     System.out.println("Error sintactico (linea " + AnalizadorLexico.getLineaActual() + "): " + s);
 }
-//#line 803 "Parser.java"
+//#line 814 "Parser.java"
 //###############################################################
 // method: yylexdebug : check lexer state
 //###############################################################
@@ -1029,14 +1040,13 @@ boolean doaction;
 case 1:
 //#line 52 "gram.y"
 {
-            int ref = val_peek(0).ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            String nombre = val_peek(0).sval;
             TablaSimbolos.declararVariable(nombre, "programa", "nombre_programa", ambitoActual);
             yyval = val_peek(0);
         }
 break;
 case 2:
-//#line 62 "gram.y"
+//#line 61 "gram.y"
 { 
             if (cant_errores == 0 && cant_errores_semanticos == 0) {
                 System.out.println("Programa reconocido correctamente"); 
@@ -1046,54 +1056,54 @@ case 2:
         }
 break;
 case 3:
-//#line 69 "gram.y"
+//#line 68 "gram.y"
 { yyerror("Falta el nombre del programa al inicio"); }
 break;
 case 4:
-//#line 70 "gram.y"
+//#line 69 "gram.y"
 { 
             System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
         }
 break;
 case 5:
-//#line 73 "gram.y"
+//#line 72 "gram.y"
 { yyerror("Falta el delimitador BEGIN de sentencias ejecutables"); }
 break;
 case 6:
-//#line 74 "gram.y"
+//#line 73 "gram.y"
 {
             System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
         }
 break;
 case 7:
-//#line 78 "gram.y"
+//#line 77 "gram.y"
 {
             yyerror("Falta el delimitador END al final del programa");
             System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
         }
 break;
 case 10:
-//#line 92 "gram.y"
+//#line 91 "gram.y"
 { imprimirRegla("declaracion_variables"); }
 break;
 case 11:
-//#line 93 "gram.y"
+//#line 92 "gram.y"
 { imprimirRegla("declaracion_funciones"); }
 break;
 case 12:
-//#line 94 "gram.y"
+//#line 93 "gram.y"
 { imprimirRegla("declaracion_clase"); }
 break;
 case 13:
-//#line 95 "gram.y"
+//#line 94 "gram.y"
 { imprimirRegla("declaracion_objeto"); }
 break;
 case 14:
-//#line 96 "gram.y"
+//#line 95 "gram.y"
 { imprimirRegla("declaracion_comptime"); }
 break;
 case 15:
-//#line 102 "gram.y"
+//#line 101 "gram.y"
 {
             String tipoDato = val_peek(2).sval;
             ArrayList<String> variables = (ArrayList<String>) val_peek(1).obj;
@@ -1106,155 +1116,141 @@ case 15:
         }
 break;
 case 16:
-//#line 113 "gram.y"
+//#line 112 "gram.y"
 { yyerror("Falta ';' al final de la declaracion de variables"); }
 break;
 case 17:
-//#line 118 "gram.y"
+//#line 117 "gram.y"
 {
             ArrayList<String> lista = new ArrayList<>();
-            int ref = val_peek(0).ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            lista.add(lexema);
+            lista.add(val_peek(0).sval);
             ParserVal pv = new ParserVal();
             pv.obj = lista;
             yyval = pv;
         }
 break;
 case 18:
-//#line 128 "gram.y"
+//#line 125 "gram.y"
 {
             ArrayList<String> lista = (ArrayList<String>) val_peek(2).obj;
-            int ref = val_peek(0).ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            lista.add(lexema);
+            lista.add(val_peek(0).sval);
             yyval = val_peek(2);
         }
 break;
 case 19:
-//#line 135 "gram.y"
+//#line 130 "gram.y"
 { yyerror("Falta ',' entre los identificadores"); yyval = val_peek(1); }
 break;
 case 20:
-//#line 140 "gram.y"
+//#line 135 "gram.y"
 {
             ArrayList<String> lista = new ArrayList<>();
-            int ref = val_peek(0).ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            lista.add(lexema);
+            lista.add(val_peek(0).sval);
             ParserVal pv = new ParserVal();
             pv.obj = lista;
             yyval = pv;
         }
 break;
 case 21:
-//#line 150 "gram.y"
+//#line 143 "gram.y"
 {
             ArrayList<String> lista = (ArrayList<String>) val_peek(2).obj;
-            int ref = val_peek(0).ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            lista.add(lexema);
+            lista.add(val_peek(0).sval);
             yyval = val_peek(2);
         }
 break;
 case 22:
-//#line 160 "gram.y"
+//#line 151 "gram.y"
 { yyval = new ParserVal("SHORTINT"); }
 break;
 case 23:
-//#line 161 "gram.y"
+//#line 152 "gram.y"
 { yyval = new ParserVal("SINGLEF"); }
 break;
 case 24:
-//#line 168 "gram.y"
+//#line 159 "gram.y"
 {
-            int ref = val_peek(0).ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            int idFunc = TablaSimbolos.declararVariable(nombre, val_peek(2).sval, "funcion", ambitoActual);
-            String mangling = nombre + ambitoActual;
-            if (idFunc != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
-                TablaSimbolos.agregarAtributo(idFunc, "TIENE_RET", "false");
+            String nombre = val_peek(0).sval;
+            String claveFunc = TablaSimbolos.declararVariable(nombre, val_peek(2).sval, "funcion", ambitoActual);
+            if (claveFunc != null) {
+                TablaSimbolos.agregarAtributo(claveFunc, "TIENE_RET", Boolean.FALSE);
             }
             entrarAmbito(nombre);
-            GeneradorTerceto.crearTerceto("FUNCION", mangling, "-");
+            GeneradorTerceto.iniciarAmbito(ambitoActual);
             yyval = val_peek(0);
         }
 break;
 case 25:
-//#line 184 "gram.y"
+//#line 173 "gram.y"
 {
-            int ref = val_peek(0).ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, "auto", "funcion", ambitoActual);
-            String mangling = nombre + ambitoActual;
+            String nombre = val_peek(0).sval;
+            String claveFunc = TablaSimbolos.declararVariable(nombre, "auto", "funcion", ambitoActual);
+            if (claveFunc != null) {
+                TablaSimbolos.agregarAtributo(claveFunc, "TIENE_RET", Boolean.FALSE);
+            }
             entrarAmbito(nombre);
-            GeneradorTerceto.crearTerceto("FUNCION", mangling, "-");
+            GeneradorTerceto.iniciarAmbito(ambitoActual);
             yyval = val_peek(0);
         }
 break;
 case 26:
-//#line 197 "gram.y"
+//#line 187 "gram.y"
 { cant_retornos_auto = 0; }
 break;
 case 27:
-//#line 204 "gram.y"
+//#line 194 "gram.y"
 {
             String mangling = obtenerFuncionActualMangled();
             if (mangling != null) {
-                int refFunc = TablaSimbolos.buscarPorMangling(mangling);
-                String tieneRet = TablaSimbolos.obtenerAtributo(refFunc, "TIENE_RET");
-                if (!"true".equals(tieneRet)) {
-                    String tipo = TablaSimbolos.obtenerAtributo(refFunc, TablaSimbolos.TIPO);
+                Boolean tieneRet = (Boolean) TablaSimbolos.obtenerAtributo(mangling, "TIENE_RET");
+                if (!Boolean.TRUE.equals(tieneRet)) {
+                    String tipo = TablaSimbolos.obtenerTipo(mangling);
                     String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0$s";
                     GeneradorTerceto.crearTerceto("RET", valDef, "-", tipo);
                 }
-                GeneradorTerceto.crearTerceto("FIN_FUNCION", mangling, "-");
             }
             salirAmbito();
         }
 break;
 case 28:
-//#line 218 "gram.y"
+//#line 206 "gram.y"
 { yyerror("Falta nombre de funcion"); }
 break;
 case 30:
-//#line 224 "gram.y"
+//#line 212 "gram.y"
 {
             String mangling = obtenerFuncionActualMangled();
             if (mangling != null) {
-                GeneradorTerceto.crearTerceto("FIN_FUNCION", mangling, "-");
+                Boolean tieneRet = (Boolean) TablaSimbolos.obtenerAtributo(mangling, "TIENE_RET");
+                if (!Boolean.TRUE.equals(tieneRet)) {
+                    String tipo = TablaSimbolos.obtenerTipo(mangling);
+                    String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0$s";
+                    GeneradorTerceto.crearTerceto("RET", valDef, "-", tipo);
+                }
             }
             yyerror("Falta ';' al final de la declaracion de funcion");
             salirAmbito();
         }
 break;
 case 31:
-//#line 233 "gram.y"
+//#line 226 "gram.y"
 {
-            String mangling = obtenerFuncionActualMangled();
             if (cant_retornos_auto == 0) {
                 yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
-            }
-            if (mangling != null) {
-                GeneradorTerceto.crearTerceto("FIN_FUNCION", mangling, "-");
             }
             cant_retornos_auto = -1;
             salirAmbito();
         }
 break;
 case 32:
-//#line 244 "gram.y"
+//#line 233 "gram.y"
 { yyerror("Falta nombre de funcion"); }
 break;
 case 34:
-//#line 248 "gram.y"
+//#line 237 "gram.y"
 {
-            String mangling = obtenerFuncionActualMangled();
             if (cant_retornos_auto == 0) {
                 yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
-            }
-            if (mangling != null) {
-                GeneradorTerceto.crearTerceto("FIN_FUNCION", mangling, "-");
             }
             cant_retornos_auto = -1;
             yyerror("Falta ';' al final de la declaracion de funcion");
@@ -1262,90 +1258,94 @@ case 34:
         }
 break;
 case 38:
-//#line 270 "gram.y"
+//#line 255 "gram.y"
 {
-            int ref = val_peek(0).ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
+            String nombre = val_peek(0).sval;
             TablaSimbolos.declararVariable(nombre, val_peek(1).sval, "parametro", ambitoActual);
             String funcMangled = obtenerFuncionActualMangled();
             if (funcMangled != null) {
-                String nombreParamMangled = nombre + ambitoActual;
-                TablaSimbolos.agregarParametroAFuncion(funcMangled, val_peek(1).sval, nombreParamMangled);
+                TablaSimbolos.agregarParametro(funcMangled, nombre);
             }
             imprimirRegla("parametro_formal");
         }
 break;
 case 39:
-//#line 282 "gram.y"
+//#line 265 "gram.y"
 {
-            int refTipo = val_peek(1).ival;
-            String nomClase = TablaSimbolos.obtenerAtributo(refTipo, TablaSimbolos.LEXEMA);
-            int idClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
-            if (idClase == TablaSimbolos.LEXEMA_NO_ENCONTRADO || !"nombre_clase".equals(TablaSimbolos.obtenerAtributo(idClase, TablaSimbolos.USO))) {
+            String nomClase = val_peek(1).sval;
+            String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+            if (!TablaSimbolos.existeSimbolo(claveClase) || !"nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase))) {
                 agregarErrorSemantico("Tipo de parametro formal '" + nomClase + "' no declarado o no es una clase valida");
             }
-            int refNom = val_peek(0).ival;
-            String nombre = TablaSimbolos.obtenerAtributo(refNom, TablaSimbolos.LEXEMA);
+            String nombre = val_peek(0).sval;
             TablaSimbolos.declararVariable(nombre, nomClase, "parametro", ambitoActual);
             String funcMangled = obtenerFuncionActualMangled();
             if (funcMangled != null) {
-                String nombreParamMangled = nombre + ambitoActual;
-                TablaSimbolos.agregarParametroAFuncion(funcMangled, nomClase, nombreParamMangled);
+                TablaSimbolos.agregarParametro(funcMangled, nombre);
             }
             imprimirRegla("parametro_formal");
         }
 break;
 case 40:
-//#line 299 "gram.y"
+//#line 279 "gram.y"
 { yyerror("Falta de nombre de parametro formal en declaracion de funcion"); }
 break;
 case 41:
-//#line 300 "gram.y"
+//#line 280 "gram.y"
 { yyerror("Falta de tipo del parametro formal en declaracion de funcion"); }
 break;
 case 42:
-//#line 308 "gram.y"
+//#line 288 "gram.y"
 {
-            int ref = val_peek(0).ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, "clase", "nombre_clase", ambitoActual);
+            String nombre = val_peek(0).sval;
+            String claveClase = TablaSimbolos.declararVariable(nombre, "clase", "nombre_clase", ambitoActual);
+            claseActualValida = (claveClase != null);
             entrarAmbito(nombre);
             yyval = val_peek(0);
         }
 break;
 case 43:
-//#line 320 "gram.y"
+//#line 300 "gram.y"
 {
+            claseActualValida = false;
             salirAmbito();
         }
 break;
 case 44:
-//#line 325 "gram.y"
+//#line 306 "gram.y"
 {
             yyerror("Falta ';' al final de la declaracion de clase");
+            claseActualValida = false;
             salirAmbito();
         }
 break;
 case 45:
-//#line 333 "gram.y"
+//#line 315 "gram.y"
 {
             yyval = new ParserVal();
         }
 break;
 case 46:
-//#line 337 "gram.y"
+//#line 319 "gram.y"
 {
             String nomClase = obtenerClaseDeAmbito(ambitoActual);
             if (nomClase != null) {
                 ArrayList<String> imports = (ArrayList<String>) val_peek(0).obj;
                 if (imports != null) {
-                    for (String imp : imports) {
-                        int refImp = TablaSimbolos.buscarPorMangling(imp + ":main");
-                        if (refImp == TablaSimbolos.LEXEMA_NO_ENCONTRADO || !"nombre_clase".equals(TablaSimbolos.obtenerAtributo(refImp, TablaSimbolos.USO))) {
+                    ArrayList<String> importsValidos = new ArrayList<>();
+                    for (int i = 0; i < imports.size(); i++) {
+                        String imp = imports.get(i);
+                        String claveImp = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + imp;
+                        if (!TablaSimbolos.existeSimbolo(claveImp) || !"nombre_clase".equals(TablaSimbolos.obtenerUso(claveImp))) {
                             agregarErrorSemantico("Clase '" + imp + "' especificada en IMPORT FROM no declarada");
+                        } else {
+                            importsValidos.add(imp);
                         }
                     }
-                    TablaSimbolos.registrarImports(nomClase + ":main", imports);
+                    if (claseActualValida) {
+                        String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+                        TablaSimbolos.registrarImports(claveClase, importsValidos);
+                    }
                 }
             }
             imprimirRegla("importacion_opcional");
@@ -1353,32 +1353,43 @@ case 46:
         }
 break;
 case 47:
-//#line 355 "gram.y"
+//#line 344 "gram.y"
 {
             yyerror("Falta la palabra clave 'FROM' en la declaracion IMPORT");
             yyval = val_peek(0);
         }
 break;
 case 48:
-//#line 363 "gram.y"
+//#line 352 "gram.y"
 {
             yyval = new ParserVal();
         }
 break;
 case 49:
-//#line 367 "gram.y"
+//#line 356 "gram.y"
 {
             String nomClase = obtenerClaseDeAmbito(ambitoActual);
             if (nomClase != null) {
                 ArrayList<String> padres = (ArrayList<String>) val_peek(1).obj;
                 if (padres != null) {
-                    for (String padre : padres) {
-                        int refPadre = TablaSimbolos.buscarPorMangling(padre + ":main");
-                        if (refPadre == TablaSimbolos.LEXEMA_NO_ENCONTRADO || !"nombre_clase".equals(TablaSimbolos.obtenerAtributo(refPadre, TablaSimbolos.USO))) {
+                    ArrayList<String> padresValidos = new ArrayList<>();
+                    for (int i = 0; i < padres.size(); i++) {
+                        String padre = padres.get(i);
+                        String clavePadre = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + padre;
+                        if (!TablaSimbolos.existeSimbolo(clavePadre) || !"nombre_clase".equals(TablaSimbolos.obtenerUso(clavePadre))) {
                             agregarErrorSemantico("Clase base '" + padre + "' especificada en EXTENDS no declarada");
+                        } else if (TablaSimbolos.hayCicloHerencia(nomClase, padre)) {
+                            agregarErrorSemantico("Herencia circular detectada entre la clase '" + nomClase + "' y '" + padre + "'");
+                        } else if (padresValidos.contains(padre)) {
+                            agregarErrorSemantico("Clase base '" + padre + "' duplicada en EXTENDS de la clase '" + nomClase + "'");
+                        } else {
+                            padresValidos.add(padre);
                         }
                     }
-                    TablaSimbolos.registrarHerencia(nomClase + ":main", padres);
+                    if (claseActualValida) {
+                        String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+                        TablaSimbolos.registrarHerencia(claveClase, padresValidos);
+                    }
                 }
             }
             imprimirRegla("herencia_opcional");
@@ -1399,18 +1410,18 @@ case 55:
             ArrayList<String> variables = (ArrayList<String>) val_peek(2).obj;
             ArrayList<String> exportTo = (val_peek(1) != null && val_peek(1).obj != null) ? (ArrayList<String>) val_peek(1).obj : null;
             String nomClase = obtenerClaseDeAmbito(ambitoActual);
-            String claseMangled = (nomClase != null) ? nomClase + ":main" : null;
+            String claseClave = (nomClase != null) ? TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase : null;
 
             if (variables != null) {
                 for (int i = 0; i < variables.size(); i++) {
                     String nombreVar = variables.get(i);
-                    int idAtr = TablaSimbolos.declararVariable(nombreVar, tipoDato, "atributo", ambitoActual);
-                    if (idAtr != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
-                        if (claseMangled != null) {
-                            TablaSimbolos.agregarAtributoAClase(claseMangled, nombreVar, tipoDato);
+                    String claveAtr = TablaSimbolos.declararVariable(nombreVar, tipoDato, "atributo", ambitoActual);
+                    if (claveAtr != null) {
+                        if (claseClave != null) {
+                            TablaSimbolos.agregarAtributoAClase(claseClave, nombreVar);
                         }
                         if (exportTo != null) {
-                            TablaSimbolos.registrarExport(idAtr, exportTo);
+                            TablaSimbolos.registrarExport(claveAtr, exportTo);
                         }
                     }
                 }
@@ -1422,88 +1433,85 @@ case 56:
 {
             String mangling = obtenerFuncionActualMangled();
             if (mangling != null) {
-                int refMetodo = TablaSimbolos.buscarPorMangling(mangling);
-                String tieneRet = TablaSimbolos.obtenerAtributo(refMetodo, "TIENE_RET");
-                if (!"true".equals(tieneRet)) {
-                    String tipo = TablaSimbolos.obtenerAtributo(refMetodo, TablaSimbolos.TIPO);
+                Boolean tieneRet = (Boolean) TablaSimbolos.obtenerAtributo(mangling, "TIENE_RET");
+                if (!Boolean.TRUE.equals(tieneRet)) {
+                    String tipo = TablaSimbolos.obtenerTipo(mangling);
                     String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0$s";
                     GeneradorTerceto.crearTerceto("RET", valDef, "-", tipo);
                 }
-                GeneradorTerceto.crearTerceto("FIN_METODO", mangling, "-");
                 if (val_peek(1) != null && val_peek(1).obj != null) {
                     ArrayList<String> exports = (ArrayList<String>) val_peek(1).obj;
-                    TablaSimbolos.registrarExport(refMetodo, exports);
+                    TablaSimbolos.registrarExport(mangling, exports);
                 }
             }
             salirAmbito();
         }
 break;
 case 57:
-//#line 451 "gram.y"
+//#line 449 "gram.y"
 {
             String mangling = obtenerFuncionActualMangled();
             if (mangling != null) {
-                int refMetodo = TablaSimbolos.buscarPorMangling(mangling);
-                GeneradorTerceto.crearTerceto("FIN_METODO", mangling, "-");
                 if (val_peek(1) != null && val_peek(1).obj != null) {
                     ArrayList<String> exports = (ArrayList<String>) val_peek(1).obj;
-                    TablaSimbolos.registrarExport(refMetodo, exports);
+                    TablaSimbolos.registrarExport(mangling, exports);
                 }
             }
             salirAmbito();
         }
 break;
 case 58:
-//#line 467 "gram.y"
+//#line 463 "gram.y"
 {
-            int ref = val_peek(0).ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            int idMet = TablaSimbolos.declararVariable(nombre, val_peek(1).sval, "metodo", ambitoActual);
-            String mangling = nombre + ambitoActual;
-            GeneradorTerceto.crearTerceto("METODO", mangling, "-");
+            String nombre = val_peek(0).sval;
+            String claveMet = TablaSimbolos.declararVariable(nombre, val_peek(1).sval, "metodo", ambitoActual);
+            if (claveMet != null) {
+                TablaSimbolos.agregarAtributo(claveMet, "TIENE_RET", Boolean.FALSE);
+            }
             entrarAmbito(nombre);
+            GeneradorTerceto.iniciarAmbito(ambitoActual);
             yyval = val_peek(0);
         }
 break;
 case 59:
-//#line 480 "gram.y"
+//#line 477 "gram.y"
 {
-            int ref = val_peek(0).ival;
-            String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            int idMet = TablaSimbolos.declararVariable(nombre, "auto", "metodo", ambitoActual);
-            String mangling = nombre + ambitoActual;
-            GeneradorTerceto.crearTerceto("METODO", mangling, "-");
+            String nombre = val_peek(0).sval;
+            String claveMet = TablaSimbolos.declararVariable(nombre, "auto", "metodo", ambitoActual);
+            if (claveMet != null) {
+                TablaSimbolos.agregarAtributo(claveMet, "TIENE_RET", Boolean.FALSE);
+            }
             entrarAmbito(nombre);
+            GeneradorTerceto.iniciarAmbito(ambitoActual);
             yyval = val_peek(0);
         }
 break;
 case 60:
-//#line 493 "gram.y"
+//#line 491 "gram.y"
 {
             yyval = new ParserVal();
         }
 break;
 case 61:
-//#line 497 "gram.y"
+//#line 495 "gram.y"
 {
             imprimirRegla("exportacion_opcional");
             yyval = val_peek(0);
         }
 break;
 case 62:
-//#line 502 "gram.y"
+//#line 500 "gram.y"
 {
             yyerror("Falta la palabra clave 'TO' en la declaracion EXPORT");
             yyval = val_peek(0);
         }
 break;
 case 63:
-//#line 512 "gram.y"
+//#line 510 "gram.y"
 {
-            int refClase = val_peek(2).ival;
-            String nomClase = TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.LEXEMA);
-            int idClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
-            if (idClase == TablaSimbolos.LEXEMA_NO_ENCONTRADO || !"nombre_clase".equals(TablaSimbolos.obtenerAtributo(idClase, TablaSimbolos.USO))) {
+            String nomClase = val_peek(2).sval;
+            String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+            if (!TablaSimbolos.existeSimbolo(claveClase) || !"nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase))) {
                 agregarErrorSemantico("Clase '" + nomClase + "' no declarada o no es una clase valida");
             } else {
                 ArrayList<String> variables = (ArrayList<String>) val_peek(1).obj;
@@ -1518,59 +1526,57 @@ case 63:
         }
 break;
 case 64:
-//#line 530 "gram.y"
+//#line 527 "gram.y"
 { yyerror("Falta ';' al final de la declaracion de objeto"); }
 break;
 case 65:
-//#line 537 "gram.y"
+//#line 534 "gram.y"
 {
             String tipoDato = val_peek(2).sval;
             ArrayList<String> variables = (ArrayList<String>) val_peek(1).obj;
             if (variables != null) {
                 for (int i = 0; i < variables.size(); i++) {
                     String nombreVar = variables.get(i);
-                    int id = TablaSimbolos.declararVariable(nombreVar, tipoDato, "variable", ambitoActual);
-                    if (id != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
-                        TablaSimbolos.agregarAtributo(id, "COMPTIME", "true");
+                    String clave = TablaSimbolos.declararVariable(nombreVar, tipoDato, "variable", ambitoActual);
+                    if (clave != null) {
+                        TablaSimbolos.agregarAtributo(clave, "COMPTIME", Boolean.TRUE);
                     }
                 }
             }
         }
 break;
 case 66:
-//#line 551 "gram.y"
+//#line 548 "gram.y"
 { yyerror("Falta ';' al final de la declaracion comptime"); }
 break;
 case 67:
-//#line 553 "gram.y"
+//#line 550 "gram.y"
 { yyerror("Falta el tipo de dato en la declaracion comptime"); }
 break;
 case 68:
-//#line 555 "gram.y"
+//#line 552 "gram.y"
 {
             yyerror("Falta el tipo de dato en la declaracion comptime");
             yyerror("Falta ';' al final de la declaracion comptime");
         }
 break;
 case 70:
-//#line 565 "gram.y"
+//#line 562 "gram.y"
 { imprimirRegla("sentencia_ejecutable"); }
 break;
 case 77:
-//#line 576 "gram.y"
+//#line 573 "gram.y"
 { yyerror("Sentencia ejecutable malformada o falta ';' previo"); }
 break;
 case 78:
-//#line 581 "gram.y"
+//#line 578 "gram.y"
 {
             if (val_peek(0) != null && val_peek(0).sval != null) {
-                int ref = val_peek(2).ival;
-                String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-                int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
-                if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
-                    boolean esComp = TablaSimbolos.esComptime(idVar);
-                    String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
-                    String tipoVar = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.TIPO);
+                String lexema = val_peek(2).sval;
+                String claveVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+                if (claveVar != null) {
+                    boolean esComp = TablaSimbolos.esComptime(claveVar);
+                    String tipoVar = TablaSimbolos.obtenerTipo(claveVar);
                     String tipoExp = (String) val_peek(0).obj;
 
                     if (esComp) {
@@ -1579,7 +1585,7 @@ case 78:
                         } else {
                             if (tipoExp != null) {
                                 if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                                    TablaSimbolos.guardarValorComptime(idVar, val_peek(0).sval);
+                                    TablaSimbolos.guardarValorComptime(claveVar, val_peek(0).sval);
                                 } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
                                     agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
                                 } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
@@ -1592,7 +1598,7 @@ case 78:
                     } else {
                         if (tipoExp != null) {
                             if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                                GeneradorTerceto.crearTerceto(":=", mangling, val_peek(0).sval, tipoVar);
+                                GeneradorTerceto.crearTerceto(":=", claveVar, val_peek(0).sval, tipoVar);
                             } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
                                 agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
                             } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
@@ -1609,7 +1615,7 @@ case 78:
         }
 break;
 case 79:
-//#line 627 "gram.y"
+//#line 622 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipoVar = (String) val_peek(2).obj;
@@ -1630,59 +1636,56 @@ case 79:
         }
 break;
 case 80:
-//#line 649 "gram.y"
+//#line 644 "gram.y"
 {
-            int refObj = val_peek(3).ival;
-            String nomObj = TablaSimbolos.obtenerAtributo(refObj, TablaSimbolos.LEXEMA);
-            int idObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
+            String nomObj = val_peek(3).sval;
+            String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
 
-            if (idObj == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+            if (claveObj == null) {
                 agregarErrorSemantico("Objeto '" + nomObj + "' no declarado o no visible en el ambito actual (" + ambitoActual + ")");
                 yyval = new ParserVal();
             } else {
-                String uso = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.USO);
-                String nomClase = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.TIPO);
-                int refClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+                String uso = TablaSimbolos.obtenerUso(claveObj);
+                String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+                String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
                 boolean esObjeto = ("objeto".equals(uso) || "parametro".equals(uso)) && 
-                    (refClase != TablaSimbolos.LEXEMA_NO_ENCONTRADO && "nombre_clase".equals(TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.USO)));
+                    (TablaSimbolos.existeSimbolo(claveClase) && "nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase)));
 
                 if (!esObjeto) {
                     agregarErrorSemantico("El identificador '" + nomObj + "' no es un objeto (uso actual: " + uso + ")");
                     yyval = new ParserVal();
                 } else {
-                    String claseMangled = nomClase + ":main";
-                    int refConst = val_peek(1).ival;
-                    String lexConst = TablaSimbolos.obtenerAtributo(refConst, TablaSimbolos.LEXEMA);
+                    String lexConst = val_peek(1).sval;
                     int idx = Integer.parseInt(lexConst);
-                    int cantAtr = TablaSimbolos.obtenerCantidadAtributosClase(claseMangled);
+                    ArrayList<String> atrs = TablaSimbolos.obtenerAtributosClase(claveClase);
+                    int cantAtr = atrs.size();
 
                     if (idx < 0 || idx >= cantAtr) {
                         agregarErrorSemantico("Indice posicional [" + idx + "$s] fuera de rango para la clase '" + nomClase + "' (cantidad de atributos: " + cantAtr + ")");
                         yyval = new ParserVal();
                     } else {
-                        String nomAtr = TablaSimbolos.obtenerNombreAtributoClase(claseMangled, idx);
-                        String tipoAtr = TablaSimbolos.obtenerTipoAtributoClase(claseMangled, idx);
-                        int idAtr = TablaSimbolos.buscarPorMangling(nomAtr + ":main:" + nomClase);
+                        String nomAtr = atrs.get(idx);
+                        String claveAtr = claveClase + TablaSimbolos.SEPARADOR + nomAtr;
+                        String tipoAtr = TablaSimbolos.obtenerTipo(claveAtr);
 
                         /* Chequeo de visibilidad (Tema 26)*/
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
                         boolean accesoValido = true;
                         if (claseActual != null && !claseActual.equals(nomClase)) {
-                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claseActual + ":main");
+                            String claveClaseActual = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + claseActual;
+                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claveClaseActual);
                             if (imports == null || !imports.contains(nomClase)) {
                                 agregarErrorSemantico("La clase '" + claseActual + "' no importa a la clase '" + nomClase + "'");
                                 accesoValido = false;
-                            } else if (!TablaSimbolos.estaExportadoA(idAtr, claseActual)) {
+                            } else if (!TablaSimbolos.estaExportadoA(claveAtr, claseActual)) {
                                 agregarErrorSemantico("El atributo '" + nomAtr + "' de la clase '" + nomClase + "' no esta exportado a la clase '" + claseActual + "'");
                                 accesoValido = false;
                             }
                         }
 
                         if (accesoValido) {
-                            String manglingObj = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.MANGLING);
-                            ParserVal pv = new ParserVal(manglingObj + "[" + idx + "$s]");
+                            ParserVal pv = new ParserVal(claveObj + "[" + idx + "$s]");
                             pv.obj = tipoAtr;
-                            pv.ival = idAtr;
                             yyval = pv;
                         } else {
                             yyval = new ParserVal();
@@ -1693,48 +1696,43 @@ case 80:
         }
 break;
 case 81:
-//#line 710 "gram.y"
+//#line 702 "gram.y"
 {
-            int refObj = val_peek(3).ival;
-            String nomObj = TablaSimbolos.obtenerAtributo(refObj, TablaSimbolos.LEXEMA);
-            int idObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
+            String nomObj = val_peek(3).sval;
+            String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
 
-            if (idObj == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+            if (claveObj == null) {
                 agregarErrorSemantico("Objeto '" + nomObj + "' no declarado o no visible en el ambito actual (" + ambitoActual + ")");
                 yyval = new ParserVal();
             } else {
-                String uso = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.USO);
-                String nomClase = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.TIPO);
-                int refClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+                String uso = TablaSimbolos.obtenerUso(claveObj);
+                String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+                String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
                 boolean esObjeto = ("objeto".equals(uso) || "parametro".equals(uso)) && 
-                    (refClase != TablaSimbolos.LEXEMA_NO_ENCONTRADO && "nombre_clase".equals(TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.USO)));
+                    (TablaSimbolos.existeSimbolo(claveClase) && "nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase)));
 
                 if (!esObjeto) {
                     agregarErrorSemantico("El identificador '" + nomObj + "' no es un objeto (uso actual: " + uso + ")");
                     yyval = new ParserVal();
                 } else {
-                    String claseMangled = nomClase + ":main";
-                    int refIdx = val_peek(1).ival;
-                    String nomIdx = TablaSimbolos.obtenerAtributo(refIdx, TablaSimbolos.LEXEMA);
-                    int idVarIdx = TablaSimbolos.buscarIdentificador(nomIdx, ambitoActual);
+                    String nomIdx = val_peek(1).sval;
+                    String claveVarIdx = TablaSimbolos.buscarIdentificador(nomIdx, ambitoActual);
 
-                    if (idVarIdx == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                    if (claveVarIdx == null) {
                         agregarErrorSemantico("Variable de indice '" + nomIdx + "' no declarada");
                         yyval = new ParserVal();
                     } else {
-                        String tipoIdx = TablaSimbolos.obtenerAtributo(idVarIdx, TablaSimbolos.TIPO);
+                        String tipoIdx = TablaSimbolos.obtenerTipo(claveVarIdx);
                         if (!"SHORTINT".equals(tipoIdx)) {
                             agregarErrorSemantico("El indice de acceso posicional debe ser de tipo SHORTINT (se encontro: " + tipoIdx + ")");
                             yyval = new ParserVal();
                         } else {
-                            String manglingIdx = TablaSimbolos.obtenerAtributo(idVarIdx, TablaSimbolos.MANGLING);
-                            String manglingObj = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.MANGLING);
-                            String tipoDefecto = TablaSimbolos.obtenerTipoAtributoClase(claseMangled, 0);
+                            ArrayList<String> atrs = TablaSimbolos.obtenerAtributosClase(claveClase);
+                            String tipoDefecto = (!atrs.isEmpty()) ? TablaSimbolos.obtenerTipo(claveClase + TablaSimbolos.SEPARADOR + atrs.get(0)) : "SHORTINT";
                             if (tipoDefecto == null) tipoDefecto = "SHORTINT";
 
-                            ParserVal pv = new ParserVal(manglingObj + "[" + manglingIdx + "]");
+                            ParserVal pv = new ParserVal(claveObj + "[" + claveVarIdx + "]");
                             pv.obj = tipoDefecto;
-                            pv.ival = idObj;
                             yyval = pv;
                         }
                     }
@@ -1743,17 +1741,17 @@ case 81:
         }
 break;
 case 82:
-//#line 758 "gram.y"
+//#line 745 "gram.y"
 { yyerror("Acceso posicional invalido: solo se permite constante SHORTINT positiva o identificador"); yyval = new ParserVal(); }
 break;
 case 83:
-//#line 764 "gram.y"
+//#line 751 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 84:
-//#line 768 "gram.y"
+//#line 755 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -1784,7 +1782,7 @@ case 84:
         }
 break;
 case 85:
-//#line 797 "gram.y"
+//#line 784 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -1815,25 +1813,25 @@ case 85:
         }
 break;
 case 86:
-//#line 825 "gram.y"
+//#line 812 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 87:
-//#line 826 "gram.y"
+//#line 813 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 88:
-//#line 827 "gram.y"
+//#line 814 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 89:
-//#line 831 "gram.y"
+//#line 818 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 90:
-//#line 835 "gram.y"
+//#line 822 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -1864,7 +1862,7 @@ case 90:
         }
 break;
 case 91:
-//#line 864 "gram.y"
+//#line 851 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -1895,48 +1893,45 @@ case 91:
         }
 break;
 case 92:
-//#line 892 "gram.y"
+//#line 879 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 93:
-//#line 893 "gram.y"
+//#line 880 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 94:
-//#line 894 "gram.y"
+//#line 881 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 95:
-//#line 895 "gram.y"
+//#line 882 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 96:
-//#line 896 "gram.y"
+//#line 883 "gram.y"
 { yyerror("Falta operador en la expresion"); yyval = new ParserVal(); }
 break;
 case 97:
-//#line 897 "gram.y"
+//#line 884 "gram.y"
 { yyerror("Falta operador en la expresion"); yyval = new ParserVal(); }
 break;
 case 98:
-//#line 898 "gram.y"
+//#line 885 "gram.y"
 { yyerror("Falta operador en la expresion"); yyval = new ParserVal(); }
 break;
 case 99:
-//#line 903 "gram.y"
+//#line 890 "gram.y"
 {
-            int ref = val_peek(0).ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
-            if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
-                String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
-                String tipo = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.TIPO);
-                boolean esComp = TablaSimbolos.esComptime(idVar);
+            String lexema = val_peek(0).sval;
+            String claveVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+            if (claveVar != null) {
+                String tipo = TablaSimbolos.obtenerTipo(claveVar);
+                boolean esComp = TablaSimbolos.esComptime(claveVar);
                 if (esComp) {
-                    if (TablaSimbolos.tieneValorComptime(idVar)) {
-                        String val = TablaSimbolos.obtenerValorComptime(idVar);
+                    if (TablaSimbolos.tieneValorComptime(claveVar)) {
+                        String val = TablaSimbolos.obtenerValorComptime(claveVar);
                         ParserVal pv = new ParserVal(val);
-                        pv.ival = idVar;
                         pv.obj = tipo;
                         yyval = pv;
                     } else {
@@ -1944,8 +1939,7 @@ case 99:
                         yyval = new ParserVal();
                     }
                 } else {
-                    ParserVal pv = new ParserVal(mangling);
-                    pv.ival = idVar;
+                    ParserVal pv = new ParserVal(claveVar);
                     pv.obj = tipo;
                     yyval = pv;
                 }
@@ -1956,61 +1950,56 @@ case 99:
         }
 break;
 case 100:
-//#line 934 "gram.y"
+//#line 917 "gram.y"
 {
-            int id = val_peek(0).ival;
-            String lexema = TablaSimbolos.obtenerAtributo(id, TablaSimbolos.LEXEMA);
+            String lexema = val_peek(0).sval;
             int valor = Integer.parseInt(lexema);
             if (valor > AnalizadorLexico.ValorMaximoInt) {
                 yyerror("Constante shortint positiva fuera de rango (" + lexema + "). Rango permitido: [-128, 127]");
             }
-            TablaSimbolos.agregarAtributo(id, TablaSimbolos.TIPO, "SHORTINT");
+            TablaSimbolos.agregarAtributo(lexema, TablaSimbolos.TIPO, "SHORTINT");
             ParserVal pv = new ParserVal(lexema);
-            pv.ival = id;
             pv.obj = "SHORTINT";
             yyval = pv;
         }
 break;
 case 101:
-//#line 948 "gram.y"
+//#line 929 "gram.y"
 {
-            int id = val_peek(0).ival;
-            String lexema = TablaSimbolos.obtenerAtributo(id, TablaSimbolos.LEXEMA);
+            String lexema = val_peek(0).sval;
             double valor = Double.parseDouble(lexema);
             if (valor != 0.0 && (valor < AnalizadorLexico.ValorMinimoFloat || valor > AnalizadorLexico.ValorMaximoFloat)) {
                 yyerror("Constante singlef fuera de rango (" + lexema + ")");
             }
-            TablaSimbolos.agregarAtributo(id, TablaSimbolos.TIPO, "SINGLEF");
+            TablaSimbolos.agregarAtributo(lexema, TablaSimbolos.TIPO, "SINGLEF");
             ParserVal pv = new ParserVal(lexema);
-            pv.ival = id;
             pv.obj = "SINGLEF";
             yyval = pv;
         }
 break;
 case 102:
-//#line 962 "gram.y"
+//#line 941 "gram.y"
 {
-            int ref = val_peek(2).ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            int idFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
-            if (idFunc == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+            String lexema = val_peek(2).sval;
+            String claveFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+            if (claveFunc == null) {
                 agregarErrorSemantico("Funcion '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
                 yyval = new ParserVal();
             } else {
-                String uso = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.USO);
+                String uso = TablaSimbolos.obtenerUso(claveFunc);
                 if (!"funcion".equals(uso)) {
                     agregarErrorSemantico("El identificador '" + lexema + "' no es una funcion (uso actual: " + uso + ")");
                     yyval = new ParserVal();
                 } else {
-                    String funcMangled = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.MANGLING);
-                    String tipoRetorno = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.TIPO);
-                    int cantEsperada = TablaSimbolos.obtenerCantidadParametros(funcMangled);
+                    String tipoRetorno = TablaSimbolos.obtenerTipo(claveFunc);
+                    ArrayList<String> paramsFormales = TablaSimbolos.obtenerParametros(claveFunc);
+                    int cantEsperada = paramsFormales.size();
 
                     if (cantEsperada != 0) {
                         agregarErrorSemantico("Cantidad incorrecta de parametros en invocacion a '" + lexema + "': se esperaban " + cantEsperada + " pero se recibieron 0");
                         yyval = new ParserVal();
                     } else {
-                        int idCall = GeneradorTerceto.crearTerceto("CALL", funcMangled, "-", tipoRetorno);
+                        int idCall = GeneradorTerceto.crearTerceto("CALL", claveFunc, "-", tipoRetorno);
                         ParserVal pv = new ParserVal("[" + idCall + "]");
                         pv.obj = tipoRetorno;
                         yyval = pv;
@@ -2020,23 +2009,22 @@ case 102:
         }
 break;
 case 103:
-//#line 992 "gram.y"
+//#line 970 "gram.y"
 {
-            int ref = val_peek(3).ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            int idFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
-            if (idFunc == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+            String lexema = val_peek(3).sval;
+            String claveFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+            if (claveFunc == null) {
                 agregarErrorSemantico("Funcion '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
                 yyval = new ParserVal();
             } else {
-                String uso = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.USO);
+                String uso = TablaSimbolos.obtenerUso(claveFunc);
                 if (!"funcion".equals(uso)) {
                     agregarErrorSemantico("El identificador '" + lexema + "' no es una funcion (uso actual: " + uso + ")");
                     yyval = new ParserVal();
                 } else {
-                    String funcMangled = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.MANGLING);
-                    String tipoRetorno = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.TIPO);
-                    int cantEsperada = TablaSimbolos.obtenerCantidadParametros(funcMangled);
+                    String tipoRetorno = TablaSimbolos.obtenerTipo(claveFunc);
+                    ArrayList<String> paramsFormales = TablaSimbolos.obtenerParametros(claveFunc);
+                    int cantEsperada = paramsFormales.size();
                     ArrayList<ParserVal> paramsReales = (val_peek(1) != null && val_peek(1).obj != null) ? (ArrayList<ParserVal>) val_peek(1).obj : new ArrayList<>();
                     int cantRecibida = paramsReales.size();
 
@@ -2046,8 +2034,9 @@ case 103:
                     } else {
                         boolean paramsOk = true;
                         for (int i = 0; i < cantEsperada; i++) {
-                            String tipoFormal = TablaSimbolos.obtenerTipoParametro(funcMangled, i);
-                            String nomFormal = TablaSimbolos.obtenerNombreParametro(funcMangled, i);
+                            String nomFormal = paramsFormales.get(i);
+                            String claveFormal = claveFunc + TablaSimbolos.SEPARADOR + nomFormal;
+                            String tipoFormal = TablaSimbolos.obtenerTipo(claveFormal);
                             ParserVal pReal = paramsReales.get(i);
                             String tipoReal = (pReal != null) ? (String) pReal.obj : null;
 
@@ -2055,12 +2044,12 @@ case 103:
                                 agregarErrorSemantico("Incompatibilidad de tipos en parametro " + (i + 1) + " al invocar a '" + lexema + "': se esperaba " + tipoFormal + " pero se recibio " + tipoReal);
                                 paramsOk = false;
                             } else if (pReal != null && pReal.sval != null) {
-                                GeneradorTerceto.crearTerceto(":=", nomFormal, pReal.sval, tipoFormal);
+                                GeneradorTerceto.crearTerceto(":=", claveFormal, pReal.sval, tipoFormal);
                             }
                         }
 
                         if (paramsOk) {
-                            int idCall = GeneradorTerceto.crearTerceto("CALL", funcMangled, "-", tipoRetorno);
+                            int idCall = GeneradorTerceto.crearTerceto("CALL", claveFunc, "-", tipoRetorno);
                             ParserVal pv = new ParserVal("[" + idCall + "]");
                             pv.obj = tipoRetorno;
                             yyval = pv;
@@ -2073,84 +2062,83 @@ case 103:
         }
 break;
 case 105:
-//#line 1044 "gram.y"
+//#line 1022 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 106:
-//#line 1048 "gram.y"
+//#line 1026 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 107:
-//#line 1052 "gram.y"
+//#line 1030 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 108:
-//#line 1056 "gram.y"
+//#line 1034 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 109:
-//#line 1063 "gram.y"
+//#line 1041 "gram.y"
 {
-            int refObj = val_peek(4).ival;
-            String nomObj = TablaSimbolos.obtenerAtributo(refObj, TablaSimbolos.LEXEMA);
-            int idObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
+            String nomObj = val_peek(4).sval;
+            String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
 
-            if (idObj == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+            if (claveObj == null) {
                 agregarErrorSemantico("Objeto '" + nomObj + "' no declarado o no visible en el ambito actual (" + ambitoActual + ")");
                 yyval = new ParserVal();
             } else {
-                String uso = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.USO);
-                String nomClase = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.TIPO);
-                int refClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+                String uso = TablaSimbolos.obtenerUso(claveObj);
+                String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+                String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
                 boolean esObjeto = ("objeto".equals(uso) || "parametro".equals(uso)) && 
-                    (refClase != TablaSimbolos.LEXEMA_NO_ENCONTRADO && "nombre_clase".equals(TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.USO)));
+                    (TablaSimbolos.existeSimbolo(claveClase) && "nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase)));
 
                 if (!esObjeto) {
                     agregarErrorSemantico("El identificador '" + nomObj + "' no es un objeto (uso actual: " + uso + ")");
                     yyval = new ParserVal();
                 } else {
-                    int refMetodo = val_peek(2).ival;
-                    String nomMetodo = TablaSimbolos.obtenerAtributo(refMetodo, TablaSimbolos.LEXEMA);
+                    String nomMetodo = val_peek(2).sval;
 
                     /* Buscar metodo con herencia multiple (Tema 30 - Desambiguado Opcion 1)*/
-                    int idMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
-                    if (idMet == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                    String claveMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
+                    if (claveMet == null) {
                         agregarErrorSemantico("Metodo '" + nomMetodo + "' no encontrado en la clase '" + nomClase + "' ni en su jerarquia de herencia");
                         yyval = new ParserVal();
                     } else {
                         /* Chequeo de visibilidad (Tema 26)*/
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
                         boolean accesoValido = true;
-                        String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.AMBITO));
+                        String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAmbito(claveMet));
                         if (claseActual != null && claseDueniaMetodo != null && !claseActual.equals(claseDueniaMetodo)) {
-                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claseActual + ":main");
+                            String claveClaseActual = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + claseActual;
+                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claveClaseActual);
                             if (imports == null || !imports.contains(claseDueniaMetodo)) {
                                 agregarErrorSemantico("La clase '" + claseActual + "' no importa a la clase '" + claseDueniaMetodo + "'");
                                 accesoValido = false;
-                            } else if (!TablaSimbolos.estaExportadoA(idMet, claseActual)) {
+                            } else if (!TablaSimbolos.estaExportadoA(claveMet, claseActual)) {
                                 agregarErrorSemantico("El metodo '" + nomMetodo + "' de la clase '" + claseDueniaMetodo + "' no esta exportado a la clase '" + claseActual + "'");
                                 accesoValido = false;
                             }
                         }
 
                         if (accesoValido) {
-                            String metodoMangled = TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.MANGLING);
-                            String tipoRetorno = TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.TIPO);
-                            int cantEsperada = TablaSimbolos.obtenerCantidadParametros(metodoMangled);
+                            String tipoRetorno = TablaSimbolos.obtenerTipo(claveMet);
+                            ArrayList<String> paramsFormales = TablaSimbolos.obtenerParametros(claveMet);
+                            int cantEsperada = paramsFormales.size();
 
                             if (cantEsperada != 0) {
                                 agregarErrorSemantico("Cantidad incorrecta de parametros en invocacion a metodo '" + nomMetodo + "': se esperaban " + cantEsperada + " pero se recibieron 0");
                                 yyval = new ParserVal();
                             } else {
-                                int idCall = GeneradorTerceto.crearTerceto("CALL", metodoMangled, "-", tipoRetorno);
+                                int idCall = GeneradorTerceto.crearTerceto("CALL", claveMet, "-", tipoRetorno);
                                 ParserVal pv = new ParserVal("[" + idCall + "]");
                                 pv.obj = tipoRetorno;
                                 yyval = pv;
@@ -2164,53 +2152,52 @@ case 109:
         }
 break;
 case 110:
-//#line 1128 "gram.y"
+//#line 1105 "gram.y"
 {
-            int refObj = val_peek(5).ival;
-            String nomObj = TablaSimbolos.obtenerAtributo(refObj, TablaSimbolos.LEXEMA);
-            int idObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
+            String nomObj = val_peek(5).sval;
+            String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
 
-            if (idObj == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+            if (claveObj == null) {
                 agregarErrorSemantico("Objeto '" + nomObj + "' no declarado o no visible en el ambito actual (" + ambitoActual + ")");
                 yyval = new ParserVal();
             } else {
-                String uso = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.USO);
-                String nomClase = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.TIPO);
-                int refClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+                String uso = TablaSimbolos.obtenerUso(claveObj);
+                String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+                String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
                 boolean esObjeto = ("objeto".equals(uso) || "parametro".equals(uso)) && 
-                    (refClase != TablaSimbolos.LEXEMA_NO_ENCONTRADO && "nombre_clase".equals(TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.USO)));
+                    (TablaSimbolos.existeSimbolo(claveClase) && "nombre_clase".equals(TablaSimbolos.obtenerUso(claveClase)));
 
                 if (!esObjeto) {
                     agregarErrorSemantico("El identificador '" + nomObj + "' no es un objeto (uso actual: " + uso + ")");
                     yyval = new ParserVal();
                 } else {
-                    int refMetodo = val_peek(3).ival;
-                    String nomMetodo = TablaSimbolos.obtenerAtributo(refMetodo, TablaSimbolos.LEXEMA);
+                    String nomMetodo = val_peek(3).sval;
 
-                    int idMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
-                    if (idMet == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                    String claveMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
+                    if (claveMet == null) {
                         agregarErrorSemantico("Metodo '" + nomMetodo + "' no encontrado en la clase '" + nomClase + "' ni en su jerarquia de herencia");
                         yyval = new ParserVal();
                     } else {
                         /* Chequeo de visibilidad (Tema 26)*/
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
                         boolean accesoValido = true;
-                        String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.AMBITO));
+                        String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAmbito(claveMet));
                         if (claseActual != null && claseDueniaMetodo != null && !claseActual.equals(claseDueniaMetodo)) {
-                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claseActual + ":main");
+                            String claveClaseActual = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + claseActual;
+                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claveClaseActual);
                             if (imports == null || !imports.contains(claseDueniaMetodo)) {
                                 agregarErrorSemantico("La clase '" + claseActual + "' no importa a la clase '" + claseDueniaMetodo + "'");
                                 accesoValido = false;
-                            } else if (!TablaSimbolos.estaExportadoA(idMet, claseActual)) {
+                            } else if (!TablaSimbolos.estaExportadoA(claveMet, claseActual)) {
                                 agregarErrorSemantico("El metodo '" + nomMetodo + "' de la clase '" + claseDueniaMetodo + "' no esta exportado a la clase '" + claseActual + "'");
                                 accesoValido = false;
                             }
                         }
 
                         if (accesoValido) {
-                            String metodoMangled = TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.MANGLING);
-                            String tipoRetorno = TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.TIPO);
-                            int cantEsperada = TablaSimbolos.obtenerCantidadParametros(metodoMangled);
+                            String tipoRetorno = TablaSimbolos.obtenerTipo(claveMet);
+                            ArrayList<String> paramsFormales = TablaSimbolos.obtenerParametros(claveMet);
+                            int cantEsperada = paramsFormales.size();
                             ArrayList<ParserVal> paramsReales = (val_peek(1) != null && val_peek(1).obj != null) ? (ArrayList<ParserVal>) val_peek(1).obj : new ArrayList<>();
                             int cantRecibida = paramsReales.size();
 
@@ -2220,8 +2207,9 @@ case 110:
                             } else {
                                 boolean paramsOk = true;
                                 for (int i = 0; i < cantEsperada; i++) {
-                                    String tipoFormal = TablaSimbolos.obtenerTipoParametro(metodoMangled, i);
-                                    String nomFormal = TablaSimbolos.obtenerNombreParametro(metodoMangled, i);
+                                    String nomFormal = paramsFormales.get(i);
+                                    String claveFormal = claveMet + TablaSimbolos.SEPARADOR + nomFormal;
+                                    String tipoFormal = TablaSimbolos.obtenerTipo(claveFormal);
                                     ParserVal pReal = paramsReales.get(i);
                                     String tipoReal = (pReal != null) ? (String) pReal.obj : null;
 
@@ -2229,12 +2217,12 @@ case 110:
                                         agregarErrorSemantico("Incompatibilidad de tipos en parametro " + (i + 1) + " al invocar metodo '" + nomMetodo + "': se esperaba " + tipoFormal + " pero se recibio " + tipoReal);
                                         paramsOk = false;
                                     } else if (pReal != null && pReal.sval != null) {
-                                        GeneradorTerceto.crearTerceto(":=", nomFormal, pReal.sval, tipoFormal);
+                                        GeneradorTerceto.crearTerceto(":=", claveFormal, pReal.sval, tipoFormal);
                                     }
                                 }
 
                                 if (paramsOk) {
-                                    int idCall = GeneradorTerceto.crearTerceto("CALL", metodoMangled, "-", tipoRetorno);
+                                    int idCall = GeneradorTerceto.crearTerceto("CALL", claveMet, "-", tipoRetorno);
                                     ParserVal pv = new ParserVal("[" + idCall + "]");
                                     pv.obj = tipoRetorno;
                                     yyval = pv;
@@ -2251,7 +2239,7 @@ case 110:
         }
 break;
 case 111:
-//#line 1216 "gram.y"
+//#line 1193 "gram.y"
 {
             ArrayList<ParserVal> lista = new ArrayList<>();
             lista.add(val_peek(0));
@@ -2261,7 +2249,7 @@ case 111:
         }
 break;
 case 112:
-//#line 1224 "gram.y"
+//#line 1201 "gram.y"
 {
             ArrayList<ParserVal> lista = (ArrayList<ParserVal>) val_peek(2).obj;
             lista.add(val_peek(0));
@@ -2269,16 +2257,14 @@ case 112:
         }
 break;
 case 113:
-//#line 1234 "gram.y"
+//#line 1211 "gram.y"
 {
             if (val_peek(1) != null && val_peek(1).sval != null) {
-                int ref = val_peek(4).ival;
-                String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-                int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
-                if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
-                    boolean esComp = TablaSimbolos.esComptime(idVar);
-                    String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
-                    String tipoVar = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.TIPO);
+                String lexema = val_peek(4).sval;
+                String claveVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
+                if (claveVar != null) {
+                    boolean esComp = TablaSimbolos.esComptime(claveVar);
+                    String tipoVar = TablaSimbolos.obtenerTipo(claveVar);
                     String tipoExp = (String) val_peek(1).obj;
 
                     if (esComp) {
@@ -2288,7 +2274,7 @@ case 113:
                         } else {
                             if (tipoExp != null) {
                                 if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                                    TablaSimbolos.guardarValorComptime(idVar, val_peek(1).sval);
+                                    TablaSimbolos.guardarValorComptime(claveVar, val_peek(1).sval);
                                     ParserVal pv = new ParserVal(val_peek(1).sval);
                                     pv.obj = tipoVar;
                                     yyval = pv;
@@ -2309,7 +2295,7 @@ case 113:
                     } else {
                         if (tipoExp != null) {
                             if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                                int idTerceto = GeneradorTerceto.crearTerceto(":=", mangling, val_peek(1).sval, tipoVar);
+                                int idTerceto = GeneradorTerceto.crearTerceto(":=", claveVar, val_peek(1).sval, tipoVar);
                                 ParserVal pv = new ParserVal("[" + idTerceto + "]");
                                 pv.obj = tipoVar;
                                 yyval = pv;
@@ -2337,40 +2323,36 @@ case 113:
         }
 break;
 case 114:
-//#line 1300 "gram.y"
+//#line 1275 "gram.y"
 {
             yyerror("Uso del simbolo ':=' donde debe usarse '=' en asignacion dentro de expresion");
             yyval = new ParserVal();
         }
 break;
 case 115:
-//#line 1308 "gram.y"
+//#line 1283 "gram.y"
 {
-            int id_pos = val_peek(0).ival;
-            String lexema_pos = TablaSimbolos.obtenerAtributo(id_pos, TablaSimbolos.LEXEMA);
-            int id_neg = TablaSimbolos.convertirANegativo(lexema_pos);
-            TablaSimbolos.agregarAtributo(id_neg, TablaSimbolos.TIPO, "SHORTINT");
-            ParserVal pv = new ParserVal("-" + lexema_pos);
-            pv.ival = id_neg;
+            String lexemaPos = val_peek(0).sval;
+            String claveNeg = TablaSimbolos.convertirANegativo(lexemaPos);
+            TablaSimbolos.agregarAtributo(claveNeg, TablaSimbolos.TIPO, "SHORTINT");
+            ParserVal pv = new ParserVal("-" + lexemaPos);
             pv.obj = "SHORTINT";
             yyval = pv;
         }
 break;
 case 116:
-//#line 1319 "gram.y"
+//#line 1292 "gram.y"
 {
-            int id_pos = val_peek(0).ival;
-            String lexema_pos = TablaSimbolos.obtenerAtributo(id_pos, TablaSimbolos.LEXEMA);
-            int id_neg = TablaSimbolos.convertirANegativo(lexema_pos);
-            TablaSimbolos.agregarAtributo(id_neg, TablaSimbolos.TIPO, "SINGLEF");
-            ParserVal pv = new ParserVal("-" + lexema_pos);
-            pv.ival = id_neg;
+            String lexemaPos = val_peek(0).sval;
+            String claveNeg = TablaSimbolos.convertirANegativo(lexemaPos);
+            TablaSimbolos.agregarAtributo(claveNeg, TablaSimbolos.TIPO, "SINGLEF");
+            ParserVal pv = new ParserVal("-" + lexemaPos);
             pv.obj = "SINGLEF";
             yyval = pv;
         }
 break;
 case 117:
-//#line 1334 "gram.y"
+//#line 1305 "gram.y"
 {
             if (val_peek(1) != null && val_peek(1).sval != null) {
                 String tipoExp = (String) val_peek(1).obj;
@@ -2402,7 +2384,7 @@ case 117:
         }
 break;
 case 118:
-//#line 1368 "gram.y"
+//#line 1339 "gram.y"
 {
             if (val_peek(1) != null && val_peek(1).sval != null) {
                 int idBF = GeneradorTerceto.crearTerceto("BF", val_peek(1).sval, "?");
@@ -2411,15 +2393,15 @@ case 118:
         }
 break;
 case 120:
-//#line 1379 "gram.y"
+//#line 1350 "gram.y"
 { yyerror("Falta '(' de apertura en condicion de seleccion"); }
 break;
 case 121:
-//#line 1381 "gram.y"
+//#line 1352 "gram.y"
 { yyerror("Condicion de seleccion malformada o error en parentesis"); }
 break;
 case 122:
-//#line 1386 "gram.y"
+//#line 1357 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idBF = pilaSaltos.pop();
@@ -2430,7 +2412,7 @@ case 122:
         }
 break;
 case 123:
-//#line 1398 "gram.y"
+//#line 1369 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idSalto = pilaSaltos.pop();
@@ -2439,7 +2421,7 @@ case 123:
         }
 break;
 case 124:
-//#line 1405 "gram.y"
+//#line 1376 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idBI = pilaSaltos.pop();
@@ -2448,7 +2430,7 @@ case 124:
         }
 break;
 case 125:
-//#line 1412 "gram.y"
+//#line 1383 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idSalto = pilaSaltos.pop();
@@ -2458,7 +2440,7 @@ case 125:
         }
 break;
 case 126:
-//#line 1420 "gram.y"
+//#line 1391 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idBI = pilaSaltos.pop();
@@ -2468,7 +2450,7 @@ case 126:
         }
 break;
 case 127:
-//#line 1431 "gram.y"
+//#line 1402 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -2490,41 +2472,41 @@ case 127:
         }
 break;
 case 128:
-//#line 1453 "gram.y"
+//#line 1424 "gram.y"
 { yyval = new ParserVal(">="); }
 break;
 case 129:
-//#line 1454 "gram.y"
+//#line 1425 "gram.y"
 { yyval = new ParserVal("<="); }
 break;
 case 130:
-//#line 1455 "gram.y"
+//#line 1426 "gram.y"
 { yyval = new ParserVal("=="); }
 break;
 case 131:
-//#line 1456 "gram.y"
+//#line 1427 "gram.y"
 { yyval = new ParserVal("!="); }
 break;
 case 132:
-//#line 1457 "gram.y"
+//#line 1428 "gram.y"
 { yyval = new ParserVal(">"); }
 break;
 case 133:
-//#line 1458 "gram.y"
+//#line 1429 "gram.y"
 { yyval = new ParserVal("<"); }
 break;
 case 136:
-//#line 1465 "gram.y"
+//#line 1436 "gram.y"
 { yyerror("Falta el delimitador END en el bloque de sentencias"); }
 break;
 case 137:
-//#line 1471 "gram.y"
+//#line 1442 "gram.y"
 {
             pilaSaltos.push(GeneradorTerceto.getProximoIndice());
         }
 break;
 case 138:
-//#line 1478 "gram.y"
+//#line 1449 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int dirInicio = pilaSaltos.pop();
@@ -2535,77 +2517,75 @@ case 138:
         }
 break;
 case 139:
-//#line 1487 "gram.y"
+//#line 1458 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta el cuerpo de la iteracion REPEAT");
         }
 break;
 case 140:
-//#line 1492 "gram.y"
+//#line 1463 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta palabra clave UNTIL en la iteracion REPEAT");
         }
 break;
 case 141:
-//#line 1497 "gram.y"
+//#line 1468 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta palabra clave UNTIL y cuerpo en la iteracion REPEAT");
         }
 break;
 case 142:
-//#line 1502 "gram.y"
+//#line 1473 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta palabra clave UNTIL y ')' en la iteracion REPEAT");
         }
 break;
 case 143:
-//#line 1507 "gram.y"
+//#line 1478 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta palabra clave UNTIL, cuerpo y ')' en la iteracion REPEAT");
         }
 break;
 case 144:
-//#line 1515 "gram.y"
+//#line 1486 "gram.y"
 {
             yyval = val_peek(1);
         }
 break;
 case 145:
-//#line 1519 "gram.y"
+//#line 1490 "gram.y"
 {
             yyval = val_peek(1);
             yyerror("Falta '(' de apertura en condicion de iteracion");
         }
 break;
 case 146:
-//#line 1524 "gram.y"
+//#line 1495 "gram.y"
 {
             yyval = val_peek(0);
             yyerror("Falta ')' de cierre en condicion de iteracion");
         }
 break;
 case 147:
-//#line 1529 "gram.y"
+//#line 1500 "gram.y"
 {
             yyval = val_peek(0);
             yyerror("Faltan parentesis en condicion de iteracion");
         }
 break;
 case 148:
-//#line 1538 "gram.y"
+//#line 1509 "gram.y"
 {
-            int ref = val_peek(1).ival;
-            String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            GeneradorTerceto.crearTerceto("POUT", lexema, "-");
+            GeneradorTerceto.crearTerceto("POUT", val_peek(1).sval, "-");
         }
 break;
 case 149:
-//#line 1544 "gram.y"
+//#line 1513 "gram.y"
 {
             if (val_peek(1) != null && val_peek(1).sval != null) {
                 GeneradorTerceto.crearTerceto("POUT", val_peek(1).sval, "-", (String) val_peek(1).obj);
@@ -2613,32 +2593,32 @@ case 149:
         }
 break;
 case 150:
-//#line 1550 "gram.y"
+//#line 1519 "gram.y"
 { yyerror("Falta argumento en sentencia pout"); }
 break;
 case 151:
-//#line 1555 "gram.y"
+//#line 1524 "gram.y"
 {
             String funcionActual = obtenerFuncionActualMangled();
             if (funcionActual == null) {
                 agregarErrorSemantico("Sentencia RET fuera del cuerpo de una funcion");
             } else {
-                int idFunc = TablaSimbolos.buscarPorMangling(funcionActual);
-                String tipoDeclarado = TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.TIPO);
+                String claveFunc = funcionActual;
+                String tipoDeclarado = TablaSimbolos.obtenerTipo(claveFunc);
                 String tipoExp = (val_peek(1) != null) ? (String) val_peek(1).obj : null;
-                TablaSimbolos.agregarAtributo(idFunc, "TIENE_RET", "true");
+                TablaSimbolos.agregarAtributo(claveFunc, "TIENE_RET", Boolean.TRUE);
 
                 if (cant_retornos_auto >= 0) {
                     cant_retornos_auto++;
                     if ("auto".equals(tipoDeclarado)) {
-                        TablaSimbolos.agregarAtributo(idFunc, TablaSimbolos.TIPO, tipoExp);
+                        TablaSimbolos.agregarAtributo(claveFunc, TablaSimbolos.TIPO, tipoExp);
                     } else if (tipoExp != null && !tipoDeclarado.equals(tipoExp)) {
-                        TablaSimbolos.agregarAtributo(idFunc, TablaSimbolos.TIPO, "SINGLEF");
+                        TablaSimbolos.agregarAtributo(claveFunc, TablaSimbolos.TIPO, "SINGLEF");
                     }
                 } else {
                     if (tipoDeclarado != null && tipoExp != null && !tipoDeclarado.equals(tipoExp)) {
                         agregarErrorSemantico("Tipo de retorno incompatible en funcion '" + 
-                            TablaSimbolos.obtenerAtributo(idFunc, TablaSimbolos.LEXEMA) + 
+                            TablaSimbolos.obtenerNombre(claveFunc) + 
                             "': se esperaba " + tipoDeclarado + " pero se retorno " + tipoExp);
                     }
                 }
@@ -2649,7 +2629,7 @@ case 151:
             }
         }
 break;
-//#line 2575 "Parser.java"
+//#line 2555 "Parser.java"
 //########## END OF USER-SUPPLIED ACTIONS ##########
     }//switch
     //#### Now let's reduce... ####

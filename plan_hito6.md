@@ -1,5 +1,8 @@
 # Plan de Implementación — Hito 6: Funciones, Clases y Temas Avanzados
 
+> [!NOTE]
+> **Actualización post-consulta (07/11):** Por indicación docente, `TablaSimbolos` fue migrada a claves `String` mangledas (`main@ambito@nombre`), atributos `Map<String, Object>` y listas `ArrayList<String>`. Ver detalle en `GUIA_DEFENSA_ETAPA3.md`.
+
 **Materia:** Diseño de Compiladores I / Compiladores e Intérpretes  
 **Grupo:** 20 · Ingeniería de Sistemas  
 **Etapa:** Etapa 3 (Generación de Código Intermedio por Tercetos y Chequeos Semánticos)  

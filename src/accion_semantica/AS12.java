@@ -10,8 +10,8 @@ public class AS12 extends Accion_Semantica{
         String token_cerrado = token_actual.toString();
         // Tema 10: las cadenas multilineas se guardan sin saltos de linea en la Tabla de Simbolos
         String cadena_limpia = token_cerrado.replace("\r", "").replace("\n", "");
-        int id = TablaSimbolos.agregarOBuscarConstante(cadena_limpia);
-        AnalizadorLexico.setReferenciaTablaSimbolos(id);
+        String clave = TablaSimbolos.agregarOBuscarConstante(cadena_limpia, "CADENA");
+        AnalizadorLexico.setReferenciaTablaSimbolos(clave);
         return TablaPalabrasReservadas.obtenerIdentificador("CADENA");
     }
 }

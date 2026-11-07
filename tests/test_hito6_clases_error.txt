@@ -53,9 +53,48 @@ begin
     end;
 end;
 
+// Error 11: Herencia directa a si misma (auto-ciclo)
+class c_auto_ciclo
+begin
+    extends c_auto_ciclo;
+    shortint x;
+end;
+
+// Error 12: Intento de ciclo mutuo por referencia hacia adelante (clase no declarada)
+class c_fwd_a
+begin
+    extends c_fwd_b;
+    shortint atr_a;
+end;
+
+class c_fwd_b
+begin
+    extends c_fwd_a;
+    shortint atr_b;
+end;
+
+// Error 13: Ciclo indirecto mediante redeclaracion de clase
+class c_ciclo1
+begin
+    shortint val1;
+end;
+
+class c_ciclo2
+begin
+    extends c_ciclo1;
+    shortint val2;
+end;
+
+class c_ciclo1
+begin
+    extends c_ciclo2;
+    shortint val3;
+end;
+
 c_base b;
 shortint r_entero;
 singlef idx_float;
+c_fwd_a obj_fwd;
 
 // Error 5: Objeto de clase no declarada
 c_no_existe obj_malo;
@@ -78,5 +117,8 @@ begin
 
     // Error 10: Incompatibilidad de tipos en asignacion a atributo (SINGLEF a SHORTINT sin tos)
     b[0$s] := 3.14;
+
+    // Invocacion de metodo inexistente sobre clase con intento de ciclo mutuo (sin StackOverflowError)
+    obj_fwd.metodo_inexistente();
 end
 

@@ -17,8 +17,8 @@ public class AS10 extends Accion_Semantica{
             e.printStackTrace();
         }
         if ((resultado >= AnalizadorLexico.ValorMinimoFloat && resultado <= AnalizadorLexico.ValorMaximoFloat) || resultado == 0.0){
-            int id = TablaSimbolos.agregarOBuscarConstante("" + resultado);
-            AnalizadorLexico.setReferenciaTablaSimbolos(id);
+            String clave = TablaSimbolos.agregarOBuscarConstante("" + resultado, "SINGLEF");
+            AnalizadorLexico.setReferenciaTablaSimbolos(clave);
             return TablaPalabrasReservadas.obtenerIdentificador("CTE_SINGLEF");
         }
         AnalizadorLexico.mostrarWarning("WARNING: El double "+ resultado + " esta fuera de rango");
