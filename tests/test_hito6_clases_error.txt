@@ -1,0 +1,82 @@
+programa_clases_error
+
+class c_base
+begin
+    shortint atr_privado;
+    shortint atr_exportado export to c_autorizada;
+
+    shortint m_privado()
+    begin
+        ret(1$s);
+    end;
+
+    shortint m_exportado()
+    begin
+        ret(2$s);
+    end export to c_autorizada;
+end;
+
+// Error 1: Clase base no declarada en EXTENDS
+class c_herencia_invalida
+begin
+    extends c_fantasma;
+    shortint x;
+end;
+
+// Error 2: Clase no declarada en IMPORT FROM
+class c_import_invalido import from c_inexistente
+begin
+    shortint y;
+end;
+
+class c_autorizada import from c_base
+begin
+    shortint m_test(c_base obj)
+    begin
+        // Error 3: Miembro no exportado a esta clase
+        obj[0$s] := 10$s; // atr_privado no esta exportado a c_autorizada
+        obj.m_privado();   // m_privado no esta exportado a c_autorizada
+
+        ret(0$s);
+    end;
+end;
+
+class c_no_importa
+begin
+    shortint m_test(c_base obj)
+    begin
+        // Error 4: La clase c_no_importa no importa a c_base
+        obj[1$s] := 20$s;
+        obj.m_exportado();
+
+        ret(0$s);
+    end;
+end;
+
+c_base b;
+shortint r_entero;
+singlef idx_float;
+
+// Error 5: Objeto de clase no declarada
+c_no_existe obj_malo;
+
+begin
+    // Error 6: Indice posicional fuera de rango (c_base tiene 2 atributos: 0 y 1)
+    b[5$s] := 1$s;
+
+    // Error 7: Indice de acceso posicional no es SHORTINT
+    idx_float := 1.5;
+    b[idx_float] := 1$s;
+
+    // Error 8: Metodo no encontrado en la jerarquia
+    b.metodo_inexistente();
+
+    // Error 9: Acceso posicional e invocacion de metodo sobre identificador que no es objeto
+    r_entero := 5$s;
+    r_entero[0$s] := 1$s;
+    r_entero.m();
+
+    // Error 10: Incompatibilidad de tipos en asignacion a atributo (SINGLEF a SHORTINT sin tos)
+    b[0$s] := 3.14;
+end
+

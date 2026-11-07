@@ -34,7 +34,7 @@ Es en las partes declarativas de la gramatica que se llama a declararVariable, y
 
 Se llama cuando:
 asignacion
-facto
+factor
 unica
 
 
@@ -75,4 +75,87 @@ Ya hablamos de como se declaran las funciones. Ahora toca hablar de como se invo
 
 Para el caso de las funciones que si necesitan parametros hay que trabajar un poco mas. La regla **lista_expresiones** guarda una lista de objetos del parser, cada uno tiene el valor en **svalue** y el tipo en el **obj**. Al igual que antes validamos que esté al alcanse y que sea una funcion, si se cumple entonces obtengo la cantidad de parametros esperada de la funcion con la longitud de la lista de expresiones. Si la longitud es la misma, entonces tengo que iterar y comparar posicion a posicion si el tipo esperado es el mismo que el de la expresion real, cuando la verificacion se cumple genero un terceto para asignar al parametro formal el valor y tipo del real. Cuando termine de recorrer toda la lista sin errores, puedo emitir el terceto con la llamada a la funcion 
 
+# Comptime
 
+Para las variables **COMPTIME** necesitabamos que en lugar de  generar tercetos sus valores se guarden en tiempo de compilacion. Entonces hay que distinguir dos casos, cuando es un **identificador** o cuando es una operacion entre variables **comptime**. Para el primer caso guardamos el valor en la **TS** como un atributo **valor_comptime**. El segundo caso se refiere al momento en que la gramatica reduce una expresion/termino/factor, entonces tenemos que guardar el resultado dentro del **parser val** como **sval**. Para saber si una expresion es **comptime** debemos preguntar que **no** contenga **[ ]** (correspondiente a un terceto) ni **:**(una variable)
+
+Existen situaciones donde es necesario dar error en tiempo de compilacion. El primero ocurre cuando se quiere leer el valor de una variable **comptime** que todavia no fue inicializada. Tambien hay que dar error cuando se quiere operar una **comptime** con otra avariable cuyo valor se conoce en tiempo de ejecucion. Es valido operar con numeros explicitos y otras **comptime**
+
+# Clases Herencia y Visibilidad
+
+
+En la parte de POO tenemos tres temas juntos:
+- **Tema 30 (Herencia multiple - Desambiguado Opcion 1):** Cuando una clase declara `EXTENDS c1, c2;`, guardamos en la tabla de símbolos la lista ordenada de padres (`HEREDA_0`, `HEREDA_1`, etc.). Al buscar un método o atributo (`buscarMiembroEnJerarquia`), primero busca en la propia clase (`:main:clase`), y si no está, busca en los padres en el orden estricto de izquierda a derecha. La primera coincidencia encontrada es la que se usa.
+- **Tema 26 (Import / Export):** Una clase puede indicar `IMPORT FROM c1, c2;` y sus atributos o métodos pueden llevar `EXPORT TO c3, c4;`. Cuando un método de una clase `B` accede a un miembro de `A`, validamos que `B` tenga en sus imports a `A`, y que el miembro de `A` tenga en su lista de export a `B`. Si alguna de las dos cosas no se cumple, damos error semántico.
+- **Tema 29 (Acceso posicional):** En lugar de usar punto para acceder a los atributos, se accede con corchetes `obj[0$s]` o `obj[idx]`. En la tabla de símbolos, cada atributo declarado en la clase se registra con su posición (`ATR_NOMBRE_0`, `ATR_TIPO_0`, etc.). Si se accede con constante numérica, verificamos en tiempo de compilación que el índice sea válido (entre 0 y la cantidad de atributos menos uno). Si se accede con variable, validamos que dicha variable sea de tipo `SHORTINT`. En los tercetos generamos la asignación o lectura referenciando al objeto indexado.
+
+Vamos a explicar toda la historia de cómo fuimos construyendo la solución paso a paso, yendo desde lo más simple hasta las invocaciones y chequeos finales.
+
+Las clases tienen un **encabezado_clase** que actualiza el ambito actual. A partir de ahi tenemos que identificar los atributos. Los atributos de las clases se guardan con la misma estrategia que usamos en las funciones. Para cada atributo atributo vamos a agregar 2 campos a la entrada de la **TS** asociada a la funcion, **ATR_NOMBRE_i** y **ATR_TIPO_i** y actualiza el contador **CANT_ATRIBUTOS**. Nos facilita el acceso posicional a atributos del tema 29.   
+
+Cuando queremos instanciar una variable del tipo de una clase, tenemos que validar que el tipo que nos pasaron realmente exista en la tabla de simbolos y tenga **USO == nombre_clase**, sino damos un error semantico que anuncia que la clase no fue declarada. Si la declaracion es correcta, declaramos la variable con el tipo que corresponde y **USO = objeto**.
+
+Ademas tenemos que contemplar la herencia multiple. La sintaxis es **EXTENDS lista_identificadores**, entonces lo primero es recorrer la lista y validar que los identificadores existan y sean **nombre_clase**. Luego de validar agregamos mas atributos a la funcion en la **TS**, **HEREDA_i** por cada herencia. 
+
+Es importante registrar las herencias en orden porque luego para desambiguar los casos donde se necesita recuperar un metodo o atributo que está presente en 2 herencias tenemos que recorrer en orden y tomar el primero. La busqueda la realiza **TablaSimbolos.registrarHerencia**, que primero recorre la **TS** buscando el atributo/metodo con el mismo ambito de la funcion. Si no lo encuentra entonces toma todas las herencias en orden, y por cada una vuelve a realizar la misma busqueda recursiva. En ese momento podría suceder un ciclo de herencias donde A herede de B y viceverza, para evitarlo llevamos un conjunto de visitados.
+
+
+## 4. Import / Export (Tema 26) y cuándo se chequea la visibilidad
+
+El **Tema 26** introduce el control de visibilidad entre clases:
+- Una clase puede decir desde qué otras clases importa miembros: `class B import from A begin ... end;`
+- Y un atributo o método de una clase puede decir a quién se exporta: `shortint x export to B, C;` o `shortint m() begin ... end export to B;`
+
+Acá también tenemos dos momentos: el registro y el chequeo estático.
+
+### En la declaración:
+- Cuando se reduce `importacion_opcional` (`IMPORT FROM lista_identificadores`), verificamos que las clases que se intentan importar existan en la tabla de símbolos. Si no existen, tiramos error semántico. Si existen, llamamos a `registrarImports`, que guarda `IMPORT_0`, `IMPORT_1`, etc., en la clase cliente.
+- Cuando se reduce `exportacion_opcional` (`EXPORT TO lista_identificadores`), guardamos en la entrada del atributo o método un string `EXPORT_TO` con las clases autorizadas (ej. `"B,C"`).  
+  **Un detalle muy importante de diseño:** en `export to` no podemos exigir que las clases destino ya estén declaradas antes en el archivo. ¿Por qué? Porque en un código normal como el que da la cátedra en el enunciado, la clase `A` se declara primero y exporta a `B`, pero `B` recién se escribe más abajo. Si exigiéramos que `B` exista antes, tendríamos un error de huevo o la gallina. Por eso, en la declaración solo guardamos la lista de nombres autorizados, y el chequeo real de visibilidad lo hacemos en el punto de uso.
+
+### En el punto de uso (Chequeo estático de visibilidad):
+¿Cuándo se chequea? Cada vez que se intenta acceder a un atributo o invocar un método de otra clase.  
+El compilador mira en qué ámbito estamos actualmente mediante `obtenerClaseDeAmbito(ambitoActual)`. Si estamos adentro de un método de la clase `B`, y el objeto al que estamos accediendo es de la clase `A`:
+1. **Primer chequeo:** ¿La clase `B` declaró que importa a `A`?  
+   Consultamos `obtenerImports("B:main")`. Si `A` no está en la lista de importados, emitimos:  
+   `Error semantico (linea X): La clase 'B' no importa a la clase 'A'`
+2. **Segundo chequeo:** ¿Ese atributo o método específico de `A` tiene permiso para `B`?  
+   Llamamos a `TablaSimbolos.estaExportadoA(idMiembro, "B")`. Si el miembro no tiene a `B` en su lista `EXPORT_TO`, emitimos:  
+   `Error semantico (linea X): El miembro 'x' de la clase 'A' no esta exportado a la clase 'B'`
+
+Si ambas cosas están bien, el acceso se permite. Si estamos adentro de la misma clase dueña del objeto, no se pide import/export porque el acceso es interno.
+
+## 5. Acceso posicional a atributos (Tema 29) y generación de código
+
+Ahora que ya vimos cómo se guardan los atributos, cómo se hereda y cómo se controla la visibilidad, podemos ver cómo se usan los atributos con notación posicional:
+`b[0$s] := 25$s;` o `d[idx] := 42$s;`
+
+La regla `acceso_posicional` puede venir con constante entera (`CTE_SHORTINT`) o con variable (`IDENTIFICADOR`). En ambos casos:
+1. Valida que el identificador del objeto exista y sea efectivamente un objeto (o un parámetro formal de tipo clase, como cuando se pasa `c_base obj` a un método).
+2. **Si el índice es constante (`0$s`, `1$s`):**
+   - Parseamos el número del índice.
+   - Chequeamos el rango estático: tiene que ser mayor o igual a 0 y estrictamente menor a `CANT_ATRIBUTOS`. Si alguien pone `b[5$s]` en una clase que tiene 2 atributos, tiramos inmediatamente:  
+     `Error semantico (linea X): Indice posicional [5$s] fuera de rango para la clase 'c_base' (cantidad de atributos: 2)`
+   - Si el rango es correcto, obtenemos de la tabla de símbolos el nombre real y el tipo de ese atributo (`ATR_NOMBRE_idx`, `ATR_TIPO_idx`).
+   - Aplicamos el chequeo de visibilidad (Tema 26) que explicamos antes.
+   - Sintetizamos el operando como `b:main[0$s]` y le asociamos su tipo (`SHORTINT` o `SINGLEF`).
+3. **Si el índice es variable (`b[idx]`):**
+   - Validamos que la variable `idx` esté declarada.
+   - Validamos que sea de tipo `SHORTINT`. Si le pasan un `SINGLEF`, tiramos error semántico porque los índices deben ser enteros.
+   - Sintetizamos el operando como `b:main[idx:main]`.
+
+Cuando esto se usa del lado izquierdo de una asignación (`acceso_posicional := expresion`):
+- Comparamos el tipo del atributo con el tipo de la expresión.
+- Si ambos coinciden, emitimos el terceto de asignación: `( := , b:main[0$s] , 25 )`.
+- Si hay incompatibilidad (por ejemplo asignar un float a un entero sin `tos()`), tiramos el error semántico de tipos correspondiente.
+
+Y si se usa adentro de una expresión aritmética (`r := b[0$s] + 1$s;`), el acceso posicional sintetiza su valor y tipo, generando el terceto de suma y luego la asignación sin ninguna diferencia respecto a una variable común.
+
+## 6. Invocación de métodos (`invocacion_metodo`)
+
+Para cerrar el circuito, la invocación de métodos (`obj.metodo()` o `obj.metodo(params)`) junta todos los elementos que explicamos:
+1. Valida que `obj` sea un objeto o parámetro de tipo clase.
+2. Resuelve el método llamando a `buscarMiembroEnJerarquia` (aplicando la herencia múltiple y el Desambiguado Opción 1).
+3. Verifica la visibilidad con `IMPORT FROM` y `EXPORT TO`.
+4. Si tiene parámetros, compara la cantidad recibida con la esperada (`CANT_PARAMS`), chequea que coincidan los tipos uno a uno y emite los tercetos de copia de parámetros `( := , paramFormal , paramReal )`.
+5. Finalmente emite el terceto de llamada `( CALL , metodoMangled , - )` y sintetiza el tipo de retorno para que pueda usarse en expresiones o asignaciones.

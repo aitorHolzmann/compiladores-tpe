@@ -24,7 +24,13 @@
 [Hito 5] Control de Flujo y Backpatching: IF, IF-ELSE y REPEAT UNTIL (Tema 12) (COMPLETADO)
     │
     ▼
-[Hito 6] Funciones, Clases y Temas Avanzados (AUTO FUNCTION, COMPTIME, IMPORT/EXPORT, Herencia Múltiple) (SIGUIENTE)
+[Hito 6] Funciones, Clases y Temas Avanzados:
+    ├── 6.1 Funciones ordinarias y AUTO FUNCTION (Tema 21) (COMPLETADO)
+    ├── 6.2 Variables en Tiempo de Compilacion COMPTIME (Tema 22) (COMPLETADO)
+    └── 6.3 Clases, IMPORT/EXPORT, Acceso Posicional y Herencia Multiple (COMPLETADO)
+    │
+    ▼
+[Cierre Etapa 3] Caso Integrador Final, Checklist de Entrega TP3 y Defensa Oral (SIGUIENTE)
 ```
 
 ---
@@ -1323,10 +1329,577 @@ Compilacion finalizada con 1 error(es) sintactico(s) y 6 error(es) semantico(s)
 
 ---
 
-### 6.2. Sub-hito 6.2 (SIGUIENTE): Variables en Tiempo de Compilación `COMPTIME` (Tema 22)
-- Atributos `COMPTIME` y valor constante evaluado estáticamente en la Tabla de Símbolos.
-- Supresión de tercetos en tiempo de ejecución.
-- Detección de errores semánticos por asignación de variables de runtime a variables `COMPTIME`.
+### 6.2. Sub-hito 6.2: Variables en Tiempo de Compilacion `COMPTIME` (Tema 22) (COMPLETADO)
+
+#### 6.2.1. Objetivo Tecnico
+Implementar el soporte integral para variables que **solo existen durante la compilacion** (`COMPTIME`), cumpliendo estrictamente con las directivas de `Tp3.pdf` (Tema 22):
+1. **Registro estatico de valor:** El compilador calcula y almacena en la Tabla de Símbolos el valor estático que adquiere la variable a lo largo del programa (`VALOR_COMPTIME`).
+2. **Supresion de tercetos en runtime:** Ninguna asignacion ni operacion puramente estatica sobre variables `COMPTIME` debe emitir tercetos de ejecucion.
+3. **Sustitucion constante:** Cada vez que una variable `COMPTIME` se utiliza en cualquier expresion de codigo, se sustituye directamente en el terceto por su valor literal ya registrado, en lugar de su identificador mangled.
+4. **Validacion semantica obligatoria:** Impedir que una variable `COMPTIME` reciba expresiones que dependan de variables o estados de tiempo de ejecucion (runtime).
+
+---
+
+#### 6.2.2. Decisiones de Diseno y Preguntas Conceptuales para la Defensa
+
+##### ❓ Pregunta 1: ¿Por que una asignacion a una variable `COMPTIME` (ej. `c := 3$s` o `c := c + 7$s`) NO genera tercetos de ejecucion?
+* **Respuesta para la defensa:**  
+  Las variables normales de un programa residen en memoria dinamica o en el segmento de datos (`.data`) en Assembler y sus valores cambian durante la ejecucion de la CPU.  
+  Una variable declarada con `COMPTIME` (Tema 22):
+  - **No tiene existencia en tiempo de ejecucion:** No se le reserva memoria en el binario final.
+  - **Es una herramienta del compilador:** Actúa como una constante simbolica mutable durante el analisis sintactico-semantico.
+  - Emitir un terceto de asignacion `( := , c:main , 3 )` obligaria al generador de Assembler de la Etapa 4 a buscar una direccion de memoria inexistente para `c`, produciendo instrucciones de ejecucion inutiles o fallos de compilacion. Por ello, la asignacion se resuelve internamente actualizando el atributo `VALOR_COMPTIME` en la Tabla de Simbolos y suprimiendo la llamada a `GeneradorTerceto.crearTerceto(...)`.
+
+---
+
+##### ❓ Pregunta 2: ¿Como implementamos la evaluacion estatica y el Constant Folding (Plegado de Constantes)?
+* **Respuesta para la defensa:**  
+  Aprovechamos el mecanismo de propagacion de atributos en el autómata Bottom-Up LALR(1) mediante la clase `ParserVal` y la convencion de nombres en `sval`:
+  1. **Deteccion natural sin sobreingenieria (`esConstante`):** En nuestro compilador, un operando solo puede ser tres cosas:
+     - Un terceto de runtime: empieza con corchete `[` (ej. `"[2]"`).
+     - Una variable de runtime: lleva Name Mangling con dos puntos `:` (ej. `"x:main"`).
+     - Una constante o resultado estatico: es un numero literal puro (ej. `"10"`, `"-5"`, `"3.14"`).  
+     Por ende, el predicado `esConstante(pv)` simplemente verifica:
+     ```java
+     return pv != null && pv.sval != null && !pv.sval.startsWith("[") && !pv.sval.contains(":");
+     ```
+     No requiere campos magicos ni banderas auxiliares.
+  2. **Evaluacion en los operadores (`+`, `-`, `*`, `/` y `tos()`):** Al reducir una regla binaria, el compilador verifica:
+     ```java
+     if (esConstante($1) && esConstante($3)) {
+         String res = evaluarOperacionEstatica("+", $1.sval, $3.sval, tipo1);
+         ParserVal pv = new ParserVal(res);
+         pv.obj = tipo1;
+         $$ = pv;
+     } else {
+         // Si alguno depende de runtime, se emite el terceto normal
+         int idTerceto = GeneradorTerceto.crearTerceto("+", $1.sval, $3.sval, tipo1);
+         ...
+     }
+     ```
+  3. **Chequeo de rangos y division por cero:** En `evaluarOperacionEstatica`, se valida en compilacion la division por cero (`v2 == 0`) y el desborde numerico tanto para `SHORTINT` (`[-128, 127]`) como para `SINGLEF` (`[ValorMinimoFloat, ValorMaximoFloat]`).
+  4. Esto permite que expresiones compuestas como `c_entero2 := c_entero1 + 7$s;` se calculen directamente en Java, propagando el valor entero `"10"` sin dejar tercetos huerfanos.
+
+---
+
+##### ❓ Pregunta 3: ¿Por que asignar una variable de runtime a una variable `COMPTIME` (`c := z;`) es un ERROR SEMANTICO y no sintactico?
+* **Respuesta para la defensa:**  
+  1. **Desde el punto de vista sintactico:** La sentencia `c := z;` cumple fielmente con la produccion gramatical:
+     ```yacc
+     asignacion : IDENTIFICADOR ASIGNAR expresion ';'
+     ```
+     El autómata LALR(1) lee tokens validos y no detecta ninguna alteracion en la estructura del lenguaje.
+  2. **Desde el punto de vista semantico:** El identificador `c` posee el atributo semantico `COMPTIME = "true"`. El enunciado del TP3 (`Tp3.pdf`, pag. 5) exige taxativamente:
+     > *"El compilador debe verificar que estas variables se usen en contextos donde se pueda determinar su valor en tiempo de compilación."*
+     Y coloca a `x := z;` explicitamente en su catalogo de **Ejemplos invalidos**.
+  3. Al consultar en `asignacion` la Tabla de Simbolos y descubrir que el operando derecho no es constante (posee mangling o referencia a terceto dinámico), el compilador reporta:
+     ```text
+     Error semantico (linea X): La variable comptime 'c' no puede recibir una expresion dependiente de tiempo de ejecucion
+     ```
+
+---
+
+##### ❓ Pregunta 4: ¿Como se propaga el valor de una variable `COMPTIME` al utilizarla en una expresion comun de runtime (ej. `r := c + 5$s;`)?
+* **Respuesta para la defensa:**  
+  En la regla `factor : IDENTIFICADOR`:
+  - Si el identificador buscado es una variable normal, sintetiza su nombre mangled (ej. `r:main`).
+  - Si es `COMPTIME`, el compilador extrae su `VALOR_COMPTIME` de la Tabla de Simbolos (ej. `"20"`) y sintetiza `ParserVal pv = new ParserVal("20");`.
+  
+  Cumpliendo al pie de la letra con la definicion de la catedra en `Tp3.pdf`:
+  > *"Cada vez que la variable sea usada en código, en el código intermedio se utilizará, en lugar del nombre de esa variable, el valor registrado en ese momento."*  
+  De este modo, la asignacion a la variable de runtime emite un terceto con el valor literal sustituido: `( := , r:main , 25 )` o `( + , 20 , 5 )`.
+
+---
+
+##### ❓ Pregunta 5: ¿Que sucede si una variable `COMPTIME` se intenta leer antes de asignarle un valor estatico?
+* **Respuesta para la defensa:**  
+  Al ser evaluada en `factor : IDENTIFICADOR`, el compilador consulta `TablaSimbolos.tieneValorComptime(idVar)`.  
+  Si la variable no fue inicializada, no existe ningún valor que sustituir en el código intermedio. Por ende, el compilador emite un error semantico explicito:
+  ```text
+  Error semantico (linea X): La variable comptime 'c_sin_init' se utiliza antes de ser inicializada con un valor estatico
+  ```
+  impidiendo la emision de valores basura o nulos.
+
+---
+
+##### ❓ Pregunta 6: ¿Es `COMPTIME` un tipo de dato? ¿Se puede operar una variable `COMPTIME` con una normal de runtime (`SHORTINT` o `SINGLEF`)?
+* **Respuesta para la defensa:**  
+  **No, `COMPTIME` no es un tipo de dato; es un modificador o calificador de ciclo de vida.**  
+  Toda variable declarada como `comptime` posee obligatoriamente un tipo de dato concreto del lenguaje (`SHORTINT` o `SINGLEF`, ej. `comptime shortint c;`).  
+  Por lo tanto, se rige por las mismas reglas de chequeo estático de tipos:
+  1. **Mismo tipo de dato $\rightarrow$ Es 100% VÁLIDO:**  
+     Una variable `comptime shortint` (con valor `3`) puede sumarse con una variable de runtime `shortint` (`r := c + r;`). En el código intermedio, `c` simplemente se reemplaza por su valor numérico y se emite el terceto de ejecución `( + , 3 , r:main )`.
+  2. **Distinto tipo de dato $\rightarrow$ ERROR DE TIPOS (salvo conversión):**  
+     Si se intenta operar una `comptime shortint` con una variable `singlef`, el compilador reportará error semántico por **incompatibilidad de tipos** (a menos que se use `tos()`), exactamente igual que entre dos variables comunes.
+  3. **¿Cuándo es error exclusivo de COMPTIME?**  
+     Únicamente cuando la variable `COMPTIME` se encuentra en el **lado izquierdo de una asignación** (`c := r;` o `c := c + r;`). Allí el compilador rechaza la sentencia porque una variable de compilación no puede quedar condicionada por un valor dinámico de tiempo de ejecución.
+
+---
+
+##### ❓ Pregunta 7: ¿Por que en la regla de conversion `TOS` no usamos un bloque `try-catch`?
+* **Respuesta para la defensa:**  
+  Un bloque `try-catch` que capture excepciones como `NumberFormatException` y recurra silenciosamente a emitir un terceto de runtime es una **práctica de programación defensiva que oculta fallas de diseño**:
+  - Si el parser redujo la expresión previa como constante (`esConstante($3) == true`) y su tipo semántico es `SINGLEF`, el analizador léxico y las reglas sintácticas ya garantizaron que `$3.sval` es una cadena numérica perfectamente válida.
+  - El parseo con `Double.parseDouble($3.sval)` no puede fallar. Si fallase, se trataría de un bug interno del compilador que debe manifestarse, no disimularse emitiendo instrucciones de runtime erróneas.
+  - Eliminar el `try-catch` mantiene el código limpio, directo y libre de sobreingeniería.
+
+---
+
+##### ❓ Pregunta 8: ¿Por que no alcanza con consultar la Tabla de Simbolos para saber si una expresion es constante?
+* **Respuesta para la defensa:**  
+  La Tabla de Símbolos es un registro de **símbolos declarados** (variables, nombres de funciones, literales léxicos).  
+  Cuando el autómata de pila LALR(1) reduce una expresión aritmética intermedia en la pila (por ejemplo `c1 + 7$s`), el resultado obtenido (`"10"`) es un atributo sintetizado temporal en un objeto `ParserVal`, **no una entrada en la Tabla de Símbolos**.  
+  Al llegar a la asignación `c := expresion;`, el lado derecho `$3` puede ser:
+  - Un terceto dinámico previo: `"[3]"`.
+  - Una variable mangled: `"x:main"`.
+  - O un valor literal ya plegado: `"10"`.  
+  Como la TS no almacena el historial de las subexpresiones intermedias, el propio nodo sintáctico debe informar su naturaleza constante inspeccionando `sval` (`!sval.startsWith("[") && !sval.contains(":")`).
+
+---
+
+#### 6.2.3. Casos de Prueba y Salidas Verificadas
+
+##### Caso 1: Pruebas Validas de COMPTIME (`tests/test_hito6_comptime_ok.txt`)
+```pascal
+programa_comptime_ok
+
+comptime shortint c_entero1, c_entero2, c_entero3;
+comptime singlef c_float1, c_float2;
+shortint r_entero1, r_entero2;
+singlef r_float1;
+
+begin
+    // 1. Asignaciones de constantes a variables comptime (no deben generar tercetos)
+    c_entero1 := 3$s;
+    c_float1 := 2.5;
+
+    // 2. Evaluacion estatica de expresiones entre constantes y comptime
+    c_entero2 := c_entero1 + 7$s; // 3 + 7 = 10
+    c_entero3 := c_entero2 * 2$s; // 10 * 2 = 20
+    c_float2 := c_float1 + 1.5;   // 2.5 + 1.5 = 4.0
+
+    // 3. Evaluacion estatica de conversion tos() en comptime
+    c_entero1 := tos(c_float2);   // tos(4.0) = 4
+
+    // 4. Asignacion de comptime a variables de runtime (debe emitir el valor literal)
+    r_entero1 := c_entero1;       // r_entero1 := 4
+    r_entero2 := c_entero3 + 5$s; // r_entero2 := 20 + 5
+    r_float1 := c_float2;         // r_float1 := 4.0
+
+    // 5. Uso de comptime en condicion if
+    if (c_entero1 > 1$s)
+        r_entero1 := r_entero1 + 1$s;
+    end_if;
+
+    // 6. Sentencia de salida pout con comptime
+    pout(c_entero2);              // POUT(10)
+end
+```
+
+**Tabla de Simbolos verificada:**
+```text
+=== TABLA DE SIMBOLOS ===
+1: {USO=nombre_programa, TIPO=programa, MANGLING=programa_comptime_ok:main, AMBITO=:main, LEXEMA=programa_comptime_ok}
+2: {USO=variable, COMPTIME=true, TIPO=SHORTINT, MANGLING=c_entero1:main, VALOR_COMPTIME=4, AMBITO=:main, LEXEMA=c_entero1}
+3: {USO=variable, COMPTIME=true, TIPO=SHORTINT, MANGLING=c_entero2:main, VALOR_COMPTIME=10, AMBITO=:main, LEXEMA=c_entero2}
+4: {USO=variable, COMPTIME=true, TIPO=SHORTINT, MANGLING=c_entero3:main, VALOR_COMPTIME=20, AMBITO=:main, LEXEMA=c_entero3}
+5: {USO=variable, COMPTIME=true, TIPO=SINGLEF, MANGLING=c_float1:main, VALOR_COMPTIME=2.5, AMBITO=:main, LEXEMA=c_float1}
+6: {USO=variable, COMPTIME=true, TIPO=SINGLEF, MANGLING=c_float2:main, VALOR_COMPTIME=4.0, AMBITO=:main, LEXEMA=c_float2}
+7: {USO=variable, TIPO=SHORTINT, MANGLING=r_entero1:main, AMBITO=:main, LEXEMA=r_entero1}
+8: {USO=variable, TIPO=SHORTINT, MANGLING=r_entero2:main, AMBITO=:main, LEXEMA=r_entero2}
+9: {USO=variable, TIPO=SINGLEF, MANGLING=r_float1:main, AMBITO=:main, LEXEMA=r_float1}
+```
+
+**Tercetos generados y verificados:**
+```text
+----------------------------------------
+         CODIGO INTERMEDIO (TERCETOS)   
+----------------------------------------
+0 ( := , r_entero1:main , 4 )
+1 ( := , r_entero2:main , 25 )
+2 ( := , r_float1:main , 4.0 )
+3 ( > , 4 , 1 )
+4 ( BF , [3] , [7] )
+5 ( + , r_entero1:main , 1 )
+6 ( := , r_entero1:main , [5] )
+7 ( POUT , 10 , - )
+----------------------------------------
+```
+> Observación crítica: Se aprecia claramente que **no existe un solo terceto** donde una variable `COMPTIME` aparezca en el lado izquierdo de una asignación. Todas las expresiones dinámicas recibieron el valor sustituido ya resuelto.
+
+---
+
+##### Caso 2: Pruebas de Errores Semanticos en COMPTIME (`tests/test_hito6_comptime_error.txt`)
+```pascal
+programa_comptime_error
+
+comptime shortint c_entero, c_sin_init;
+comptime singlef c_float;
+shortint r_entero;
+singlef r_float;
+
+begin
+    r_entero := 5$s;
+    r_float := 2.5;
+
+    // Error 1: Asignacion de variable de runtime a variable comptime
+    c_entero := r_entero;
+
+    // Error 2: Asignacion de expresion con variables de runtime a variable comptime
+    c_entero := r_entero + 2$s;
+
+    // Error 3: Uso de variable comptime antes de ser inicializada con valor estatico
+    r_entero := c_sin_init;
+
+    // Error 4: Incompatibilidad de tipos en asignacion comptime (SINGLEF a SHORTINT sin tos)
+    c_entero := 3.14;
+
+    // Error 5: Incompatibilidad de tipos en asignacion comptime (SHORTINT a SINGLEF)
+    c_float := 10$s;
+
+    // Error 6: Asignacion en expresion (Tema 17) de runtime a comptime
+    r_entero := c_entero = (r_entero);
+end
+```
+
+**Errores detectados:**
+```text
+Error semantico (linea 13): La variable comptime 'c_entero' no puede recibir una expresion dependiente de tiempo de ejecucion
+Error semantico (linea 16): La variable comptime 'c_entero' no puede recibir una expresion dependiente de tiempo de ejecucion
+Error semantico (linea 19): La variable comptime 'c_sin_init' se utiliza antes de ser inicializada con un valor estatico
+Error semantico (linea 22): Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT 'c_entero' sin conversion explicita 'tos'
+Error semantico (linea 25): Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF 'c_float'
+Error semantico (linea 28): La variable comptime 'c_entero' no puede recibir una expresion dependiente de tiempo de ejecucion
+Compilacion finalizada con 0 error(es) sintactico(s) y 6 error(es) semantico(s)
+```
+
+---
+
+### 6.3. Sub-hito 6.3: Clases, Herencia y Visibilidad (Temas 26, 29 y 30)
+
+#### 6.3.1. Fundamentos Conceptuales y Decisiones de Diseño
+
+En este sub-hito se completan todos los temas asignados al Grupo 20 relacionados con Programación Orientada a Objetos:
+1. **Tema 30: Herencia Múltiple (Desambiguado Opción 1):**
+   - Sintaxis: `EXTENDS c1, c2, ...;` en el cuerpo de la clase.
+   - En la Tabla de Símbolos, cada clase almacena en orden de declaración su lista de clases base: `HEREDA_0`, `HEREDA_1`, ..., `CANT_HERENCIA`.
+   - **Mecanismo de Desambiguado Opción 1:**
+     Cuando se invoca un método o se busca un atributo sobre una instancia de clase `C`:
+     1. Se busca primero en la clase propia `C` (ámbito `:main:C`).
+     2. Si no se encuentra, se busca en las clases declaradas en `EXTENDS` en estricto orden de izquierda a derecha.
+     3. La primera coincidencia encontrada es la que se utiliza.
+     4. Si no se encuentra en ninguna clase de la jerarquía, se emite error semántico de miembro no encontrado.
+2. **Tema 26: Import / Export de Atributos y Métodos (Control Estático de Visibilidad):**
+   - Sintaxis:
+     - En la clase: `CLASS B IMPORT FROM A, C BEGIN ... END;`
+     - En atributos y métodos: `tipo x EXPORT TO B, D;` o `tipo m(...) ... END EXPORT TO B;`
+   - La clase `B` almacena en la Tabla de Símbolos su lista de clases importadas: `IMPORT_0`, `IMPORT_1`, ..., `CANT_IMPORTS`.
+   - Cada atributo o método almacena un atributo `EXPORT_TO` con la lista de clases autorizadas.
+   - **Reglas de Visibilidad:**
+     Cuando una clase cliente `B` intenta acceder a un miembro de un objeto de clase `A`:
+     - El compilador valida estáticamente si `B` declaró `IMPORT FROM A`. Si no lo hizo:
+       `Error semantico (linea X): La clase 'B' no importa a la clase 'A'`
+     - El compilador valida estáticamente si el miembro accedido incluye a `B` en su cláusula `EXPORT TO`. Si no lo incluye:
+       `Error semantico (linea X): El miembro 'x' de la clase 'A' no esta exportado a la clase 'B'`
+     - Si el acceso es dentro del ámbito de la misma clase o clases heredadas, no se exige import/export.
+     - En `EXPORT TO`, se permite referenciar clases que aún no fueron declaradas previamente en el archivo fuente (referencias hacia adelante), resolviéndose la validación en el punto de uso.
+3. **Tema 29: Acceso Posicional a Atributos:**
+   - Sintaxis: `obj[0$s]` (constante entera) o `obj[idx]` (variable).
+   - Los atributos de cada clase se numeran automáticamente en orden de declaración ($0, 1, 2, \dots$) mediante `ATR_NOMBRE_0`, `ATR_TIPO_0`, etc., y `CANT_ATRIBUTOS` en la Tabla de Símbolos.
+   - **Validación con constante entera:**
+     - El índice debe ser de tipo `SHORTINT` positivo.
+     - Se chequea en tiempo de compilación que $0 \le \text{indice} < \text{CANT\_ATRIBUTOS}$. Si excede, se reporta:
+       `Error semantico (linea X): Indice posicional [idx$s] fuera de rango para la clase 'C' (cantidad de atributos: N)`
+     - Se mapea al atributo real, se extrae su tipo y se realiza el chequeo de visibilidad (Tema 26).
+   - **Validación con variable:**
+     - La variable índice debe estar declarada y ser obligatoriamente de tipo `SHORTINT`. Si es `SINGLEF` o cualquier otro tipo:
+       `Error semantico (linea X): El indice de acceso posicional debe ser de tipo SHORTINT`
+   - **Código intermedio generado:**
+     - Asignación a atributo posicional: `( := , b:main[0$s] , val )` o `( := , d:main[idx:main] , val )`.
+     - Lectura en expresiones: se sintetiza el operando con su tipo para operar aritméticamente o en condiciones.
+
+---
+
+#### 6.3.2. Preguntas de Examen para la Defensa Oral (Temas 26, 29 y 30)
+
+##### ❓ Pregunta 1: ¿Cómo funciona el Desambiguado Opción 1 en herencia múltiple y cómo se implementó en `TablaSimbolos`?
+* **Respuesta para la defensa:**  
+  La cátedra define que cuando una clase hereda de múltiples clases base (`EXTENDS c1, c2, ...`), puede ocurrir que dos o más clases base contengan un miembro con el mismo nombre. El mecanismo de **Desambiguado Opción 1** resuelve esta colisión mediante búsqueda determinística ordenada:
+  1. Primero se busca el miembro en el ámbito local de la clase del objeto (`:main:C`).
+  2. Si no se encuentra, se consulta la lista `EXTENDS` almacenada en la Tabla de Símbolos (`HEREDA_0`, `HEREDA_1`, etc.) en estricto orden de izquierda a derecha.
+  3. La primera coincidencia encontrada es la que se selecciona.
+  
+  En `TablaSimbolos.java`, esto se implementó con el método recursivo `buscarMiembroEnJerarquia(nomClase, nombreMiembro, visitados)`, que además mantiene un `Set<String> visitados` para proteger al compilador contra ciclos de herencia.
+
+---
+
+##### ❓ Pregunta 2: ¿Cómo y cuándo se verifican los permisos de visibilidad de `IMPORT FROM` y `EXPORT TO`?
+* **Respuesta para la defensa:**  
+  La verificación es 100% estática en tiempo de compilación. Cuando el parser reduce un acceso a miembro (ya sea por invocación `obj.metodo()` o por acceso posicional `obj[idx]`):
+  1. Se determina la clase del contexto actual mediante el helper `obtenerClaseDeAmbito(ambitoActual)`.
+  2. Si el código actual está dentro de una clase `B` y el objeto accedido pertenece a una clase diferente `A`:
+     - Se verifica que `A` pertenezca a la lista `obtenerImports("B:main")`. Si no está, se emite error semántico informando que `B` no importa a `A`.
+     - Se consulta `TablaSimbolos.estaExportadoA(idMiembro, "B")`. Si el atributo o método no contiene a `B` en su cláusula `EXPORT TO`, se emite error semántico de miembro no exportado.
+  3. De esta manera, el compilador garantiza el encapsulamiento y el cumplimiento estricto del Tema 26.
+
+---
+
+##### ❓ Pregunta 3: ¿Por qué en la cláusula `EXPORT TO` no se exige que las clases destino ya estén declaradas antes?
+* **Respuesta para la defensa:**  
+  Porque en un lenguaje con clases interdependientes (por ejemplo, el caso canónico de la especificación `Tp3.pdf` donde la clase `A` declara `shortint x1 export to B, C;` antes de que `B` y `C` aparezcan en el archivo), exigir declaración previa crearía una dependencia circular irresoluble.  
+  Por lo tanto, la reducción de `exportacion_opcional` registra los nombres de las clases destino como cadenas en la entrada del miembro (`EXPORT_TO`). La validación semántica real ocurre cuando la clase cliente efectivamente intenta usar el miembro, momento en el cual ambas clases ya fueron analizadas y declaradas en la Tabla de Símbolos.
+
+---
+
+##### ❓ Pregunta 4: ¿Cómo garantiza el compilador que el acceso posicional a atributos no rompa la seguridad de tipos?
+* **Respuesta para la defensa:**  
+  En `acceso_posicional`:
+  - **Si el índice es constante (`0$s`, `1$s`):** el compilador conoce estáticamente la cantidad de atributos de la clase (`CANT_ATRIBUTOS`). Si el índice es menor a cero o mayor o igual a la cantidad de atributos, emite inmediatamente error semántico de índice fuera de rango. Si está en rango, obtiene el tipo exacto del atributo (`SHORTINT` o `SINGLEF`).
+  - **En asignaciones (`acceso_posicional := expresion`):** el tipo sintetizado del atributo se compara contra el tipo de la expresión derecha. Se aplican las mismas reglas estrictas de incompatibilidad del lenguaje (no se puede asignar `SINGLEF` a `SHORTINT` sin `tos()`, ni `SHORTINT` a `SINGLEF`).
+  - **Si el índice es variable (`obj[idx]`):** se valida semánticamente que la variable índice esté declarada y sea estrictamente de tipo `SHORTINT`.
+
+---
+
+##### ❓ Pregunta 5: ¿Cómo se maneja un objeto pasado como parámetro formal dentro de un método para acceder a sus atributos o invocar métodos?
+* **Respuesta para la defensa:**  
+  Cuando un método recibe un parámetro de tipo objeto (por ejemplo `shortint m(c_base obj)`), en la Tabla de Símbolos el símbolo `obj` tiene `USO = "parametro"` y su `TIPO` es el nombre de la clase (`"c_base"`).  
+  Para soportar esto sin sobreingeniería, tanto en `acceso_posicional` como en `invocacion_metodo`, el compilador valida la condición:
+  ```java
+  boolean esObjeto = ("objeto".equals(uso) || "parametro".equals(uso)) && 
+      (refClase != TablaSimbolos.LEXEMA_NO_ENCONTRADO && "nombre_clase".equals(TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.USO)));
+  ```
+  De esta forma, cualquier parámetro formal cuyo tipo corresponda a una clase válida declarada en el programa es reconocido legítimamente como una instancia, permitiendo acceder a sus atributos posicionales y llamar a sus métodos con las mismas reglas de herencia y visibilidad.
+
+---
+
+#### 6.3.3. Casos de Prueba y Salidas Verificadas
+
+##### Caso 1: Pruebas Válidas de Clases, Herencia y Visibilidad (`tests/test_hito6_clases_ok.txt`)
+```pascal
+programa_clases_ok
+
+class c_base1
+begin
+    shortint b1_atr0 export to c_cliente;
+    singlef b1_atr1 export to c_cliente;
+
+    shortint m_base1()
+    begin
+        ret(b1_atr0);
+    end export to c_cliente;
+end;
+
+class c_base2
+begin
+    shortint b2_atr0;
+
+    shortint m_base2(shortint x)
+    begin
+        ret(x + 1$s);
+    end;
+end;
+
+class c_derivada
+begin
+    extends c_base1, c_base2;
+    shortint der_atr0;
+
+    shortint m_propio()
+    begin
+        ret(100$s);
+    end;
+end;
+
+class c_cliente import from c_base1
+begin
+    shortint m_cliente(c_base1 obj_b1)
+    begin
+        obj_b1[0$s] := 10$s;
+        obj_b1.m_base1();
+        ret(0$s);
+    end;
+end;
+
+c_derivada d;
+c_base1 b;
+c_cliente cli;
+shortint r_short, idx;
+singlef r_single;
+
+begin
+    // 1. Acceso posicional a atributos con constante
+    b[0$s] := 25$s;
+    b[1$s] := 3.14;
+    r_short := b[0$s];
+    r_single := b[1$s];
+
+    // 2. Acceso posicional con variable
+    idx := 0$s;
+    d[idx] := 42$s;
+
+    // 3. Invocacion de metodos heredados (Tema 30: herencia multiple)
+    r_short := d.m_base1();
+    r_short := d.m_base2(5$s);
+    r_short := d.m_propio();
+
+    // 4. Invocacion de metodo con objeto y visibilidad (Tema 26)
+    cli.m_cliente(b);
+
+    pout("Fin de pruebas clases ok");
+end
+```
+
+**Resultado de compilación:**
+```text
+Programa reconocido correctamente
+Compilacion finalizada con 0 error(es) sintactico(s) y 0 error(es) semantico(s)
+```
+
+**Tercetos generados y verificados:**
+```text
+----------------------------------------
+         CODIGO INTERMEDIO (TERCETOS)   
+----------------------------------------
+0 ( METODO , m_base1:main:c_base1 , - )
+1 ( RET , b1_atr0:main:c_base1 , - )
+2 ( FIN_METODO , m_base1:main:c_base1 , - )
+3 ( METODO , m_base2:main:c_base2 , - )
+4 ( + , x:main:c_base2:m_base2 , 1 )
+5 ( RET , [4] , - )
+6 ( FIN_METODO , m_base2:main:c_base2 , - )
+7 ( METODO , m_propio:main:c_derivada , - )
+8 ( RET , 100 , - )
+9 ( FIN_METODO , m_propio:main:c_derivada , - )
+10 ( METODO , m_cliente:main:c_cliente , - )
+11 ( := , obj_b1:main:c_cliente:m_cliente[0$s] , 10 )
+12 ( CALL , m_base1:main:c_base1 , - )
+13 ( RET , 0 , - )
+14 ( FIN_METODO , m_cliente:main:c_cliente , - )
+15 ( := , b:main[0$s] , 25 )
+16 ( := , b:main[1$s] , 3.14 )
+17 ( := , r_short:main , b:main[0$s] )
+18 ( := , r_single:main , b:main[1$s] )
+19 ( := , idx:main , 0 )
+20 ( := , d:main[idx:main] , 42 )
+21 ( CALL , m_base1:main:c_base1 , - )
+22 ( := , r_short:main , [21] )
+23 ( := , x:main:c_base2:m_base2 , 5 )
+24 ( CALL , m_base2:main:c_base2 , - )
+25 ( := , r_short:main , [24] )
+26 ( CALL , m_propio:main:c_derivada , - )
+27 ( := , r_short:main , [26] )
+28 ( := , obj_b1:main:c_cliente:m_cliente , b:main )
+29 ( CALL , m_cliente:main:c_cliente , - )
+30 ( POUT , "Fin de pruebas clases ok" , - )
+----------------------------------------
+```
+
+---
+
+##### Caso 2: Pruebas de Errores Semánticos en POO (`tests/test_hito6_clases_error.txt`)
+```pascal
+programa_clases_error
+
+class c_base
+begin
+    shortint atr_privado;
+    shortint atr_exportado export to c_autorizada;
+
+    shortint m_privado()
+    begin
+        ret(1$s);
+    end;
+
+    shortint m_exportado()
+    begin
+        ret(2$s);
+    end export to c_autorizada;
+end;
+
+// Error 1: Clase base no declarada en EXTENDS
+class c_herencia_invalida
+begin
+    extends c_fantasma;
+    shortint x;
+end;
+
+// Error 2: Clase no declarada en IMPORT FROM
+class c_import_invalido import from c_inexistente
+begin
+    shortint y;
+end;
+
+class c_autorizada import from c_base
+begin
+    shortint m_test(c_base obj)
+    begin
+        // Error 3: Miembro no exportado a esta clase
+        obj[0$s] := 10$s; // atr_privado no esta exportado a c_autorizada
+        obj.m_privado();   // m_privado no esta exportado a c_autorizada
+
+        ret(0$s);
+    end;
+end;
+
+class c_no_importa
+begin
+    shortint m_test(c_base obj)
+    begin
+        // Error 4: La clase c_no_importa no importa a c_base
+        obj[1$s] := 20$s;
+        obj.m_exportado();
+
+        ret(0$s);
+    end;
+end;
+
+c_base b;
+shortint r_entero;
+singlef idx_float;
+
+// Error 5: Objeto de clase no declarada
+c_no_existe obj_malo;
+
+begin
+    // Error 6: Indice posicional fuera de rango (c_base tiene 2 atributos: 0 y 1)
+    b[5$s] := 1$s;
+
+    // Error 7: Indice de acceso posicional no es SHORTINT
+    idx_float := 1.5;
+    b[idx_float] := 1$s;
+
+    // Error 8: Metodo no encontrado en la jerarquia
+    b.metodo_inexistente();
+
+    // Error 9: Acceso posicional e invocacion de metodo sobre identificador que no es objeto
+    r_entero := 5$s;
+    r_entero[0$s] := 1$s;
+    r_entero.m();
+
+    // Error 10: Incompatibilidad de tipos en asignacion a atributo (SINGLEF a SHORTINT sin tos)
+    b[0$s] := 3.14;
+end
+```
+
+**Errores detectados:**
+```text
+Error semantico (linea 22): Clase base 'c_fantasma' especificada en EXTENDS no declarada
+Error semantico (linea 28): Clase 'c_inexistente' especificada en IMPORT FROM no declarada
+Error semantico (linea 37): El atributo 'atr_privado' de la clase 'c_base' no esta exportado a la clase 'c_autorizada'
+Error semantico (linea 38): El metodo 'm_privado' de la clase 'c_base' no esta exportado a la clase 'c_autorizada'
+Error semantico (linea 49): La clase 'c_no_importa' no importa a la clase 'c_base'
+Error semantico (linea 50): La clase 'c_no_importa' no importa a la clase 'c_base'
+Error semantico (linea 61): Clase 'c_no_existe' no declarada o no es una clase valida
+Error semantico (linea 65): Indice posicional [5$s] fuera de rango para la clase 'c_base' (cantidad de atributos: 2)
+Error semantico (linea 69): El indice de acceso posicional debe ser de tipo SHORTINT (se encontro: SINGLEF)
+Error semantico (linea 72): Metodo 'metodo_inexistente' no encontrado en la clase 'c_base' ni en su jerarquia de herencia
+Error semantico (linea 76): El identificador 'r_entero' no es un objeto (uso actual: variable)
+Error semantico (linea 77): El identificador 'r_entero' no es un objeto (uso actual: variable)
+Error semantico (linea 80): Incompatibilidad de tipos en la asignacion a 'b:main[0$s]': no se puede asignar SINGLEF a SHORTINT sin conversion explicita 'tos'
+Compilacion finalizada con 0 error(es) sintactico(s) y 13 error(es) semantico(s)
+```
+
+
 
 
 

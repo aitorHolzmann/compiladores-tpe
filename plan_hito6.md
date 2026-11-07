@@ -199,12 +199,12 @@ flowchart TD
 
 | Paso | Tarea | Verificación | Estado |
 | :---: | :--- | :--- | :---: |
-| **6.1.1** | Infraestructura de firma de parámetros y retorno en `TablaSimbolos` | Tests unitarios / compilar | Pendiente |
-| **6.1.2** | Tercetos de `RET`, invocación `CALL` y copia de parámetros en `gram.y` | Parser compila con cero conflictos | Pendiente |
-| **6.1.3** | Inferencia de tipos y retornos múltiples en `AUTO FUNCTION` (Tema 21) | `tests/test_hito6_funciones_*.txt` | Pendiente |
-| **6.2.1** | Atributos y evaluación estática de variables `COMPTIME` (Tema 22) | Supresión de tercetos en runtime | Pendiente |
-| **6.2.2** | Chequeos semánticos y sustitución directa de constantes `COMPTIME` | `tests/test_hito6_comptime_*.txt` | Pendiente |
-| **6.3.1** | Almacenamiento de jerarquía `EXTENDS` y resolución Opción 1 (Tema 30) | Búsqueda ordenada en TS | Pendiente |
-| **6.3.2** | Control de visibilidad `IMPORT FROM` / `EXPORT TO` (Tema 26) | Chequeo estático de permisos | Pendiente |
-| **6.3.3** | Mapeo y validación de acceso posicional `obj[idx]` (Tema 29) | Control de límites y tipos | Pendiente |
-| **6.4** | Actualización de bitácora pedagógica `GUIA_DEFENSA_ETAPA3.md` | Documentación para defensa oral | Pendiente |
+| **6.1.1** | Infraestructura de firma de parámetros y retorno en `TablaSimbolos` | Tests unitarios / compilar | Completado |
+| **6.1.2** | Tercetos de `RET`, invocación `CALL` y copia de parámetros en `gram.y` | Parser compila con cero conflictos | Completado |
+| **6.1.3** | Inferencia de tipos y retornos múltiples en `AUTO FUNCTION` (Tema 21) | `tests/test_hito6_funciones_*.txt` | Completado |
+| **6.2.1** | Atributos y evaluación estática de variables `COMPTIME` (Tema 22) | Supresión de tercetos en runtime | Completado |
+| **6.2.2** | Chequeos semánticos y sustitución directa de constantes `COMPTIME` | `tests/test_hito6_comptime_*.txt` | Completado |
+| **6.3.1** | Almacenamiento de jerarquía `EXTENDS` y resolución Opción 1 (Tema 30) | Búsqueda ordenada en TS | Completado |
+| **6.3.2** | Control de visibilidad `IMPORT FROM` / `EXPORT TO` (Tema 26) | Chequeo estático de permisos | Completado |
+| **6.3.3** | Mapeo y validación de acceso posicional `obj[idx]` (Tema 29) | Control de límites y tipos | Completado |
+| **6.4** | Actualización de bitácora pedagógica `GUIA_DEFENSA_ETAPA3.md` | Documentación para defensa oral | Completado |

@@ -16,7 +16,6 @@ public class TablaSimbolos {
 
     // La tabla se accede con el identificador numerico (>256).
     private static final Map<Integer, Map<String, String>> tabla_simbolos = new LinkedHashMap<>();
-    
     private static int siguiente_identificador = 1; 
 
     public static void reiniciar() {
@@ -115,7 +114,7 @@ public class TablaSimbolos {
     }
 
     public static int declararVariable(String nombre, String tipo, String uso, String ambito) {
-        String mangling = nombre + ambito;
+        String mangling = nombre + ambito; //suma, shortint, funcion, :main
 
         //Chequeo de redeclaracion en el mismo ambito
         for (Map.Entry<Integer, Map<String, String>> entrada : tabla_simbolos.entrySet()) {
@@ -139,7 +138,7 @@ public class TablaSimbolos {
 
         int id = (idReusar != LEXEMA_NO_ENCONTRADO) ? idReusar : siguiente_identificador++;
         Map<String, String> atributos = (idReusar != LEXEMA_NO_ENCONTRADO) ? tabla_simbolos.get(id) : new HashMap<>();
-        atributos.put(LEXEMA, nombre);
+        atributos.put(LEXEMA, nombre); //Este esta repetido si estoy rehutilizando no?
         atributos.put(MANGLING, mangling);
         atributos.put(TIPO, tipo);
         atributos.put(USO, uso);
@@ -147,9 +146,10 @@ public class TablaSimbolos {
         tabla_simbolos.put(id, atributos);
         return id;
     }
-
+    
     public static int buscarIdentificador(String nombre, String ambito) {
         String ambitoBusqueda = ambito;
+        
         while (ambitoBusqueda != null && ambitoBusqueda.contains(":")) {
             String manglingBuscado = nombre + ambitoBusqueda;
             for (Map.Entry<Integer, Map<String, String>> entrada : tabla_simbolos.entrySet()) {
@@ -186,18 +186,19 @@ public class TablaSimbolos {
     public static void agregarParametroAFuncion(String funcionMangled, String tipoParam, String nombreParamMangled) {
         int ref = buscarPorMangling(funcionMangled);
         if (ref != LEXEMA_NO_ENCONTRADO) {
-            Map<String, String> atrs = tabla_simbolos.get(ref);
+            Map<String, String> atributos = tabla_simbolos.get(ref);
             int cant = 0;
-            if (atrs.containsKey("CANT_PARAMS")) {
+            if (atributos.containsKey("CANT_PARAMS")) {
                 try {
-                    cant = Integer.parseInt(atrs.get("CANT_PARAMS"));
+                    cant = Integer.parseInt(atributos.get("CANT_PARAMS"));
                 } catch (NumberFormatException e) {
                     cant = 0;
                 }
             }
-            atrs.put("PARAM_TIPO_" + cant, tipoParam);
-            atrs.put("PARAM_NOMBRE_" + cant, nombreParamMangled);
-            atrs.put("CANT_PARAMS", String.valueOf(cant + 1));
+            
+            atributos.put("PARAM_TIPO_" + cant, tipoParam);
+            atributos.put("PARAM_NOMBRE_" + cant, nombreParamMangled);
+            atributos.put("CANT_PARAMS", String.valueOf(cant + 1));
         }
     }
 
@@ -230,6 +231,190 @@ public class TablaSimbolos {
             return tabla_simbolos.get(ref).get("PARAM_NOMBRE_" + indice);
         }
         return null;
+    }
+
+    // Metodos auxiliares para COMPTIME (Tema 22)
+    public static boolean esComptime(int ref) {
+        return "true".equals(obtenerAtributo(ref, "COMPTIME"));
+    }
+
+    public static void guardarValorComptime(int ref, String valor) {
+        agregarAtributo(ref, "VALOR_COMPTIME", valor);
+    }
+
+    public static String obtenerValorComptime(int ref) {
+        String val = obtenerAtributo(ref, "VALOR_COMPTIME");
+        if (ATRIBUTO_NO_ENCONTRADO.equals(val)) {
+            return null;
+        }
+        return val;
+    }
+
+    public static boolean tieneValorComptime(int ref) {
+        return obtenerValorComptime(ref) != null;
+    }
+
+    // ===== HITO 6.3: CLASES, HERENCIA Y VISIBILIDAD (Temas 26, 29, 30) =====
+
+    public static void agregarAtributoAClase(String claseMangled, String nombreAtr, String tipoAtr) {
+        int ref = buscarPorMangling(claseMangled);
+        if (ref != LEXEMA_NO_ENCONTRADO) {
+            Map<String, String> atributos = tabla_simbolos.get(ref);
+            int cant = 0;
+            if (atributos.containsKey("CANT_ATRIBUTOS")) {
+                try {
+                    cant = Integer.parseInt(atributos.get("CANT_ATRIBUTOS"));
+                } catch (NumberFormatException e) {
+                    cant = 0;
+                }
+            }
+            atributos.put("ATR_NOMBRE_" + cant, nombreAtr);
+            atributos.put("ATR_TIPO_" + cant, tipoAtr);
+            atributos.put("CANT_ATRIBUTOS", String.valueOf(cant + 1));
+        }
+    }
+
+    public static int obtenerCantidadAtributosClase(String claseMangled) {
+        int ref = buscarPorMangling(claseMangled);
+        if (ref != LEXEMA_NO_ENCONTRADO) {
+            Map<String, String> atrs = tabla_simbolos.get(ref);
+            if (atrs.containsKey("CANT_ATRIBUTOS")) {
+                try {
+                    return Integer.parseInt(atrs.get("CANT_ATRIBUTOS"));
+                } catch (NumberFormatException e) {
+                    return 0;
+                }
+            }
+        }
+        return 0;
+    }
+
+    public static String obtenerNombreAtributoClase(String claseMangled, int indice) {
+        int ref = buscarPorMangling(claseMangled);
+        if (ref != LEXEMA_NO_ENCONTRADO) {
+            return tabla_simbolos.get(ref).get("ATR_NOMBRE_" + indice);
+        }
+        return null;
+    }
+
+    public static String obtenerTipoAtributoClase(String claseMangled, int indice) {
+        int ref = buscarPorMangling(claseMangled);
+        if (ref != LEXEMA_NO_ENCONTRADO) {
+            return tabla_simbolos.get(ref).get("ATR_TIPO_" + indice);
+        }
+        return null;
+    }
+
+    public static void registrarHerencia(String claseMangled, ArrayList<String> padres) {
+        int ref = buscarPorMangling(claseMangled);
+        if (ref != LEXEMA_NO_ENCONTRADO && padres != null) {
+            Map<String, String> atrs = tabla_simbolos.get(ref);
+            atrs.put("CANT_HERENCIA", String.valueOf(padres.size()));
+            for (int i = 0; i < padres.size(); i++) {
+                atrs.put("HEREDA_" + i, padres.get(i));
+            }
+        }
+    }
+
+    public static java.util.ArrayList<String> obtenerHerencia(String claseMangled) {
+        java.util.ArrayList<String> res = new java.util.ArrayList<>();
+        int ref = buscarPorMangling(claseMangled);
+        if (ref != LEXEMA_NO_ENCONTRADO) {
+            Map<String, String> atrs = tabla_simbolos.get(ref);
+            if (atrs.containsKey("CANT_HERENCIA")) {
+                try {
+                    int cant = Integer.parseInt(atrs.get("CANT_HERENCIA"));
+                    for (int i = 0; i < cant; i++) {
+                        res.add(atrs.get("HEREDA_" + i));
+                    }
+                } catch (NumberFormatException e) {
+                }
+            }
+        }
+        return res;
+    }
+
+    public static void registrarImports(String claseMangled, java.util.ArrayList<String> imports) {
+        int ref = buscarPorMangling(claseMangled);
+        if (ref != LEXEMA_NO_ENCONTRADO && imports != null) {
+            Map<String, String> atrs = tabla_simbolos.get(ref);
+            atrs.put("CANT_IMPORTS", String.valueOf(imports.size()));
+            for (int i = 0; i < imports.size(); i++) {
+                atrs.put("IMPORT_" + i, imports.get(i));
+            }
+        }
+    }
+
+    public static java.util.ArrayList<String> obtenerImports(String claseMangled) {
+        java.util.ArrayList<String> res = new java.util.ArrayList<>();
+        int ref = buscarPorMangling(claseMangled);
+        if (ref != LEXEMA_NO_ENCONTRADO) {
+            Map<String, String> atrs = tabla_simbolos.get(ref);
+            if (atrs.containsKey("CANT_IMPORTS")) {
+                try {
+                    int cant = Integer.parseInt(atrs.get("CANT_IMPORTS"));
+                    for (int i = 0; i < cant; i++) {
+                        res.add(atrs.get("IMPORT_" + i));
+                    }
+                } catch (NumberFormatException e) {
+                }
+            }
+        }
+        return res;
+    }
+
+    public static void registrarExport(int refMiembro, java.util.ArrayList<String> exports) {
+        if (tabla_simbolos.containsKey(refMiembro) && exports != null) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < exports.size(); i++) {
+                if (i > 0) sb.append(",");
+                sb.append(exports.get(i));
+            }
+            tabla_simbolos.get(refMiembro).put("EXPORT_TO", sb.toString());
+        }
+    }
+
+    public static boolean estaExportadoA(int refMiembro, String claseDestino) {
+        String exp = obtenerAtributo(refMiembro, "EXPORT_TO");
+        if (exp == null || ATRIBUTO_NO_ENCONTRADO.equals(exp)) {
+            return false;
+        }
+        String[] partes = exp.split(",");
+        for (String p : partes) {
+            if (p.trim().equals(claseDestino)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static int buscarMiembroEnJerarquia(String nomClase, String nombreMiembro) {
+        return buscarMiembroEnJerarquia(nomClase, nombreMiembro, new java.util.HashSet<String>());
+    }
+
+    private static int buscarMiembroEnJerarquia(String nomClase, String nombreMiembro, Set<String> visitados) {
+        if (nomClase == null || visitados.contains(nomClase)) {
+            return LEXEMA_NO_ENCONTRADO;
+        }
+        visitados.add(nomClase);
+
+        //Buscar en la propia clase
+        int ref = buscarPorMangling(nombreMiembro + ":main:" + nomClase);
+        if (ref != LEXEMA_NO_ENCONTRADO) {
+            return ref;
+        }
+
+        //Buscar en orden en la lista EXTENDS (Tema 30: Desambiguado Opcion 1)
+        java.util.ArrayList<String> padres = obtenerHerencia(nomClase + ":main");
+        if (padres != null) {
+            for (String padre : padres) {
+                int refPadre = buscarMiembroEnJerarquia(padre, nombreMiembro, visitados);
+                if (refPadre != LEXEMA_NO_ENCONTRADO) {
+                    return refPadre;
+                }
+            }
+        }
+        return LEXEMA_NO_ENCONTRADO;
     }
 
     public static void imprimirTabla() {

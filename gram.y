@@ -278,6 +278,24 @@ parametro_formal
             }
             imprimirRegla("parametro_formal");
         }
+    | IDENTIFICADOR IDENTIFICADOR
+        {
+            int refTipo = $1.ival;
+            String nomClase = TablaSimbolos.obtenerAtributo(refTipo, TablaSimbolos.LEXEMA);
+            int idClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+            if (idClase == TablaSimbolos.LEXEMA_NO_ENCONTRADO || !"nombre_clase".equals(TablaSimbolos.obtenerAtributo(idClase, TablaSimbolos.USO))) {
+                agregarErrorSemantico("Tipo de parametro formal '" + nomClase + "' no declarado o no es una clase valida");
+            }
+            int refNom = $2.ival;
+            String nombre = TablaSimbolos.obtenerAtributo(refNom, TablaSimbolos.LEXEMA);
+            TablaSimbolos.declararVariable(nombre, nomClase, "parametro", ambitoActual);
+            String funcMangled = obtenerFuncionActualMangled();
+            if (funcMangled != null) {
+                String nombreParamMangled = nombre + ambitoActual;
+                TablaSimbolos.agregarParametroAFuncion(funcMangled, nomClase, nombreParamMangled);
+            }
+            imprimirRegla("parametro_formal");
+        }
     | tipo error { yyerror("Falta de nombre de parametro formal en declaracion de funcion"); }
     | error IDENTIFICADOR{ yyerror("Falta de tipo del parametro formal en declaracion de funcion"); } 
     ;
@@ -312,16 +330,62 @@ declaracion_clase
 
 importacion_opcional
     : /* vacio */
-    | IMPORT FROM lista_identificadores { imprimirRegla("importacion_opcional"); }
+        {
+            $$ = new ParserVal();
+        }
+    | IMPORT FROM lista_identificadores
+        {
+            String nomClase = obtenerClaseDeAmbito(ambitoActual);
+            if (nomClase != null) {
+                ArrayList<String> imports = (ArrayList<String>) $3.obj;
+                if (imports != null) {
+                    for (String imp : imports) {
+                        int refImp = TablaSimbolos.buscarPorMangling(imp + ":main");
+                        if (refImp == TablaSimbolos.LEXEMA_NO_ENCONTRADO || !"nombre_clase".equals(TablaSimbolos.obtenerAtributo(refImp, TablaSimbolos.USO))) {
+                            agregarErrorSemantico("Clase '" + imp + "' especificada en IMPORT FROM no declarada");
+                        }
+                    }
+                    TablaSimbolos.registrarImports(nomClase + ":main", imports);
+                }
+            }
+            imprimirRegla("importacion_opcional");
+            $$ = $3;
+        }
     | IMPORT lista_identificadores
-        { yyerror("Falta la palabra clave 'FROM' en la declaracion IMPORT"); }
+        {
+            yyerror("Falta la palabra clave 'FROM' en la declaracion IMPORT");
+            $$ = $2;
+        }
     ;
 
 herencia_opcional
     : /* vacio */
-    | EXTENDS lista_identificadores ';' { imprimirRegla("herencia_opcional"); }
+        {
+            $$ = new ParserVal();
+        }
+    | EXTENDS lista_identificadores ';'
+        {
+            String nomClase = obtenerClaseDeAmbito(ambitoActual);
+            if (nomClase != null) {
+                ArrayList<String> padres = (ArrayList<String>) $2.obj;
+                if (padres != null) {
+                    for (String padre : padres) {
+                        int refPadre = TablaSimbolos.buscarPorMangling(padre + ":main");
+                        if (refPadre == TablaSimbolos.LEXEMA_NO_ENCONTRADO || !"nombre_clase".equals(TablaSimbolos.obtenerAtributo(refPadre, TablaSimbolos.USO))) {
+                            agregarErrorSemantico("Clase base '" + padre + "' especificada en EXTENDS no declarada");
+                        }
+                    }
+                    TablaSimbolos.registrarHerencia(nomClase + ":main", padres);
+                }
+            }
+            imprimirRegla("herencia_opcional");
+            $$ = $2;
+        }
     | EXTENDS ';'
-        { yyerror("Falta nombre o lista de clases a heredar luego de 'EXTENDS'"); }
+        {
+            yyerror("Falta nombre o lista de clases a heredar luego de 'EXTENDS'");
+            $$ = new ParserVal();
+        }
     ;
 
 miembros_clase
@@ -339,10 +403,22 @@ atributo_clase
         {
             String tipoDato = $1.sval;
             ArrayList<String> variables = (ArrayList<String>) $2.obj;
+            ArrayList<String> exportTo = ($3 != null && $3.obj != null) ? (ArrayList<String>) $3.obj : null;
+            String nomClase = obtenerClaseDeAmbito(ambitoActual);
+            String claseMangled = (nomClase != null) ? nomClase + ":main" : null;
+
             if (variables != null) {
                 for (int i = 0; i < variables.size(); i++) {
                     String nombreVar = variables.get(i);
-                    TablaSimbolos.declararVariable(nombreVar, tipoDato, "atributo", ambitoActual);
+                    int idAtr = TablaSimbolos.declararVariable(nombreVar, tipoDato, "atributo", ambitoActual);
+                    if (idAtr != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                        if (claseMangled != null) {
+                            TablaSimbolos.agregarAtributoAClase(claseMangled, nombreVar, tipoDato);
+                        }
+                        if (exportTo != null) {
+                            TablaSimbolos.registrarExport(idAtr, exportTo);
+                        }
+                    }
                 }
             }
         }
@@ -353,11 +429,35 @@ metodo_clase
         sentencias_declarativas
         BEGIN sentencias_ejecutables END exportacion_opcional ';'
         {
+            String mangling = obtenerFuncionActualMangled();
+            if (mangling != null) {
+                int refMetodo = TablaSimbolos.buscarPorMangling(mangling);
+                String tieneRet = TablaSimbolos.obtenerAtributo(refMetodo, "TIENE_RET");
+                if (!"true".equals(tieneRet)) {
+                    String tipo = TablaSimbolos.obtenerAtributo(refMetodo, TablaSimbolos.TIPO);
+                    String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0$s";
+                    GeneradorTerceto.crearTerceto("RET", valDef, "-", tipo);
+                }
+                GeneradorTerceto.crearTerceto("FIN_METODO", mangling, "-");
+                if ($9 != null && $9.obj != null) {
+                    ArrayList<String> exports = (ArrayList<String>) $9.obj;
+                    TablaSimbolos.registrarExport(refMetodo, exports);
+                }
+            }
             salirAmbito();
         }
     | encabezado_metodo_auto '(' lista_parametros_formales ')'
         BEGIN sentencias_ejecutables END exportacion_opcional ';'
         {
+            String mangling = obtenerFuncionActualMangled();
+            if (mangling != null) {
+                int refMetodo = TablaSimbolos.buscarPorMangling(mangling);
+                GeneradorTerceto.crearTerceto("FIN_METODO", mangling, "-");
+                if ($8 != null && $8.obj != null) {
+                    ArrayList<String> exports = (ArrayList<String>) $8.obj;
+                    TablaSimbolos.registrarExport(refMetodo, exports);
+                }
+            }
             salirAmbito();
         }
     ;
@@ -367,7 +467,9 @@ encabezado_metodo
         {
             int ref = $2.ival;
             String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, $1.sval, "metodo", ambitoActual);
+            int idMet = TablaSimbolos.declararVariable(nombre, $1.sval, "metodo", ambitoActual);
+            String mangling = nombre + ambitoActual;
+            GeneradorTerceto.crearTerceto("METODO", mangling, "-");
             entrarAmbito(nombre);
             $$ = $2;
         }
@@ -378,7 +480,9 @@ encabezado_metodo_auto
         {
             int ref = $2.ival;
             String nombre = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
-            TablaSimbolos.declararVariable(nombre, "auto", "metodo", ambitoActual);
+            int idMet = TablaSimbolos.declararVariable(nombre, "auto", "metodo", ambitoActual);
+            String mangling = nombre + ambitoActual;
+            GeneradorTerceto.crearTerceto("METODO", mangling, "-");
             entrarAmbito(nombre);
             $$ = $2;
         }
@@ -386,15 +490,42 @@ encabezado_metodo_auto
 
 exportacion_opcional
     : /* vacio */
-    | EXPORT TO lista_identificadores { imprimirRegla("exportacion_opcional"); }
+        {
+            $$ = new ParserVal();
+        }
+    | EXPORT TO lista_identificadores
+        {
+            imprimirRegla("exportacion_opcional");
+            $$ = $3;
+        }
     | EXPORT lista_identificadores
-        { yyerror("Falta la palabra clave 'TO' en la declaracion EXPORT"); }
+        {
+            yyerror("Falta la palabra clave 'TO' en la declaracion EXPORT");
+            $$ = $2;
+        }
     ;
 
 /* OBJETOS */
 
 declaracion_objeto
-    : IDENTIFICADOR lista_identificadores ';' { imprimirRegla("declaracion_de_objeto"); }
+    : IDENTIFICADOR lista_identificadores ';'
+        {
+            int refClase = $1.ival;
+            String nomClase = TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.LEXEMA);
+            int idClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+            if (idClase == TablaSimbolos.LEXEMA_NO_ENCONTRADO || !"nombre_clase".equals(TablaSimbolos.obtenerAtributo(idClase, TablaSimbolos.USO))) {
+                agregarErrorSemantico("Clase '" + nomClase + "' no declarada o no es una clase valida");
+            } else {
+                ArrayList<String> variables = (ArrayList<String>) $2.obj;
+                if (variables != null) {
+                    for (int i = 0; i < variables.size(); i++) {
+                        String nombreObj = variables.get(i);
+                        TablaSimbolos.declararVariable(nombreObj, nomClase, "objeto", ambitoActual);
+                    }
+                }
+            }
+            imprimirRegla("declaracion_de_objeto");
+        }
     | IDENTIFICADOR lista_identificadores
         { yyerror("Falta ';' al final de la declaracion de objeto"); }
     ;
@@ -453,18 +584,38 @@ asignacion
                 String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
                 int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
                 if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                    boolean esComp = TablaSimbolos.esComptime(idVar);
                     String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
                     String tipoVar = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.TIPO);
                     String tipoExp = (String) $3.obj;
-                    if (tipoExp != null) {
-                        if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                            GeneradorTerceto.crearTerceto(":=", mangling, $3.sval, tipoVar);
-                        } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
-                            agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
-                        } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
-                            agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF '" + lexema + "'");
+
+                    if (esComp) {
+                        if (!esConstante($3)) {
+                            agregarErrorSemantico("La variable comptime '" + lexema + "' no puede recibir una expresion dependiente de tiempo de ejecucion");
                         } else {
-                            agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + lexema + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
+                            if (tipoExp != null) {
+                                if (tipoVar != null && tipoVar.equals(tipoExp)) {
+                                    TablaSimbolos.guardarValorComptime(idVar, $3.sval);
+                                } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
+                                    agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
+                                } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
+                                    agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF '" + lexema + "'");
+                                } else {
+                                    agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + lexema + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
+                                }
+                            }
+                        }
+                    } else {
+                        if (tipoExp != null) {
+                            if (tipoVar != null && tipoVar.equals(tipoExp)) {
+                                GeneradorTerceto.crearTerceto(":=", mangling, $3.sval, tipoVar);
+                            } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
+                                agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
+                            } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
+                                agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF '" + lexema + "'");
+                            } else {
+                                agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + lexema + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
+                            }
                         }
                     }
                 } else {
@@ -473,11 +624,136 @@ asignacion
             }
         }
     | acceso_posicional ASIGNAR expresion
+        {
+            if ($1 != null && $1.sval != null && $3 != null && $3.sval != null) {
+                String tipoVar = (String) $1.obj;
+                String tipoExp = (String) $3.obj;
+
+                if (tipoExp != null && tipoVar != null) {
+                    if (tipoVar.equals(tipoExp)) {
+                        GeneradorTerceto.crearTerceto(":=", $1.sval, $3.sval, tipoVar);
+                    } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
+                        agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + $1.sval + "': no se puede asignar SINGLEF a SHORTINT sin conversion explicita 'tos'");
+                    } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
+                        agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + $1.sval + "': no se puede asignar SHORTINT a SINGLEF");
+                    } else {
+                        agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + $1.sval + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
+                    }
+                }
+            }
+        }
     ;
 
 acceso_posicional
     : IDENTIFICADOR '[' CTE_SHORTINT ']'
+        {
+            int refObj = $1.ival;
+            String nomObj = TablaSimbolos.obtenerAtributo(refObj, TablaSimbolos.LEXEMA);
+            int idObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
+
+            if (idObj == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                agregarErrorSemantico("Objeto '" + nomObj + "' no declarado o no visible en el ambito actual (" + ambitoActual + ")");
+                $$ = new ParserVal();
+            } else {
+                String uso = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.USO);
+                String nomClase = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.TIPO);
+                int refClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+                boolean esObjeto = ("objeto".equals(uso) || "parametro".equals(uso)) && 
+                    (refClase != TablaSimbolos.LEXEMA_NO_ENCONTRADO && "nombre_clase".equals(TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.USO)));
+
+                if (!esObjeto) {
+                    agregarErrorSemantico("El identificador '" + nomObj + "' no es un objeto (uso actual: " + uso + ")");
+                    $$ = new ParserVal();
+                } else {
+                    String claseMangled = nomClase + ":main";
+                    int refConst = $3.ival;
+                    String lexConst = TablaSimbolos.obtenerAtributo(refConst, TablaSimbolos.LEXEMA);
+                    int idx = Integer.parseInt(lexConst);
+                    int cantAtr = TablaSimbolos.obtenerCantidadAtributosClase(claseMangled);
+
+                    if (idx < 0 || idx >= cantAtr) {
+                        agregarErrorSemantico("Indice posicional [" + idx + "$s] fuera de rango para la clase '" + nomClase + "' (cantidad de atributos: " + cantAtr + ")");
+                        $$ = new ParserVal();
+                    } else {
+                        String nomAtr = TablaSimbolos.obtenerNombreAtributoClase(claseMangled, idx);
+                        String tipoAtr = TablaSimbolos.obtenerTipoAtributoClase(claseMangled, idx);
+                        int idAtr = TablaSimbolos.buscarPorMangling(nomAtr + ":main:" + nomClase);
+
+                        // Chequeo de visibilidad (Tema 26)
+                        String claseActual = obtenerClaseDeAmbito(ambitoActual);
+                        boolean accesoValido = true;
+                        if (claseActual != null && !claseActual.equals(nomClase)) {
+                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claseActual + ":main");
+                            if (imports == null || !imports.contains(nomClase)) {
+                                agregarErrorSemantico("La clase '" + claseActual + "' no importa a la clase '" + nomClase + "'");
+                                accesoValido = false;
+                            } else if (!TablaSimbolos.estaExportadoA(idAtr, claseActual)) {
+                                agregarErrorSemantico("El atributo '" + nomAtr + "' de la clase '" + nomClase + "' no esta exportado a la clase '" + claseActual + "'");
+                                accesoValido = false;
+                            }
+                        }
+
+                        if (accesoValido) {
+                            String manglingObj = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.MANGLING);
+                            ParserVal pv = new ParserVal(manglingObj + "[" + idx + "$s]");
+                            pv.obj = tipoAtr;
+                            pv.ival = idAtr;
+                            $$ = pv;
+                        } else {
+                            $$ = new ParserVal();
+                        }
+                    }
+                }
+            }
+        }
     | IDENTIFICADOR '[' IDENTIFICADOR ']'
+        {
+            int refObj = $1.ival;
+            String nomObj = TablaSimbolos.obtenerAtributo(refObj, TablaSimbolos.LEXEMA);
+            int idObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
+
+            if (idObj == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                agregarErrorSemantico("Objeto '" + nomObj + "' no declarado o no visible en el ambito actual (" + ambitoActual + ")");
+                $$ = new ParserVal();
+            } else {
+                String uso = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.USO);
+                String nomClase = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.TIPO);
+                int refClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+                boolean esObjeto = ("objeto".equals(uso) || "parametro".equals(uso)) && 
+                    (refClase != TablaSimbolos.LEXEMA_NO_ENCONTRADO && "nombre_clase".equals(TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.USO)));
+
+                if (!esObjeto) {
+                    agregarErrorSemantico("El identificador '" + nomObj + "' no es un objeto (uso actual: " + uso + ")");
+                    $$ = new ParserVal();
+                } else {
+                    String claseMangled = nomClase + ":main";
+                    int refIdx = $3.ival;
+                    String nomIdx = TablaSimbolos.obtenerAtributo(refIdx, TablaSimbolos.LEXEMA);
+                    int idVarIdx = TablaSimbolos.buscarIdentificador(nomIdx, ambitoActual);
+
+                    if (idVarIdx == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                        agregarErrorSemantico("Variable de indice '" + nomIdx + "' no declarada");
+                        $$ = new ParserVal();
+                    } else {
+                        String tipoIdx = TablaSimbolos.obtenerAtributo(idVarIdx, TablaSimbolos.TIPO);
+                        if (!"SHORTINT".equals(tipoIdx)) {
+                            agregarErrorSemantico("El indice de acceso posicional debe ser de tipo SHORTINT (se encontro: " + tipoIdx + ")");
+                            $$ = new ParserVal();
+                        } else {
+                            String manglingIdx = TablaSimbolos.obtenerAtributo(idVarIdx, TablaSimbolos.MANGLING);
+                            String manglingObj = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.MANGLING);
+                            String tipoDefecto = TablaSimbolos.obtenerTipoAtributoClase(claseMangled, 0);
+                            if (tipoDefecto == null) tipoDefecto = "SHORTINT";
+
+                            ParserVal pv = new ParserVal(manglingObj + "[" + manglingIdx + "]");
+                            pv.obj = tipoDefecto;
+                            pv.ival = idObj;
+                            $$ = pv;
+                        }
+                    }
+                }
+            }
+        }
     | IDENTIFICADOR '[' CTE_SINGLEF ']'
         { yyerror("Acceso posicional invalido: solo se permite constante SHORTINT positiva o identificador"); $$ = new ParserVal(); }
     ;
@@ -495,10 +771,17 @@ expresion
                 String tipo2 = (String) $3.obj;
                 if (tipo1 != null && tipo2 != null) {
                     if (tipo1.equals(tipo2)) {
-                        int idTerceto = GeneradorTerceto.crearTerceto("+", $1.sval, $3.sval, tipo1);
-                        ParserVal pv = new ParserVal("[" + idTerceto + "]");
-                        pv.obj = tipo1;
-                        $$ = pv;
+                        if (esConstante($1) && esConstante($3)) {
+                            String res = evaluarOperacionEstatica("+", $1.sval, $3.sval, tipo1);
+                            ParserVal pv = new ParserVal(res);
+                            pv.obj = tipo1;
+                            $$ = pv;
+                        } else {
+                            int idTerceto = GeneradorTerceto.crearTerceto("+", $1.sval, $3.sval, tipo1);
+                            ParserVal pv = new ParserVal("[" + idTerceto + "]");
+                            pv.obj = tipo1;
+                            $$ = pv;
+                        }
                     } else {
                         agregarErrorSemantico("Incompatibilidad de tipos en operacion '+': no se puede operar " + tipo1 + " con " + tipo2 + " (requiere conversion explicita 'tos')");
                         $$ = new ParserVal();
@@ -517,10 +800,17 @@ expresion
                 String tipo2 = (String) $3.obj;
                 if (tipo1 != null && tipo2 != null) {
                     if (tipo1.equals(tipo2)) {
-                        int idTerceto = GeneradorTerceto.crearTerceto("-", $1.sval, $3.sval, tipo1);
-                        ParserVal pv = new ParserVal("[" + idTerceto + "]");
-                        pv.obj = tipo1;
-                        $$ = pv;
+                        if (esConstante($1) && esConstante($3)) {
+                            String res = evaluarOperacionEstatica("-", $1.sval, $3.sval, tipo1);
+                            ParserVal pv = new ParserVal(res);
+                            pv.obj = tipo1;
+                            $$ = pv;
+                        } else {
+                            int idTerceto = GeneradorTerceto.crearTerceto("-", $1.sval, $3.sval, tipo1);
+                            ParserVal pv = new ParserVal("[" + idTerceto + "]");
+                            pv.obj = tipo1;
+                            $$ = pv;
+                        }
                     } else {
                         agregarErrorSemantico("Incompatibilidad de tipos en operacion '-': no se puede operar " + tipo1 + " con " + tipo2 + " (requiere conversion explicita 'tos')");
                         $$ = new ParserVal();
@@ -548,10 +838,17 @@ termino
                 String tipo2 = (String) $3.obj;
                 if (tipo1 != null && tipo2 != null) {
                     if (tipo1.equals(tipo2)) {
-                        int idTerceto = GeneradorTerceto.crearTerceto("*", $1.sval, $3.sval, tipo1);
-                        ParserVal pv = new ParserVal("[" + idTerceto + "]");
-                        pv.obj = tipo1;
-                        $$ = pv;
+                        if (esConstante($1) && esConstante($3)) {
+                            String res = evaluarOperacionEstatica("*", $1.sval, $3.sval, tipo1);
+                            ParserVal pv = new ParserVal(res);
+                            pv.obj = tipo1;
+                            $$ = pv;
+                        } else {
+                            int idTerceto = GeneradorTerceto.crearTerceto("*", $1.sval, $3.sval, tipo1);
+                            ParserVal pv = new ParserVal("[" + idTerceto + "]");
+                            pv.obj = tipo1;
+                            $$ = pv;
+                        }
                     } else {
                         agregarErrorSemantico("Incompatibilidad de tipos en operacion '*': no se puede operar " + tipo1 + " con " + tipo2 + " (requiere conversion explicita 'tos')");
                         $$ = new ParserVal();
@@ -570,10 +867,17 @@ termino
                 String tipo2 = (String) $3.obj;
                 if (tipo1 != null && tipo2 != null) {
                     if (tipo1.equals(tipo2)) {
-                        int idTerceto = GeneradorTerceto.crearTerceto("/", $1.sval, $3.sval, tipo1);
-                        ParserVal pv = new ParserVal("[" + idTerceto + "]");
-                        pv.obj = tipo1;
-                        $$ = pv;
+                        if (esConstante($1) && esConstante($3)) {
+                            String res = evaluarOperacionEstatica("/", $1.sval, $3.sval, tipo1);
+                            ParserVal pv = new ParserVal(res);
+                            pv.obj = tipo1;
+                            $$ = pv;
+                        } else {
+                            int idTerceto = GeneradorTerceto.crearTerceto("/", $1.sval, $3.sval, tipo1);
+                            ParserVal pv = new ParserVal("[" + idTerceto + "]");
+                            pv.obj = tipo1;
+                            $$ = pv;
+                        }
                     } else {
                         agregarErrorSemantico("Incompatibilidad de tipos en operacion '/': no se puede operar " + tipo1 + " con " + tipo2 + " (requiere conversion explicita 'tos')");
                         $$ = new ParserVal();
@@ -603,10 +907,24 @@ factor
             if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
                 String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
                 String tipo = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.TIPO);
-                ParserVal pv = new ParserVal(mangling);
-                pv.ival = idVar;
-                pv.obj = tipo;
-                $$ = pv;
+                boolean esComp = TablaSimbolos.esComptime(idVar);
+                if (esComp) {
+                    if (TablaSimbolos.tieneValorComptime(idVar)) {
+                        String val = TablaSimbolos.obtenerValorComptime(idVar);
+                        ParserVal pv = new ParserVal(val);
+                        pv.ival = idVar;
+                        pv.obj = tipo;
+                        $$ = pv;
+                    } else {
+                        agregarErrorSemantico("La variable comptime '" + lexema + "' se utiliza antes de ser inicializada con un valor estatico");
+                        $$ = new ParserVal();
+                    }
+                } else {
+                    ParserVal pv = new ParserVal(mangling);
+                    pv.ival = idVar;
+                    pv.obj = tipo;
+                    $$ = pv;
+                }
             } else {
                 agregarErrorSemantico("Variable '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
                 $$ = new ParserVal();
@@ -735,11 +1053,162 @@ factor
             $$ = $1;
         }
     | acceso_posicional
+        {
+            $$ = $1;
+        }
     ;
 
 invocacion_metodo
-    : IDENTIFICADOR '.' IDENTIFICADOR '(' ')' { imprimirRegla("invocacion_metodo"); }
-    | IDENTIFICADOR '.' IDENTIFICADOR '(' lista_expresiones ')' { imprimirRegla("invocacion_metodo"); }
+    : IDENTIFICADOR '.' IDENTIFICADOR '(' ')'
+        {
+            int refObj = $1.ival;
+            String nomObj = TablaSimbolos.obtenerAtributo(refObj, TablaSimbolos.LEXEMA);
+            int idObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
+
+            if (idObj == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                agregarErrorSemantico("Objeto '" + nomObj + "' no declarado o no visible en el ambito actual (" + ambitoActual + ")");
+                $$ = new ParserVal();
+            } else {
+                String uso = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.USO);
+                String nomClase = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.TIPO);
+                int refClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+                boolean esObjeto = ("objeto".equals(uso) || "parametro".equals(uso)) && 
+                    (refClase != TablaSimbolos.LEXEMA_NO_ENCONTRADO && "nombre_clase".equals(TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.USO)));
+
+                if (!esObjeto) {
+                    agregarErrorSemantico("El identificador '" + nomObj + "' no es un objeto (uso actual: " + uso + ")");
+                    $$ = new ParserVal();
+                } else {
+                    int refMetodo = $3.ival;
+                    String nomMetodo = TablaSimbolos.obtenerAtributo(refMetodo, TablaSimbolos.LEXEMA);
+
+                    // Buscar metodo con herencia multiple (Tema 30 - Desambiguado Opcion 1)
+                    int idMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
+                    if (idMet == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                        agregarErrorSemantico("Metodo '" + nomMetodo + "' no encontrado en la clase '" + nomClase + "' ni en su jerarquia de herencia");
+                        $$ = new ParserVal();
+                    } else {
+                        // Chequeo de visibilidad (Tema 26)
+                        String claseActual = obtenerClaseDeAmbito(ambitoActual);
+                        boolean accesoValido = true;
+                        String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.AMBITO));
+                        if (claseActual != null && claseDueniaMetodo != null && !claseActual.equals(claseDueniaMetodo)) {
+                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claseActual + ":main");
+                            if (imports == null || !imports.contains(claseDueniaMetodo)) {
+                                agregarErrorSemantico("La clase '" + claseActual + "' no importa a la clase '" + claseDueniaMetodo + "'");
+                                accesoValido = false;
+                            } else if (!TablaSimbolos.estaExportadoA(idMet, claseActual)) {
+                                agregarErrorSemantico("El metodo '" + nomMetodo + "' de la clase '" + claseDueniaMetodo + "' no esta exportado a la clase '" + claseActual + "'");
+                                accesoValido = false;
+                            }
+                        }
+
+                        if (accesoValido) {
+                            String metodoMangled = TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.MANGLING);
+                            String tipoRetorno = TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.TIPO);
+                            int cantEsperada = TablaSimbolos.obtenerCantidadParametros(metodoMangled);
+
+                            if (cantEsperada != 0) {
+                                agregarErrorSemantico("Cantidad incorrecta de parametros en invocacion a metodo '" + nomMetodo + "': se esperaban " + cantEsperada + " pero se recibieron 0");
+                                $$ = new ParserVal();
+                            } else {
+                                int idCall = GeneradorTerceto.crearTerceto("CALL", metodoMangled, "-", tipoRetorno);
+                                ParserVal pv = new ParserVal("[" + idCall + "]");
+                                pv.obj = tipoRetorno;
+                                $$ = pv;
+                            }
+                        } else {
+                            $$ = new ParserVal();
+                        }
+                    }
+                }
+            }
+        }
+    | IDENTIFICADOR '.' IDENTIFICADOR '(' lista_expresiones ')'
+        {
+            int refObj = $1.ival;
+            String nomObj = TablaSimbolos.obtenerAtributo(refObj, TablaSimbolos.LEXEMA);
+            int idObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
+
+            if (idObj == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                agregarErrorSemantico("Objeto '" + nomObj + "' no declarado o no visible en el ambito actual (" + ambitoActual + ")");
+                $$ = new ParserVal();
+            } else {
+                String uso = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.USO);
+                String nomClase = TablaSimbolos.obtenerAtributo(idObj, TablaSimbolos.TIPO);
+                int refClase = TablaSimbolos.buscarPorMangling(nomClase + ":main");
+                boolean esObjeto = ("objeto".equals(uso) || "parametro".equals(uso)) && 
+                    (refClase != TablaSimbolos.LEXEMA_NO_ENCONTRADO && "nombre_clase".equals(TablaSimbolos.obtenerAtributo(refClase, TablaSimbolos.USO)));
+
+                if (!esObjeto) {
+                    agregarErrorSemantico("El identificador '" + nomObj + "' no es un objeto (uso actual: " + uso + ")");
+                    $$ = new ParserVal();
+                } else {
+                    int refMetodo = $3.ival;
+                    String nomMetodo = TablaSimbolos.obtenerAtributo(refMetodo, TablaSimbolos.LEXEMA);
+
+                    int idMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
+                    if (idMet == TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                        agregarErrorSemantico("Metodo '" + nomMetodo + "' no encontrado en la clase '" + nomClase + "' ni en su jerarquia de herencia");
+                        $$ = new ParserVal();
+                    } else {
+                        // Chequeo de visibilidad (Tema 26)
+                        String claseActual = obtenerClaseDeAmbito(ambitoActual);
+                        boolean accesoValido = true;
+                        String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.AMBITO));
+                        if (claseActual != null && claseDueniaMetodo != null && !claseActual.equals(claseDueniaMetodo)) {
+                            ArrayList<String> imports = TablaSimbolos.obtenerImports(claseActual + ":main");
+                            if (imports == null || !imports.contains(claseDueniaMetodo)) {
+                                agregarErrorSemantico("La clase '" + claseActual + "' no importa a la clase '" + claseDueniaMetodo + "'");
+                                accesoValido = false;
+                            } else if (!TablaSimbolos.estaExportadoA(idMet, claseActual)) {
+                                agregarErrorSemantico("El metodo '" + nomMetodo + "' de la clase '" + claseDueniaMetodo + "' no esta exportado a la clase '" + claseActual + "'");
+                                accesoValido = false;
+                            }
+                        }
+
+                        if (accesoValido) {
+                            String metodoMangled = TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.MANGLING);
+                            String tipoRetorno = TablaSimbolos.obtenerAtributo(idMet, TablaSimbolos.TIPO);
+                            int cantEsperada = TablaSimbolos.obtenerCantidadParametros(metodoMangled);
+                            ArrayList<ParserVal> paramsReales = ($5 != null && $5.obj != null) ? (ArrayList<ParserVal>) $5.obj : new ArrayList<>();
+                            int cantRecibida = paramsReales.size();
+
+                            if (cantRecibida != cantEsperada) {
+                                agregarErrorSemantico("Cantidad incorrecta de parametros en invocacion a metodo '" + nomMetodo + "': se esperaban " + cantEsperada + " pero se recibieron " + cantRecibida);
+                                $$ = new ParserVal();
+                            } else {
+                                boolean paramsOk = true;
+                                for (int i = 0; i < cantEsperada; i++) {
+                                    String tipoFormal = TablaSimbolos.obtenerTipoParametro(metodoMangled, i);
+                                    String nomFormal = TablaSimbolos.obtenerNombreParametro(metodoMangled, i);
+                                    ParserVal pReal = paramsReales.get(i);
+                                    String tipoReal = (pReal != null) ? (String) pReal.obj : null;
+
+                                    if (tipoFormal != null && tipoReal != null && !tipoFormal.equals(tipoReal)) {
+                                        agregarErrorSemantico("Incompatibilidad de tipos en parametro " + (i + 1) + " al invocar metodo '" + nomMetodo + "': se esperaba " + tipoFormal + " pero se recibio " + tipoReal);
+                                        paramsOk = false;
+                                    } else if (pReal != null && pReal.sval != null) {
+                                        GeneradorTerceto.crearTerceto(":=", nomFormal, pReal.sval, tipoFormal);
+                                    }
+                                }
+
+                                if (paramsOk) {
+                                    int idCall = GeneradorTerceto.crearTerceto("CALL", metodoMangled, "-", tipoRetorno);
+                                    ParserVal pv = new ParserVal("[" + idCall + "]");
+                                    pv.obj = tipoRetorno;
+                                    $$ = pv;
+                                } else {
+                                    $$ = new ParserVal();
+                                }
+                            }
+                        } else {
+                            $$ = new ParserVal();
+                        }
+                    }
+                }
+            }
+        }
     ;
 
 lista_expresiones
@@ -768,27 +1237,56 @@ unica
                 String lexema = TablaSimbolos.obtenerAtributo(ref, TablaSimbolos.LEXEMA);
                 int idVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
                 if (idVar != TablaSimbolos.LEXEMA_NO_ENCONTRADO) {
+                    boolean esComp = TablaSimbolos.esComptime(idVar);
                     String mangling = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.MANGLING);
                     String tipoVar = TablaSimbolos.obtenerAtributo(idVar, TablaSimbolos.TIPO);
                     String tipoExp = (String) $4.obj;
-                    if (tipoExp != null) {
-                        if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                            int idTerceto = GeneradorTerceto.crearTerceto(":=", mangling, $4.sval, tipoVar);
-                            ParserVal pv = new ParserVal("[" + idTerceto + "]");
-                            pv.obj = tipoVar;
-                            $$ = pv;
-                        } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
-                            agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
-                            $$ = new ParserVal();
-                        } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
-                            agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF '" + lexema + "'");
+
+                    if (esComp) {
+                        if (!esConstante($4)) {
+                            agregarErrorSemantico("La variable comptime '" + lexema + "' no puede recibir una expresion dependiente de tiempo de ejecucion");
                             $$ = new ParserVal();
                         } else {
-                            agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + lexema + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
-                            $$ = new ParserVal();
+                            if (tipoExp != null) {
+                                if (tipoVar != null && tipoVar.equals(tipoExp)) {
+                                    TablaSimbolos.guardarValorComptime(idVar, $4.sval);
+                                    ParserVal pv = new ParserVal($4.sval);
+                                    pv.obj = tipoVar;
+                                    $$ = pv;
+                                } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
+                                    agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
+                                    $$ = new ParserVal();
+                                } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
+                                    agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF '" + lexema + "'");
+                                    $$ = new ParserVal();
+                                } else {
+                                    agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + lexema + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
+                                    $$ = new ParserVal();
+                                }
+                            } else {
+                                $$ = new ParserVal();
+                            }
                         }
                     } else {
-                        $$ = new ParserVal();
+                        if (tipoExp != null) {
+                            if (tipoVar != null && tipoVar.equals(tipoExp)) {
+                                int idTerceto = GeneradorTerceto.crearTerceto(":=", mangling, $4.sval, tipoVar);
+                                ParserVal pv = new ParserVal("[" + idTerceto + "]");
+                                pv.obj = tipoVar;
+                                $$ = pv;
+                            } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
+                                agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
+                                $$ = new ParserVal();
+                            } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
+                                agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF '" + lexema + "'");
+                                $$ = new ParserVal();
+                            } else {
+                                agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + lexema + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
+                                $$ = new ParserVal();
+                            }
+                        } else {
+                            $$ = new ParserVal();
+                        }
                     }
                 } else {
                     agregarErrorSemantico("Variable '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
@@ -837,10 +1335,21 @@ conversion_tos
             if ($3 != null && $3.sval != null) {
                 String tipoExp = (String) $3.obj;
                 if ("SINGLEF".equals(tipoExp)) {
-                    int idTerceto = GeneradorTerceto.crearTerceto("tos", $3.sval, "-", "SHORTINT");
-                    ParserVal pv = new ParserVal("[" + idTerceto + "]");
-                    pv.obj = "SHORTINT";
-                    $$ = pv;
+                    if (esConstante($3)) {
+                        double d = Double.parseDouble($3.sval);
+                        int entero = (int) d;
+                        if (entero < AnalizadorLexico.ValorMinimoInt || entero > AnalizadorLexico.ValorMaximoInt) {
+                            agregarErrorSemantico("Resultado de conversion 'tos' fuera de rango SHORTINT [-128, 127]: " + entero);
+                        }
+                        ParserVal pv = new ParserVal(String.valueOf(entero));
+                        pv.obj = "SHORTINT";
+                        $$ = pv;
+                    } else {
+                        int idTerceto = GeneradorTerceto.crearTerceto("tos", $3.sval, "-", "SHORTINT");
+                        ParserVal pv = new ParserVal("[" + idTerceto + "]");
+                        pv.obj = "SHORTINT";
+                        $$ = pv;
+                    }
                 } else if (tipoExp != null) {
                     agregarErrorSemantico("La funcion de conversion 'tos' requiere una expresion de tipo SINGLEF (se recibio: " + tipoExp + ")");
                     $$ = new ParserVal();
@@ -1099,6 +1608,15 @@ public static String obtenerFuncionActualMangled() {
     return nombreFuncion + ambitoPadre;
 }
 
+public static String obtenerClaseDeAmbito(String ambito) {
+    if (ambito == null) return null;
+    String[] partes = ambito.split(":");
+    if (partes.length >= 3 && "main".equals(partes[1])) {
+        return partes[2];
+    }
+    return null;
+}
+
 public static void entrarAmbito(String nombre) {
     ambitoActual = ambitoActual + ":" + nombre;
 }
@@ -1120,6 +1638,60 @@ public static void agregarErrorSemantico(String s) {
 // Muestra por pantalla la regla reconocida y la linea donde termino (al reducir)
 static void imprimirRegla(String regla) {
     System.out.println("Regla " + regla + " en linea " + AnalizadorLexico.getLineaActual());
+}
+
+ // Soporte para variables COMPTIME y evaluacion estatica (Tema 22)
+public static boolean esConstante(ParserVal pv) {
+    if (pv == null || pv.sval == null) {
+        return false;
+    }
+    return !pv.sval.startsWith("[") && !pv.sval.contains(":");
+}
+
+public static String evaluarOperacionEstatica(String op, String val1, String val2, String tipo) {
+    try {
+        if ("SHORTINT".equals(tipo)) {
+            int v1 = Integer.parseInt(val1);
+            int v2 = Integer.parseInt(val2);
+            int res = 0;
+            if (op.equals("+")) res = v1 + v2;
+            else if (op.equals("-")) res = v1 - v2;
+            else if (op.equals("*")) res = v1 * v2;
+            else if (op.equals("/")) {
+                if (v2 == 0) {
+                    agregarErrorSemantico("Division por cero en tiempo de compilacion");
+                    return "0";
+                }
+                res = v1 / v2;
+            }
+            if (res < AnalizadorLexico.ValorMinimoInt || res > AnalizadorLexico.ValorMaximoInt) {
+                agregarErrorSemantico("Resultado de operacion en tiempo de compilacion fuera de rango SHORTINT [-128, 127]: " + res);
+            }
+            return String.valueOf(res);
+        } else if ("SINGLEF".equals(tipo)) {
+            double v1 = Double.parseDouble(val1);
+            double v2 = Double.parseDouble(val2);
+            double res = 0.0;
+            if (op.equals("+")) res = v1 + v2;
+            else if (op.equals("-")) res = v1 - v2;
+            else if (op.equals("*")) res = v1 * v2;
+            else if (op.equals("/")) {
+                if (v2 == 0.0) {
+                    agregarErrorSemantico("Division por cero en tiempo de compilacion");
+                    return "0.0";
+                }
+                res = v1 / v2;
+            }
+            double absRes = Math.abs(res);
+            if (absRes != 0.0 && (absRes < AnalizadorLexico.ValorMinimoFloat || absRes > AnalizadorLexico.ValorMaximoFloat)) {
+                agregarErrorSemantico("Resultado de operacion en tiempo de compilacion fuera de rango SINGLEF: " + res);
+            }
+            return String.valueOf(res);
+        }
+    } catch (NumberFormatException e) {
+        return val1;
+    }
+    return val1;
 }
 
 public static void main(String[] args) {

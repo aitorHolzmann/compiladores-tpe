@@ -1,0 +1,30 @@
+programa_comptime_error
+
+comptime shortint c_entero, c_sin_init;
+comptime singlef c_float;
+shortint r_entero;
+singlef r_float;
+
+begin
+    r_entero := 5$s;
+    r_float := 2.5;
+
+    // Error 1: Asignacion de variable de runtime a variable comptime
+    c_entero := r_entero;
+
+    // Error 2: Asignacion de expresion con variables de runtime a variable comptime
+    c_entero := r_entero + 2$s;
+
+    // Error 3: Uso de variable comptime antes de ser inicializada con valor estatico
+    r_entero := c_sin_init;
+
+    // Error 4: Incompatibilidad de tipos en asignacion comptime (SINGLEF a SHORTINT sin tos)
+    c_entero := 3.14;
+
+    // Error 5: Incompatibilidad de tipos en asignacion comptime (SHORTINT a SINGLEF)
+    c_float := 10$s;
+
+    // Error 6: Asignacion en expresion (Tema 17) de runtime a comptime
+    r_entero := c_entero = (r_entero);
+end
+

@@ -1,0 +1,72 @@
+programa_clases_ok
+
+class c_base1
+begin
+    shortint b1_atr0 export to c_cliente;
+    singlef b1_atr1 export to c_cliente;
+
+    shortint m_base1()
+    begin
+        ret(b1_atr0);
+    end export to c_cliente;
+end;
+
+class c_base2
+begin
+    shortint b2_atr0;
+
+    shortint m_base2(shortint x)
+    begin
+        ret(x + 1$s);
+    end;
+end;
+
+class c_derivada
+begin
+    extends c_base1, c_base2;
+    shortint der_atr0;
+
+    shortint m_propio()
+    begin
+        ret(100$s);
+    end;
+end;
+
+class c_cliente import from c_base1
+begin
+    shortint m_cliente(c_base1 obj_b1)
+    begin
+        obj_b1[0$s] := 10$s;
+        obj_b1.m_base1();
+        ret(0$s);
+    end;
+end;
+
+c_derivada d;
+c_base1 b;
+c_cliente cli;
+shortint r_short, idx;
+singlef r_single;
+
+begin
+    // 1. Acceso posicional a atributos con constante
+    b[0$s] := 25$s;
+    b[1$s] := 3.14;
+    r_short := b[0$s];
+    r_single := b[1$s];
+
+    // 2. Acceso posicional con variable
+    idx := 0$s;
+    d[idx] := 42$s;
+
+    // 3. Invocacion de metodos heredados (Tema 30: herencia multiple)
+    r_short := d.m_base1();
+    r_short := d.m_base2(5$s);
+    r_short := d.m_propio();
+
+    // 4. Invocacion de metodo con objeto y visibilidad (Tema 26)
+    cli.m_cliente(b);
+
+    pout("Fin de pruebas clases ok");
+end
+
