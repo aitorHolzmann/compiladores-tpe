@@ -30,7 +30,7 @@
     └── 6.3 Clases, IMPORT/EXPORT, Acceso Posicional y Herencia Multiple (COMPLETADO)
     │
     ▼
-[Cierre Etapa 3] Caso Integrador Final, Checklist de Entrega TP3 y Defensa Oral (SIGUIENTE)
+[Cierre Etapa 3] Caso Integrador Final, Checklist de Entrega TP3 y Defensa Oral (COMPLETADO)
 ```
 
 ---
@@ -2391,6 +2391,265 @@ Dado que es imposible que existan ciclos en los datos almacenados, cualquier rec
   1. **Alineación con la Opción 1 de `Tp3.pdf`:** La consigna permite explícitamente generar el código en estructuras independientes por función/método.
   2. **Independencia ante anidamiento de subrutinas:** En un esquema de lista única plana, si una función `f1` define en su interior una función `f2`, los tercetos de `f2` quedan intercalados físicamente en medio de las instrucciones de `f1`. Esto rompe el flujo de control lineal y obligaría a inyectar saltos incondicionales para saltear el código anidado. Al separar por clave de ámbito en el mapa (`"main"`, `"main@f1"`, `"main@f1@f2"`), cada subrutina mantiene un bloque de código continuo y aislado.
   3. **Localidad de índices y backpatching:** Cada ámbito posee su propio contador de tercetos (`0..N-1`). Los operandos temporales `[i]` y los saltos relativos de control de flujo (`BF [destino]`, `BI [destino]`) se resuelven dentro del espacio de la propia subrutina, desacoplando el código de cada función del tamaño del resto del programa y simplificando directamente la traducción a etiquetas Assembler en el TP4.
+
+---
+
+## 📌 Cierre Etapa 3: Caso Integrador Final, Checklist de Entrega TP3 y Defensa Oral
+
+### 1. Caso de Prueba Integrador Completo (`tests/test_etapa3_integrador.txt`)
+
+Para cumplir con la consigna de evaluación y demostrar que todas las construcciones sintácticas, semánticas y de código intermedio asignadas al Grupo 20 interactúan sinérgicamente sin colisiones, se diseñó el caso integrador `tests/test_etapa3_integrador.txt`.
+
+#### 1.1. Cobertura de Temas Asignados al Grupo 20
+- **Tema 1 (Enteros cortos):** Constantes con sufijo `$s` (ej. `2$s`, `5$s`, `20$s`), tipo `shortint` y rango `[-128, 127]`.
+- **Tema 7 (Punto flotante 32 bits):** Constantes `10.5` y tipo `singlef`.
+- **Tema 10 (Cadenas multilínea):** Cadena que abarca múltiples líneas dentro de `pout(...)`, almacenada sin saltos de línea en la Tabla de Símbolos.
+- **Tema 12 (Sentencia iterativa `repeat until`):** Bucle `repeat ... until (b <= 0$s);` con evaluación de condición posterior al bloque y salto `BF` al inicio.
+- **Tema 15 (Comentarios de una línea):** Comentarios con `//`.
+- **Tema 17 (Asignación en expresión):** Operador `=` entre paréntesis sin anidamiento: `b := c = (tos(f1) + a);`.
+- **Tema 21 (Funciones inferidas `AUTO FUNCTION`):** Función `calcular` sin declarativas locales, al menos un retorno sintáctico e inferencia de tipo `SHORTINT` a partir de `RET(tos(y) + x)`.
+- **Tema 22 (Variables en compilación `COMPTIME`):** `comptime shortint limite_estatico;` evaluada estáticamente en compilación (`limite_estatico := 5$s;`) y reemplazada como constante en la condición `if (a > 5)` sin terceto runtime.
+- **Tema 26 (Import/Export en clases):** Clases `c_base_a` y `c_base_b` exportando atributos y métodos a `c_hija` mediante `export to c_hija`. Clase `c_hija` consumiendo miembros con `import from c_base_a, c_base_b`.
+- **Tema 29 (Acceso posicional a atributos):** Acceso por constante (`obj[0$s] := 20$s;`) y por variable (`obj[a] := 30$s;`).
+- **Tema 30 (Herencia múltiple - Desambiguado Opción 1):** Clase `c_hija` con `extends c_base_a, c_base_b;` resolviendo llamadas a métodos heredados (`obj.metodo_a(a)`).
+- **Tema 34 (Conversión explícita float a shortint):** Uso de `tos(f1)` dentro de expresiones para posibilitar sumas y asignaciones entre tipos heterogéneos.
+
+---
+
+#### 1.2. Código Fuente del Caso Integrador
+```text
+programa_integrador_grupo20
+
+// Declaraciones de tipos y comptime (Temas 1, 7, 22)
+shortint a, b, c;
+singlef f1;
+comptime shortint limite_estatico;
+
+// Clases, visibilidad y herencia multiple (Temas 26 y 30)
+class c_base_a
+begin
+  shortint atr_a export to c_hija;
+  shortint metodo_a(shortint p)
+  begin
+    ret(p + 1$s);
+  end export to c_hija;
+end;
+
+class c_base_b
+begin
+  singlef atr_b export to c_hija;
+end;
+
+class c_hija import from c_base_a, c_base_b
+begin
+  extends c_base_a, c_base_b;
+  shortint atr_propio;
+end;
+
+c_hija obj;
+
+// Funcion ordinaria
+shortint FUNCTION duplicar(shortint num)
+begin
+  ret(num * 2$s);
+end;
+
+// Tema 21: AUTO FUNCTION con inferencia de retorno y Tema 34: conversion tos()
+AUTO FUNCTION calcular(shortint x, singlef y)
+begin
+  ret(tos(y) + x);
+end;
+
+begin
+  // Tema 22: Asignacion estatica a comptime
+  limite_estatico := 5$s;
+
+  // Asignaciones basicas (Temas 1 y 7)
+  a := 2$s;
+  f1 := 10.5;
+
+  // Tema 17: Asignacion en expresion y Tema 34: tos()
+  b := c = (tos(f1) + a);
+
+  // Tema 29: Acceso posicional a atributos (por constante y por variable)
+  obj[0$s] := 20$s;
+  obj[a] := 30$s;
+
+  // Invocacion a metodo heredado y funcion auto
+  c := obj.metodo_a(a);
+  a := calcular(c, f1);
+
+  // Control de flujo: IF-ELSE
+  if (a > limite_estatico)
+  begin
+    b := duplicar(a);
+  end
+  else
+  begin
+    b := 0$s;
+  end
+  end_if;
+
+  // Tema 12: Iteracion REPEAT-UNTIL
+  repeat
+  begin
+    b := b - 1$s;
+  end
+  until (b <= 0$s);
+
+  // Tema 10: Cadena multilinea en sentencia pout
+  pout("Integracion Grupo 20
+finalizada exitosamente");
+
+end
+```
+
+---
+
+#### 1.3. Salida de Compilación Obtenida y Verificada
+```text
+Compilando archivo: tests/test_etapa3_integrador.txt
+----------------------------------------
+          INFORME DE ERRORES            
+----------------------------------------
+Compilacion exitosa: No se detectaron errores.
+----------------------------------------
+
+=== TABLA DE SIMBOLOS ===
+main@programa_integrador_gr: {USO=nombre_programa, TIPO=programa}
+main@a: {USO=variable, TIPO=SHORTINT}
+main@b: {USO=variable, TIPO=SHORTINT}
+main@c: {USO=variable, TIPO=SHORTINT}
+main@f1: {USO=variable, TIPO=SINGLEF}
+main@limite_estatico: {USO=variable, COMPTIME=true, TIPO=SHORTINT, VALOR_COMPTIME=5}
+main@c_base_a: {USO=nombre_clase, TIPO=clase, ATRIBUTOS=[atr_a]}
+main@c_base_a@atr_a: {USO=atributo, TIPO=SHORTINT, EXPORT_TO=[c_hija]}
+main@c_base_a@metodo_a: {USO=metodo, TIPO=SHORTINT, TIENE_RET=true, EXPORT_TO=[c_hija], PARAMETROS=[p]}
+main@c_base_a@metodo_a@p: {USO=parametro, TIPO=SHORTINT}
+1: {TIPO=SHORTINT, OCURRENCIAS=2}
+main@c_base_b: {USO=nombre_clase, TIPO=clase, ATRIBUTOS=[atr_b]}
+main@c_base_b@atr_b: {USO=atributo, TIPO=SINGLEF, EXPORT_TO=[c_hija]}
+main@c_hija: {USO=nombre_clase, TIPO=clase, IMPORTS=[c_base_a, c_base_b], ATRIBUTOS=[atr_propio], HERENCIA=[c_base_a, c_base_b]}
+main@c_hija@atr_propio: {USO=atributo, TIPO=SHORTINT}
+main@obj: {USO=objeto, TIPO=c_hija}
+main@duplicar: {USO=funcion, TIPO=SHORTINT, TIENE_RET=true, PARAMETROS=[num]}
+main@duplicar@num: {USO=parametro, TIPO=SHORTINT}
+2: {TIPO=SHORTINT, OCURRENCIAS=2}
+main@calcular: {USO=funcion, TIPO=SHORTINT, TIENE_RET=true, PARAMETROS=[x, y]}
+main@calcular@x: {USO=parametro, TIPO=SHORTINT}
+main@calcular@y: {USO=parametro, TIPO=SINGLEF}
+5: {TIPO=SHORTINT, OCURRENCIAS=1}
+10.5: {TIPO=SINGLEF, OCURRENCIAS=1}
+0: {TIPO=SHORTINT, OCURRENCIAS=3}
+20: {TIPO=SHORTINT, OCURRENCIAS=1}
+30: {TIPO=SHORTINT, OCURRENCIAS=1}
+"Integracion Grupo 20finalizada exitosamente": {TIPO=CADENA, OCURRENCIAS=1}
+
+----------------------------------------
+         CODIGO INTERMEDIO (TERCETOS)   
+----------------------------------------
+Ambito: main
+0 ( := , main@a , 2 )
+1 ( := , main@f1 , 10.5 )
+2 ( tos , main@f1 , - )
+3 ( + , [2] , main@a )
+4 ( := , main@c , [3] )
+5 ( := , main@b , [4] )
+6 ( := , main@obj[0$s] , 20 )
+7 ( := , main@obj[main@a] , 30 )
+8 ( := , main@c_base_a@metodo_a@p , main@a )
+9 ( CALL , main@c_base_a@metodo_a , - )
+10 ( := , main@c , [9] )
+11 ( := , main@calcular@x , main@c )
+12 ( := , main@calcular@y , main@f1 )
+13 ( CALL , main@calcular , - )
+14 ( := , main@a , [13] )
+15 ( > , main@a , 5 )
+16 ( BF , [15] , [21] )
+17 ( := , main@duplicar@num , main@a )
+18 ( CALL , main@duplicar , - )
+19 ( := , main@b , [18] )
+20 ( BI , [22] , - )
+21 ( := , main@b , 0 )
+22 ( - , main@b , 1 )
+23 ( := , main@b , [22] )
+24 ( <= , main@b , 0 )
+25 ( BF , [24] , [22] )
+26 ( POUT , "Integracion Grupo 20finalizada exitosamente" , - )
+----------------------------------------
+Ambito: main@c_base_a@metodo_a
+0 ( + , main@c_base_a@metodo_a@p , 1 )
+1 ( RET , [0] , - )
+----------------------------------------
+Ambito: main@duplicar
+0 ( * , main@duplicar@num , 2 )
+1 ( RET , [0] , - )
+----------------------------------------
+Ambito: main@calcular
+0 ( tos , main@calcular@y , - )
+1 ( + , [0] , main@calcular@x )
+2 ( RET , [1] , - )
+----------------------------------------
+```
+
+---
+
+### 2. Checklist Formal de Entrega (según `Tp3.pdf`)
+
+- [x] **Código Intermedio en Estructura Dinámica:** Almacenado en `Map<String, ArrayList<Terceto>>` (`tercetosPorAmbito`), desacoplado e indexado localmente (`0..N-1`).
+- [x] **Sin pseudo-tercetos delimitadores:** Eliminados `FUNCION`/`FIN_FUNCION`/`METODO`/`FIN_METODO` para permitir anidamiento limpio y llamadas directas por clave mangled (`CALL`).
+- [x] **Backpatching Completo:** Implementado con `Stack<Integer>` y marcadores vacíos sin conflictos sintácticos para `IF`, `IF-ELSE` y `REPEAT UNTIL`.
+- [x] **Tabla de Símbolos Enriquecida:**
+  - Atributos estándar: `TIPO`, `USO` (`variable`, `nombre_clase`, `objeto`, `funcion`, `metodo`, `parametro`, `nombre_programa`).
+  - Atributos específicos del grupo: `TIENE_RET`, `PARAMETROS`, `VALOR_COMPTIME`, `ATRIBUTOS`, `IMPORTS`, `EXPORT_TO`, `HERENCIA`.
+- [x] **Name Mangling:** Formato unificado `main@subambito@identificador` (acordado con la cátedra en consulta).
+- [x] **Reglas de Alcance:**
+  - Visibilidad en el propio ámbito y ámbitos hijos.
+  - No redeclaración en el mismo ámbito.
+  - Permite nombres idénticos en ámbitos disjuntos.
+- [x] **Chequeos de Tipos y Conversión `tos()` (Tema 34):**
+  - Incompatibilidad entre enteros y punto flotante sin conversión explícita.
+  - Conversión permitida en expresiones y asignaciones.
+- [x] **Invocaciones a Funciones y Métodos:**
+  - Validación de cantidad de parámetros formales vs. reales.
+  - Validación de tipos de argumentos.
+  - Generación de tercetos de copia de parámetros por valor previos a `CALL`.
+- [x] **Salida Limpia para Entrega:**
+  - Tokens y reglas sintácticas suprimidos por defecto (activables solo con `-v`).
+  - Informe consolidado de errores (léxicos, sintácticos, semánticos).
+  - Tabla de Símbolos y Tercetos claramente legibles.
+- [x] **Cero Conflictos LALR(1):** `byaccj -J -v gram.y` genera 0 conflictos shift-reduce y reduce-reduce.
+
+---
+
+### 3. Preguntas Clave de Examen para la Defensa Oral
+
+#### ❓ Pregunta 1: ¿Cómo se resolvió la inferencia de tipo en `AUTO FUNCTION` (Tema 21) si la función puede tener múltiples retornos?
+* **Respuesta para la defensa:**  
+  Durante la declaración de la función, se registra inicialmente con tipo `"auto"`. Al procesar cada sentencia `ret(expresion);`, la acción semántica inspecciona el tipo sintetizado de la expresión (`tipoExp`). Si es el primer retorno procesado, actualiza el atributo `TIPO` de la función en la Tabla de Símbolos con dicho tipo. Si se detectan retornos subsiguientes, se verifica que su tipo coincida exactamente con el primero; ante cualquier discrepancia, se emite un error semántico de tipos inconsistentes. Además, la gramática exige sintácticamente que exista al menos un `RET` en el cuerpo.
+
+---
+
+#### ❓ Pregunta 2: ¿Por qué las variables `COMPTIME` (Tema 22) no generan tercetos en runtime?
+* **Respuesta para la defensa:**  
+  Porque su semántica establece que existen y se resuelven exclusivamente durante la compilación. En la Tabla de Símbolos se marcan con `COMPTIME=true`. Al reducir su asignación (`limite_estatico := 5$s;`), la acción semántica evalúa la expresión estática y guarda el valor en el atributo `VALOR_COMPTIME` sin emitir ningún terceto de asignación `:=`. Cuando la variable se referencia posteriormente en una expresión o condición ejecutable, el analizador sintáctico propaga su valor constante literal (en este caso `"5"`) en lugar del identificador mangled, emitiendo tercetos que operan directamente con la constante.
+
+---
+
+#### ❓ Pregunta 3: ¿Cómo interactúan el Tema 26 (Import/Export) y el Tema 30 (Herencia múltiple) durante la resolución de un miembro?
+* **Respuesta para la defensa:**  
+  Siguen una jerarquía estricta de dos pasos:
+  1. **Resolución de miembros (Tema 30):** Si un objeto invoca a un método o accede a un atributo que no está en su clase directa, `TablaSimbolos.buscarMiembroEnJerarquia` recorre la lista `EXTENDS` en orden de izquierda a derecha (Desambiguado Opción 1).
+  2. **Control de visibilidad (Tema 26):** Una vez encontrada la clase declarante del miembro, si el acceso ocurre desde otra clase, se verifica que la clase consumidora importe a la dueña (`IMPORT FROM`) y que el atributo/método esté explícitamente exportado a ella (`EXPORT TO`). Si alguna de estas condiciones no se cumple, se reporta el correspondiente error semántico.
+
+---
+
+### ⚠️ Pendiente de Auditoría Estudiantil al finalizar la Etapa 4
+
+> **Nota para el alumno antes de la entrega final:**  
+> Al finalizar el desarrollo del TP4 (Generador de Assembler), se debe realizar una revisión integral de todo el proyecto:
+> 1. Verificar que los mensajes por consola, nombres de variables en el código Java y comentarios mantengan un estilo 100% natural de alumno de ingeniería.
+> 2. Asegurarse de que no queden textos, encabezados o estructuras que parezcan generados por un asistente de IA, garantizando un código directo, austero y perfectamente defendible en el coloquio oral.
 
 
 

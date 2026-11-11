@@ -1,0 +1,20 @@
+test_hito1
+
+shortint a, b;
+singlef f1, f2;
+comptime shortint c_cte;
+
+BEGIN
+    c_cte := 42$s;
+    pout("--- Inicio prueba Hito 1 Etapa 4 ---");
+    pout("Imprimiendo constantes enteras:");
+    pout(10$s);
+    pout(-5$s);
+    pout("Imprimiendo constantes flotantes:");
+    pout(3.14);
+    pout(-0.5);
+    pout(1.5s2);
+    pout("Imprimiendo variable comptime:");
+    pout(c_cte);
+    pout("--- Fin prueba Hito 1 ---");
+END

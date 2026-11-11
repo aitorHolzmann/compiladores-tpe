@@ -15,6 +15,10 @@ public class TablaSimbolos {
     // Almacena simbolos indexados por su clave mangled o lexema de constante
     private static final Map<String, Map<String, Object>> tabla_simbolos = new LinkedHashMap<>();
 
+    public static Map<String, Map<String, Object>> obtenerTabla() {
+        return tabla_simbolos;
+    }
+
     public static void reiniciar() {
         tabla_simbolos.clear();
     }

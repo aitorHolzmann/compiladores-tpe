@@ -712,7 +712,7 @@ final static String yyrule[] = {
 "sentencia_ret : RET '(' expresion ')'",
 };
 
-//#line 1557 "gram.y"
+//#line 1543 "gram.y"
 
 /* CODIGO DE SOPORTE                                                         */
 
@@ -722,6 +722,10 @@ static int cant_errores = 0;
 static int cant_errores_semanticos = 0;
 static int cant_retornos_auto = -1;
 static boolean claseActualValida = false;
+
+public static ArrayList<String> erroresSintacticos = new ArrayList<>();
+public static ArrayList<String> erroresSemanticos = new ArrayList<>();
+public static boolean modoDebug = false;
 
 public static String ambitoActual = TablaSimbolos.AMBITO_GLOBAL;
 public static Stack<Integer> pilaSaltos = new Stack<>();
@@ -762,12 +766,56 @@ public static void salirAmbito() {
 
 public static void agregarErrorSemantico(String s) {
     cant_errores_semanticos++;
-    System.out.println("Error semantico (linea " + AnalizadorLexico.getLineaActual() + "): " + s);
+    String err = "Error semantico (linea " + AnalizadorLexico.getLineaActual() + "): " + s;
+    erroresSemanticos.add(err);
+    if (modoDebug) {
+        System.out.println(err);
+    }
 }
 
 // Muestra por pantalla la regla reconocida y la linea donde termino (al reducir)
 static void imprimirRegla(String regla) {
-    System.out.println("Regla " + regla + " en linea " + AnalizadorLexico.getLineaActual());
+    if (modoDebug) {
+        System.out.println("Regla " + regla + " en linea " + AnalizadorLexico.getLineaActual());
+    }
+}
+
+public static void imprimirInformeErrores() {
+    int cantLexicos = AnalizadorLexico.errores.size();
+    int cantSintacticos = erroresSintacticos.size();
+    int cantSemanticos = erroresSemanticos.size();
+    int total = cantLexicos + cantSintacticos + cantSemanticos;
+
+    System.out.println("----------------------------------------");
+    System.out.println("          INFORME DE ERRORES            ");
+    System.out.println("----------------------------------------");
+    if (total == 0) {
+        System.out.println("Compilacion exitosa: No se detectaron errores.");
+    } else {
+        System.out.println("Se detectaron " + total + " error(es) durante la compilacion:\n");
+        if (cantLexicos > 0) {
+            System.out.println("[Errores Lexicos]");
+            for (int i = 0; i < AnalizadorLexico.errores.size(); i++) {
+                System.out.println("  - " + AnalizadorLexico.errores.get(i));
+            }
+            System.out.println();
+        }
+        if (cantSintacticos > 0) {
+            System.out.println("[Errores Sintacticos]");
+            for (int i = 0; i < erroresSintacticos.size(); i++) {
+                System.out.println("  - " + erroresSintacticos.get(i));
+            }
+            System.out.println();
+        }
+        if (cantSemanticos > 0) {
+            System.out.println("[Errores Semanticos]");
+            for (int i = 0; i < erroresSemanticos.size(); i++) {
+                System.out.println("  - " + erroresSemanticos.get(i));
+            }
+            System.out.println();
+        }
+    }
+    System.out.println("----------------------------------------\n");
 }
 
  // Soporte para variables COMPTIME y evaluacion estatica (Tema 22)
@@ -833,7 +881,8 @@ public static void main(String[] args) {
     }
 
     String ruta = args[0];
-    boolean debug = args.length == 2;
+    modoDebug = (args.length == 2 && args[1].equals("-v"));
+    AnalizadorLexico.debug = modoDebug;
 
     if (!new File(ruta).isFile()) {
         System.out.println("No se encontro el archivo a compilar: " + ruta);
@@ -851,13 +900,27 @@ public static void main(String[] args) {
         cant_retornos_auto = -1;
         cant_errores = 0;
         cant_errores_semanticos = 0;
+        erroresSintacticos.clear();
+        erroresSemanticos.clear();
+        AnalizadorLexico.reiniciar();
+        AnalizadorLexico.debug = modoDebug;
+
         AnalizadorLexico.reader = new PushbackReader(new BufferedReader(
                 new InputStreamReader(new FileInputStream(ruta), java.nio.charset.StandardCharsets.UTF_8)));
-        parser = new Parser(debug);
+        parser = new Parser(modoDebug);
         parser.yyparse(); 
         TablaSimbolos.purgarIdentificadoresSinDeclarar();
+
+        imprimirInformeErrores();
         TablaSimbolos.imprimirTabla();
         GeneradorTerceto.imprimirTercetos();
+
+        int totalErrores = AnalizadorLexico.errores.size() + erroresSintacticos.size() + erroresSemanticos.size();
+        if (totalErrores == 0) {
+            String asm = GeneradorAssembler.generarAssembler();
+            GeneradorAssembler.guardarArchivo(ruta, asm);
+            GeneradorAssembler.imprimirAssembler(asm);
+        }
     } catch (Exception e) {
         e.printStackTrace();
     }
@@ -881,9 +944,13 @@ void yyerror(String s) {
         return; // Se omite el mensaje generico de byacc/j para usar las descripciones especificas
     }
     cant_errores++;
-    System.out.println("Error sintactico (linea " + AnalizadorLexico.getLineaActual() + "): " + s);
+    String err = "Error sintactico (linea " + AnalizadorLexico.getLineaActual() + "): " + s;
+    erroresSintacticos.add(err);
+    if (modoDebug) {
+        System.out.println(err);
+    }
 }
-//#line 814 "Parser.java"
+//#line 881 "Parser.java"
 //###############################################################
 // method: yylexdebug : check lexer state
 //###############################################################
@@ -1045,65 +1112,42 @@ case 1:
             yyval = val_peek(0);
         }
 break;
-case 2:
-//#line 61 "gram.y"
-{ 
-            if (cant_errores == 0 && cant_errores_semanticos == 0) {
-                System.out.println("Programa reconocido correctamente"); 
-            } else {
-                System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
-            }
-        }
-break;
 case 3:
-//#line 68 "gram.y"
+//#line 61 "gram.y"
 { yyerror("Falta el nombre del programa al inicio"); }
 break;
-case 4:
-//#line 69 "gram.y"
-{ 
-            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
-        }
-break;
 case 5:
-//#line 72 "gram.y"
+//#line 62 "gram.y"
 { yyerror("Falta el delimitador BEGIN de sentencias ejecutables"); }
 break;
-case 6:
-//#line 73 "gram.y"
-{
-            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
-        }
-break;
 case 7:
-//#line 77 "gram.y"
+//#line 64 "gram.y"
 {
             yyerror("Falta el delimitador END al final del programa");
-            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
         }
 break;
 case 10:
-//#line 91 "gram.y"
+//#line 77 "gram.y"
 { imprimirRegla("declaracion_variables"); }
 break;
 case 11:
-//#line 92 "gram.y"
+//#line 78 "gram.y"
 { imprimirRegla("declaracion_funciones"); }
 break;
 case 12:
-//#line 93 "gram.y"
+//#line 79 "gram.y"
 { imprimirRegla("declaracion_clase"); }
 break;
 case 13:
-//#line 94 "gram.y"
+//#line 80 "gram.y"
 { imprimirRegla("declaracion_objeto"); }
 break;
 case 14:
-//#line 95 "gram.y"
+//#line 81 "gram.y"
 { imprimirRegla("declaracion_comptime"); }
 break;
 case 15:
-//#line 101 "gram.y"
+//#line 87 "gram.y"
 {
             String tipoDato = val_peek(2).sval;
             ArrayList<String> variables = (ArrayList<String>) val_peek(1).obj;
@@ -1116,11 +1160,11 @@ case 15:
         }
 break;
 case 16:
-//#line 112 "gram.y"
+//#line 98 "gram.y"
 { yyerror("Falta ';' al final de la declaracion de variables"); }
 break;
 case 17:
-//#line 117 "gram.y"
+//#line 103 "gram.y"
 {
             ArrayList<String> lista = new ArrayList<>();
             lista.add(val_peek(0).sval);
@@ -1130,7 +1174,7 @@ case 17:
         }
 break;
 case 18:
-//#line 125 "gram.y"
+//#line 111 "gram.y"
 {
             ArrayList<String> lista = (ArrayList<String>) val_peek(2).obj;
             lista.add(val_peek(0).sval);
@@ -1138,11 +1182,11 @@ case 18:
         }
 break;
 case 19:
-//#line 130 "gram.y"
+//#line 116 "gram.y"
 { yyerror("Falta ',' entre los identificadores"); yyval = val_peek(1); }
 break;
 case 20:
-//#line 135 "gram.y"
+//#line 121 "gram.y"
 {
             ArrayList<String> lista = new ArrayList<>();
             lista.add(val_peek(0).sval);
@@ -1152,7 +1196,7 @@ case 20:
         }
 break;
 case 21:
-//#line 143 "gram.y"
+//#line 129 "gram.y"
 {
             ArrayList<String> lista = (ArrayList<String>) val_peek(2).obj;
             lista.add(val_peek(0).sval);
@@ -1160,15 +1204,15 @@ case 21:
         }
 break;
 case 22:
-//#line 151 "gram.y"
+//#line 137 "gram.y"
 { yyval = new ParserVal("SHORTINT"); }
 break;
 case 23:
-//#line 152 "gram.y"
+//#line 138 "gram.y"
 { yyval = new ParserVal("SINGLEF"); }
 break;
 case 24:
-//#line 159 "gram.y"
+//#line 145 "gram.y"
 {
             String nombre = val_peek(0).sval;
             String claveFunc = TablaSimbolos.declararVariable(nombre, val_peek(2).sval, "funcion", ambitoActual);
@@ -1181,7 +1225,7 @@ case 24:
         }
 break;
 case 25:
-//#line 173 "gram.y"
+//#line 159 "gram.y"
 {
             String nombre = val_peek(0).sval;
             String claveFunc = TablaSimbolos.declararVariable(nombre, "auto", "funcion", ambitoActual);
@@ -1194,11 +1238,11 @@ case 25:
         }
 break;
 case 26:
-//#line 187 "gram.y"
+//#line 173 "gram.y"
 { cant_retornos_auto = 0; }
 break;
 case 27:
-//#line 194 "gram.y"
+//#line 180 "gram.y"
 {
             String mangling = obtenerFuncionActualMangled();
             if (mangling != null) {
@@ -1213,11 +1257,11 @@ case 27:
         }
 break;
 case 28:
-//#line 206 "gram.y"
+//#line 192 "gram.y"
 { yyerror("Falta nombre de funcion"); }
 break;
 case 30:
-//#line 212 "gram.y"
+//#line 198 "gram.y"
 {
             String mangling = obtenerFuncionActualMangled();
             if (mangling != null) {
@@ -1233,7 +1277,7 @@ case 30:
         }
 break;
 case 31:
-//#line 226 "gram.y"
+//#line 212 "gram.y"
 {
             if (cant_retornos_auto == 0) {
                 yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
@@ -1243,11 +1287,11 @@ case 31:
         }
 break;
 case 32:
-//#line 233 "gram.y"
+//#line 219 "gram.y"
 { yyerror("Falta nombre de funcion"); }
 break;
 case 34:
-//#line 237 "gram.y"
+//#line 223 "gram.y"
 {
             if (cant_retornos_auto == 0) {
                 yyerror("Ausencia de sentencia de retorno 'RET' en funcion AUTO");
@@ -1258,7 +1302,7 @@ case 34:
         }
 break;
 case 38:
-//#line 255 "gram.y"
+//#line 241 "gram.y"
 {
             String nombre = val_peek(0).sval;
             TablaSimbolos.declararVariable(nombre, val_peek(1).sval, "parametro", ambitoActual);
@@ -1270,7 +1314,7 @@ case 38:
         }
 break;
 case 39:
-//#line 265 "gram.y"
+//#line 251 "gram.y"
 {
             String nomClase = val_peek(1).sval;
             String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
@@ -1287,15 +1331,15 @@ case 39:
         }
 break;
 case 40:
-//#line 279 "gram.y"
+//#line 265 "gram.y"
 { yyerror("Falta de nombre de parametro formal en declaracion de funcion"); }
 break;
 case 41:
-//#line 280 "gram.y"
+//#line 266 "gram.y"
 { yyerror("Falta de tipo del parametro formal en declaracion de funcion"); }
 break;
 case 42:
-//#line 288 "gram.y"
+//#line 274 "gram.y"
 {
             String nombre = val_peek(0).sval;
             String claveClase = TablaSimbolos.declararVariable(nombre, "clase", "nombre_clase", ambitoActual);
@@ -1305,14 +1349,14 @@ case 42:
         }
 break;
 case 43:
-//#line 300 "gram.y"
+//#line 286 "gram.y"
 {
             claseActualValida = false;
             salirAmbito();
         }
 break;
 case 44:
-//#line 306 "gram.y"
+//#line 292 "gram.y"
 {
             yyerror("Falta ';' al final de la declaracion de clase");
             claseActualValida = false;
@@ -1320,13 +1364,13 @@ case 44:
         }
 break;
 case 45:
-//#line 315 "gram.y"
+//#line 301 "gram.y"
 {
             yyval = new ParserVal();
         }
 break;
 case 46:
-//#line 319 "gram.y"
+//#line 305 "gram.y"
 {
             String nomClase = obtenerClaseDeAmbito(ambitoActual);
             if (nomClase != null) {
@@ -1353,20 +1397,20 @@ case 46:
         }
 break;
 case 47:
-//#line 344 "gram.y"
+//#line 330 "gram.y"
 {
             yyerror("Falta la palabra clave 'FROM' en la declaracion IMPORT");
             yyval = val_peek(0);
         }
 break;
 case 48:
-//#line 352 "gram.y"
+//#line 338 "gram.y"
 {
             yyval = new ParserVal();
         }
 break;
 case 49:
-//#line 356 "gram.y"
+//#line 342 "gram.y"
 {
             String nomClase = obtenerClaseDeAmbito(ambitoActual);
             if (nomClase != null) {
@@ -1397,14 +1441,14 @@ case 49:
         }
 break;
 case 50:
-//#line 385 "gram.y"
+//#line 371 "gram.y"
 {
             yyerror("Falta nombre o lista de clases a heredar luego de 'EXTENDS'");
             yyval = new ParserVal();
         }
 break;
 case 55:
-//#line 403 "gram.y"
+//#line 389 "gram.y"
 {
             String tipoDato = val_peek(3).sval;
             ArrayList<String> variables = (ArrayList<String>) val_peek(2).obj;
@@ -1429,7 +1473,7 @@ case 55:
         }
 break;
 case 56:
-//#line 431 "gram.y"
+//#line 417 "gram.y"
 {
             String mangling = obtenerFuncionActualMangled();
             if (mangling != null) {
@@ -1448,7 +1492,7 @@ case 56:
         }
 break;
 case 57:
-//#line 449 "gram.y"
+//#line 435 "gram.y"
 {
             String mangling = obtenerFuncionActualMangled();
             if (mangling != null) {
@@ -1461,7 +1505,7 @@ case 57:
         }
 break;
 case 58:
-//#line 463 "gram.y"
+//#line 449 "gram.y"
 {
             String nombre = val_peek(0).sval;
             String claveMet = TablaSimbolos.declararVariable(nombre, val_peek(1).sval, "metodo", ambitoActual);
@@ -1474,7 +1518,7 @@ case 58:
         }
 break;
 case 59:
-//#line 477 "gram.y"
+//#line 463 "gram.y"
 {
             String nombre = val_peek(0).sval;
             String claveMet = TablaSimbolos.declararVariable(nombre, "auto", "metodo", ambitoActual);
@@ -1487,27 +1531,27 @@ case 59:
         }
 break;
 case 60:
-//#line 491 "gram.y"
+//#line 477 "gram.y"
 {
             yyval = new ParserVal();
         }
 break;
 case 61:
-//#line 495 "gram.y"
+//#line 481 "gram.y"
 {
             imprimirRegla("exportacion_opcional");
             yyval = val_peek(0);
         }
 break;
 case 62:
-//#line 500 "gram.y"
+//#line 486 "gram.y"
 {
             yyerror("Falta la palabra clave 'TO' en la declaracion EXPORT");
             yyval = val_peek(0);
         }
 break;
 case 63:
-//#line 510 "gram.y"
+//#line 496 "gram.y"
 {
             String nomClase = val_peek(2).sval;
             String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
@@ -1526,11 +1570,11 @@ case 63:
         }
 break;
 case 64:
-//#line 527 "gram.y"
+//#line 513 "gram.y"
 { yyerror("Falta ';' al final de la declaracion de objeto"); }
 break;
 case 65:
-//#line 534 "gram.y"
+//#line 520 "gram.y"
 {
             String tipoDato = val_peek(2).sval;
             ArrayList<String> variables = (ArrayList<String>) val_peek(1).obj;
@@ -1546,30 +1590,30 @@ case 65:
         }
 break;
 case 66:
-//#line 548 "gram.y"
+//#line 534 "gram.y"
 { yyerror("Falta ';' al final de la declaracion comptime"); }
 break;
 case 67:
-//#line 550 "gram.y"
+//#line 536 "gram.y"
 { yyerror("Falta el tipo de dato en la declaracion comptime"); }
 break;
 case 68:
-//#line 552 "gram.y"
+//#line 538 "gram.y"
 {
             yyerror("Falta el tipo de dato en la declaracion comptime");
             yyerror("Falta ';' al final de la declaracion comptime");
         }
 break;
 case 70:
-//#line 562 "gram.y"
+//#line 548 "gram.y"
 { imprimirRegla("sentencia_ejecutable"); }
 break;
 case 77:
-//#line 573 "gram.y"
+//#line 559 "gram.y"
 { yyerror("Sentencia ejecutable malformada o falta ';' previo"); }
 break;
 case 78:
-//#line 578 "gram.y"
+//#line 564 "gram.y"
 {
             if (val_peek(0) != null && val_peek(0).sval != null) {
                 String lexema = val_peek(2).sval;
@@ -1615,7 +1659,7 @@ case 78:
         }
 break;
 case 79:
-//#line 622 "gram.y"
+//#line 608 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipoVar = (String) val_peek(2).obj;
@@ -1636,7 +1680,7 @@ case 79:
         }
 break;
 case 80:
-//#line 644 "gram.y"
+//#line 630 "gram.y"
 {
             String nomObj = val_peek(3).sval;
             String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
@@ -1696,7 +1740,7 @@ case 80:
         }
 break;
 case 81:
-//#line 702 "gram.y"
+//#line 688 "gram.y"
 {
             String nomObj = val_peek(3).sval;
             String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
@@ -1741,17 +1785,17 @@ case 81:
         }
 break;
 case 82:
-//#line 745 "gram.y"
+//#line 731 "gram.y"
 { yyerror("Acceso posicional invalido: solo se permite constante SHORTINT positiva o identificador"); yyval = new ParserVal(); }
 break;
 case 83:
-//#line 751 "gram.y"
+//#line 737 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 84:
-//#line 755 "gram.y"
+//#line 741 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -1782,7 +1826,7 @@ case 84:
         }
 break;
 case 85:
-//#line 784 "gram.y"
+//#line 770 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -1813,25 +1857,25 @@ case 85:
         }
 break;
 case 86:
-//#line 812 "gram.y"
+//#line 798 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 87:
-//#line 813 "gram.y"
+//#line 799 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 88:
-//#line 814 "gram.y"
+//#line 800 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 89:
-//#line 818 "gram.y"
+//#line 804 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 90:
-//#line 822 "gram.y"
+//#line 808 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -1862,7 +1906,7 @@ case 90:
         }
 break;
 case 91:
-//#line 851 "gram.y"
+//#line 837 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -1893,35 +1937,35 @@ case 91:
         }
 break;
 case 92:
-//#line 879 "gram.y"
+//#line 865 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 93:
-//#line 880 "gram.y"
+//#line 866 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 94:
-//#line 881 "gram.y"
+//#line 867 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 95:
-//#line 882 "gram.y"
+//#line 868 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 96:
-//#line 883 "gram.y"
+//#line 869 "gram.y"
 { yyerror("Falta operador en la expresion"); yyval = new ParserVal(); }
 break;
 case 97:
-//#line 884 "gram.y"
+//#line 870 "gram.y"
 { yyerror("Falta operador en la expresion"); yyval = new ParserVal(); }
 break;
 case 98:
-//#line 885 "gram.y"
+//#line 871 "gram.y"
 { yyerror("Falta operador en la expresion"); yyval = new ParserVal(); }
 break;
 case 99:
-//#line 890 "gram.y"
+//#line 876 "gram.y"
 {
             String lexema = val_peek(0).sval;
             String claveVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
@@ -1950,7 +1994,7 @@ case 99:
         }
 break;
 case 100:
-//#line 917 "gram.y"
+//#line 903 "gram.y"
 {
             String lexema = val_peek(0).sval;
             int valor = Integer.parseInt(lexema);
@@ -1964,7 +2008,7 @@ case 100:
         }
 break;
 case 101:
-//#line 929 "gram.y"
+//#line 915 "gram.y"
 {
             String lexema = val_peek(0).sval;
             double valor = Double.parseDouble(lexema);
@@ -1978,7 +2022,7 @@ case 101:
         }
 break;
 case 102:
-//#line 941 "gram.y"
+//#line 927 "gram.y"
 {
             String lexema = val_peek(2).sval;
             String claveFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
@@ -2009,7 +2053,7 @@ case 102:
         }
 break;
 case 103:
-//#line 970 "gram.y"
+//#line 956 "gram.y"
 {
             String lexema = val_peek(3).sval;
             String claveFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
@@ -2062,31 +2106,31 @@ case 103:
         }
 break;
 case 105:
-//#line 1022 "gram.y"
+//#line 1008 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 106:
-//#line 1026 "gram.y"
+//#line 1012 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 107:
-//#line 1030 "gram.y"
+//#line 1016 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 108:
-//#line 1034 "gram.y"
+//#line 1020 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 109:
-//#line 1041 "gram.y"
+//#line 1027 "gram.y"
 {
             String nomObj = val_peek(4).sval;
             String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
@@ -2152,7 +2196,7 @@ case 109:
         }
 break;
 case 110:
-//#line 1105 "gram.y"
+//#line 1091 "gram.y"
 {
             String nomObj = val_peek(5).sval;
             String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
@@ -2239,7 +2283,7 @@ case 110:
         }
 break;
 case 111:
-//#line 1193 "gram.y"
+//#line 1179 "gram.y"
 {
             ArrayList<ParserVal> lista = new ArrayList<>();
             lista.add(val_peek(0));
@@ -2249,7 +2293,7 @@ case 111:
         }
 break;
 case 112:
-//#line 1201 "gram.y"
+//#line 1187 "gram.y"
 {
             ArrayList<ParserVal> lista = (ArrayList<ParserVal>) val_peek(2).obj;
             lista.add(val_peek(0));
@@ -2257,7 +2301,7 @@ case 112:
         }
 break;
 case 113:
-//#line 1211 "gram.y"
+//#line 1197 "gram.y"
 {
             if (val_peek(1) != null && val_peek(1).sval != null) {
                 String lexema = val_peek(4).sval;
@@ -2323,14 +2367,14 @@ case 113:
         }
 break;
 case 114:
-//#line 1275 "gram.y"
+//#line 1261 "gram.y"
 {
             yyerror("Uso del simbolo ':=' donde debe usarse '=' en asignacion dentro de expresion");
             yyval = new ParserVal();
         }
 break;
 case 115:
-//#line 1283 "gram.y"
+//#line 1269 "gram.y"
 {
             String lexemaPos = val_peek(0).sval;
             String claveNeg = TablaSimbolos.convertirANegativo(lexemaPos);
@@ -2341,7 +2385,7 @@ case 115:
         }
 break;
 case 116:
-//#line 1292 "gram.y"
+//#line 1278 "gram.y"
 {
             String lexemaPos = val_peek(0).sval;
             String claveNeg = TablaSimbolos.convertirANegativo(lexemaPos);
@@ -2352,7 +2396,7 @@ case 116:
         }
 break;
 case 117:
-//#line 1305 "gram.y"
+//#line 1291 "gram.y"
 {
             if (val_peek(1) != null && val_peek(1).sval != null) {
                 String tipoExp = (String) val_peek(1).obj;
@@ -2384,7 +2428,7 @@ case 117:
         }
 break;
 case 118:
-//#line 1339 "gram.y"
+//#line 1325 "gram.y"
 {
             if (val_peek(1) != null && val_peek(1).sval != null) {
                 int idBF = GeneradorTerceto.crearTerceto("BF", val_peek(1).sval, "?");
@@ -2393,15 +2437,15 @@ case 118:
         }
 break;
 case 120:
-//#line 1350 "gram.y"
+//#line 1336 "gram.y"
 { yyerror("Falta '(' de apertura en condicion de seleccion"); }
 break;
 case 121:
-//#line 1352 "gram.y"
+//#line 1338 "gram.y"
 { yyerror("Condicion de seleccion malformada o error en parentesis"); }
 break;
 case 122:
-//#line 1357 "gram.y"
+//#line 1343 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idBF = pilaSaltos.pop();
@@ -2412,7 +2456,7 @@ case 122:
         }
 break;
 case 123:
-//#line 1369 "gram.y"
+//#line 1355 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idSalto = pilaSaltos.pop();
@@ -2421,7 +2465,7 @@ case 123:
         }
 break;
 case 124:
-//#line 1376 "gram.y"
+//#line 1362 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idBI = pilaSaltos.pop();
@@ -2430,7 +2474,7 @@ case 124:
         }
 break;
 case 125:
-//#line 1383 "gram.y"
+//#line 1369 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idSalto = pilaSaltos.pop();
@@ -2440,7 +2484,7 @@ case 125:
         }
 break;
 case 126:
-//#line 1391 "gram.y"
+//#line 1377 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idBI = pilaSaltos.pop();
@@ -2450,7 +2494,7 @@ case 126:
         }
 break;
 case 127:
-//#line 1402 "gram.y"
+//#line 1388 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -2472,41 +2516,41 @@ case 127:
         }
 break;
 case 128:
-//#line 1424 "gram.y"
+//#line 1410 "gram.y"
 { yyval = new ParserVal(">="); }
 break;
 case 129:
-//#line 1425 "gram.y"
+//#line 1411 "gram.y"
 { yyval = new ParserVal("<="); }
 break;
 case 130:
-//#line 1426 "gram.y"
+//#line 1412 "gram.y"
 { yyval = new ParserVal("=="); }
 break;
 case 131:
-//#line 1427 "gram.y"
+//#line 1413 "gram.y"
 { yyval = new ParserVal("!="); }
 break;
 case 132:
-//#line 1428 "gram.y"
+//#line 1414 "gram.y"
 { yyval = new ParserVal(">"); }
 break;
 case 133:
-//#line 1429 "gram.y"
+//#line 1415 "gram.y"
 { yyval = new ParserVal("<"); }
 break;
 case 136:
-//#line 1436 "gram.y"
+//#line 1422 "gram.y"
 { yyerror("Falta el delimitador END en el bloque de sentencias"); }
 break;
 case 137:
-//#line 1442 "gram.y"
+//#line 1428 "gram.y"
 {
             pilaSaltos.push(GeneradorTerceto.getProximoIndice());
         }
 break;
 case 138:
-//#line 1449 "gram.y"
+//#line 1435 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int dirInicio = pilaSaltos.pop();
@@ -2517,75 +2561,75 @@ case 138:
         }
 break;
 case 139:
-//#line 1458 "gram.y"
+//#line 1444 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta el cuerpo de la iteracion REPEAT");
         }
 break;
 case 140:
-//#line 1463 "gram.y"
+//#line 1449 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta palabra clave UNTIL en la iteracion REPEAT");
         }
 break;
 case 141:
-//#line 1468 "gram.y"
+//#line 1454 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta palabra clave UNTIL y cuerpo en la iteracion REPEAT");
         }
 break;
 case 142:
-//#line 1473 "gram.y"
+//#line 1459 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta palabra clave UNTIL y ')' en la iteracion REPEAT");
         }
 break;
 case 143:
-//#line 1478 "gram.y"
+//#line 1464 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta palabra clave UNTIL, cuerpo y ')' en la iteracion REPEAT");
         }
 break;
 case 144:
-//#line 1486 "gram.y"
+//#line 1472 "gram.y"
 {
             yyval = val_peek(1);
         }
 break;
 case 145:
-//#line 1490 "gram.y"
+//#line 1476 "gram.y"
 {
             yyval = val_peek(1);
             yyerror("Falta '(' de apertura en condicion de iteracion");
         }
 break;
 case 146:
-//#line 1495 "gram.y"
+//#line 1481 "gram.y"
 {
             yyval = val_peek(0);
             yyerror("Falta ')' de cierre en condicion de iteracion");
         }
 break;
 case 147:
-//#line 1500 "gram.y"
+//#line 1486 "gram.y"
 {
             yyval = val_peek(0);
             yyerror("Faltan parentesis en condicion de iteracion");
         }
 break;
 case 148:
-//#line 1509 "gram.y"
+//#line 1495 "gram.y"
 {
             GeneradorTerceto.crearTerceto("POUT", val_peek(1).sval, "-");
         }
 break;
 case 149:
-//#line 1513 "gram.y"
+//#line 1499 "gram.y"
 {
             if (val_peek(1) != null && val_peek(1).sval != null) {
                 GeneradorTerceto.crearTerceto("POUT", val_peek(1).sval, "-", (String) val_peek(1).obj);
@@ -2593,11 +2637,11 @@ case 149:
         }
 break;
 case 150:
-//#line 1519 "gram.y"
+//#line 1505 "gram.y"
 { yyerror("Falta argumento en sentencia pout"); }
 break;
 case 151:
-//#line 1524 "gram.y"
+//#line 1510 "gram.y"
 {
             String funcionActual = obtenerFuncionActualMangled();
             if (funcionActual == null) {
@@ -2629,7 +2673,7 @@ case 151:
             }
         }
 break;
-//#line 2555 "Parser.java"
+//#line 2599 "Parser.java"
 //########## END OF USER-SUPPLIED ACTIONS ##########
     }//switch
     //#### Now let's reduce... ####

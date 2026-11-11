@@ -8,6 +8,10 @@ public class GeneradorTerceto {
     // Tercetos almacenados por ambito (main, funciones, metodos)
     private static final Map<String, ArrayList<Terceto>> tercetosPorAmbito = new LinkedHashMap<>();
 
+    public static Map<String, ArrayList<Terceto>> obtenerTercetosPorAmbito() {
+        return tercetosPorAmbito;
+    }
+
     public static void reiniciar() {
         tercetosPorAmbito.clear();
     }

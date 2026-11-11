@@ -25,7 +25,7 @@ public class AS14 extends Accion_Semantica{
             AnalizadorLexico.setReferenciaTablaSimbolos(clave);
             return TablaPalabrasReservadas.obtenerIdentificador("CTE_SINGLEF");
         }
-        AnalizadorLexico.mostrarError("El double "+ resultado + " esta fuera de rango");
+        AnalizadorLexico.mostrarError("Constante singlef fuera de rango: " + resultado);
         return 0;
     }
 }

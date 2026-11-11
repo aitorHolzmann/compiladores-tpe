@@ -15,6 +15,17 @@ public class FileHelper {
 
         InputStream recurso = FileHelper.class.getResourceAsStream(path);
         if (recurso == null) {
+            java.io.File f = new java.io.File("." + path);
+            if (!f.exists()) {
+                f = new java.io.File(path.startsWith("/") ? path.substring(1) : path);
+            }
+            if (f.exists()) {
+                try {
+                    recurso = new java.io.FileInputStream(f);
+                } catch (Exception e) {}
+            }
+        }
+        if (recurso == null) {
             System.out.println("No se encontro la tabla " + path + " dentro del programa");
             return map;
         }

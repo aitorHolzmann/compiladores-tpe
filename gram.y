@@ -58,25 +58,11 @@ nombre_programa
 
 programa
     : nombre_programa sentencias_declarativas BEGIN sentencias_ejecutables END
-        { 
-            if (cant_errores == 0 && cant_errores_semanticos == 0) {
-                System.out.println("Programa reconocido correctamente"); 
-            } else {
-                System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
-            }
-        }
     | error { yyerror("Falta el nombre del programa al inicio"); } sentencias_declarativas BEGIN sentencias_ejecutables END
-        { 
-            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
-        }
     | nombre_programa sentencias_declarativas error { yyerror("Falta el delimitador BEGIN de sentencias ejecutables"); } sentencias_ejecutables END
-        {
-            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
-        }
     | nombre_programa sentencias_declarativas BEGIN sentencias_ejecutables
         {
             yyerror("Falta el delimitador END al final del programa");
-            System.out.println("Compilacion finalizada con " + cant_errores + " error(es) sintactico(s) y " + cant_errores_semanticos + " error(es) semantico(s)");
         }
     ;
 
@@ -1564,6 +1550,10 @@ static int cant_errores_semanticos = 0;
 static int cant_retornos_auto = -1;
 static boolean claseActualValida = false;
 
+public static ArrayList<String> erroresSintacticos = new ArrayList<>();
+public static ArrayList<String> erroresSemanticos = new ArrayList<>();
+public static boolean modoDebug = false;
+
 public static String ambitoActual = TablaSimbolos.AMBITO_GLOBAL;
 public static Stack<Integer> pilaSaltos = new Stack<>();
 
@@ -1603,12 +1593,56 @@ public static void salirAmbito() {
 
 public static void agregarErrorSemantico(String s) {
     cant_errores_semanticos++;
-    System.out.println("Error semantico (linea " + AnalizadorLexico.getLineaActual() + "): " + s);
+    String err = "Error semantico (linea " + AnalizadorLexico.getLineaActual() + "): " + s;
+    erroresSemanticos.add(err);
+    if (modoDebug) {
+        System.out.println(err);
+    }
 }
 
 // Muestra por pantalla la regla reconocida y la linea donde termino (al reducir)
 static void imprimirRegla(String regla) {
-    System.out.println("Regla " + regla + " en linea " + AnalizadorLexico.getLineaActual());
+    if (modoDebug) {
+        System.out.println("Regla " + regla + " en linea " + AnalizadorLexico.getLineaActual());
+    }
+}
+
+public static void imprimirInformeErrores() {
+    int cantLexicos = AnalizadorLexico.errores.size();
+    int cantSintacticos = erroresSintacticos.size();
+    int cantSemanticos = erroresSemanticos.size();
+    int total = cantLexicos + cantSintacticos + cantSemanticos;
+
+    System.out.println("----------------------------------------");
+    System.out.println("          INFORME DE ERRORES            ");
+    System.out.println("----------------------------------------");
+    if (total == 0) {
+        System.out.println("Compilacion exitosa: No se detectaron errores.");
+    } else {
+        System.out.println("Se detectaron " + total + " error(es) durante la compilacion:\n");
+        if (cantLexicos > 0) {
+            System.out.println("[Errores Lexicos]");
+            for (int i = 0; i < AnalizadorLexico.errores.size(); i++) {
+                System.out.println("  - " + AnalizadorLexico.errores.get(i));
+            }
+            System.out.println();
+        }
+        if (cantSintacticos > 0) {
+            System.out.println("[Errores Sintacticos]");
+            for (int i = 0; i < erroresSintacticos.size(); i++) {
+                System.out.println("  - " + erroresSintacticos.get(i));
+            }
+            System.out.println();
+        }
+        if (cantSemanticos > 0) {
+            System.out.println("[Errores Semanticos]");
+            for (int i = 0; i < erroresSemanticos.size(); i++) {
+                System.out.println("  - " + erroresSemanticos.get(i));
+            }
+            System.out.println();
+        }
+    }
+    System.out.println("----------------------------------------\n");
 }
 
  // Soporte para variables COMPTIME y evaluacion estatica (Tema 22)
@@ -1674,7 +1708,8 @@ public static void main(String[] args) {
     }
 
     String ruta = args[0];
-    boolean debug = args.length == 2;
+    modoDebug = (args.length == 2 && args[1].equals("-v"));
+    AnalizadorLexico.debug = modoDebug;
 
     if (!new File(ruta).isFile()) {
         System.out.println("No se encontro el archivo a compilar: " + ruta);
@@ -1692,13 +1727,27 @@ public static void main(String[] args) {
         cant_retornos_auto = -1;
         cant_errores = 0;
         cant_errores_semanticos = 0;
+        erroresSintacticos.clear();
+        erroresSemanticos.clear();
+        AnalizadorLexico.reiniciar();
+        AnalizadorLexico.debug = modoDebug;
+
         AnalizadorLexico.reader = new PushbackReader(new BufferedReader(
                 new InputStreamReader(new FileInputStream(ruta), java.nio.charset.StandardCharsets.UTF_8)));
-        parser = new Parser(debug);
+        parser = new Parser(modoDebug);
         parser.yyparse(); 
         TablaSimbolos.purgarIdentificadoresSinDeclarar();
+
+        imprimirInformeErrores();
         TablaSimbolos.imprimirTabla();
         GeneradorTerceto.imprimirTercetos();
+
+        int totalErrores = AnalizadorLexico.errores.size() + erroresSintacticos.size() + erroresSemanticos.size();
+        if (totalErrores == 0) {
+            String asm = GeneradorAssembler.generarAssembler();
+            GeneradorAssembler.guardarArchivo(ruta, asm);
+            GeneradorAssembler.imprimirAssembler(asm);
+        }
     } catch (Exception e) {
         e.printStackTrace();
     }
@@ -1722,5 +1771,9 @@ void yyerror(String s) {
         return; // Se omite el mensaje generico de byacc/j para usar las descripciones especificas
     }
     cant_errores++;
-    System.out.println("Error sintactico (linea " + AnalizadorLexico.getLineaActual() + "): " + s);
+    String err = "Error sintactico (linea " + AnalizadorLexico.getLineaActual() + "): " + s;
+    erroresSintacticos.add(err);
+    if (modoDebug) {
+        System.out.println(err);
+    }
 }

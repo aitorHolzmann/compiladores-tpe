@@ -16,7 +16,7 @@ public class AS11 extends Accion_Semantica{
         String token_entregado = token_actual.toString();
         int resultado = TablaPalabrasReservadas.obtenerIdentificador(token_entregado.toUpperCase());
         if (resultado == TablaPalabrasReservadas.NOT_FOUND){
-            System.out.println("ERROR: la palabra "+ token_entregado + " no es una palabra reservada");
+            AnalizadorLexico.mostrarError("La palabra '" + token_entregado + "' no es una palabra reservada valida");
             return 0;
         }
         return resultado;

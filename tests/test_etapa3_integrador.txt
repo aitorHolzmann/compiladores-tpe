@@ -1,0 +1,84 @@
+programa_integrador_grupo20
+
+// Declaraciones de tipos y comptime (Temas 1, 7, 22)
+shortint a, b, c;
+singlef f1;
+comptime shortint limite_estatico;
+
+// Clases, visibilidad y herencia multiple (Temas 26 y 30)
+class c_base_a
+begin
+  shortint atr_a export to c_hija;
+  shortint metodo_a(shortint p)
+  begin
+    ret(p + 1$s);
+  end export to c_hija;
+end;
+
+class c_base_b
+begin
+  singlef atr_b export to c_hija;
+end;
+
+class c_hija import from c_base_a, c_base_b
+begin
+  extends c_base_a, c_base_b;
+  shortint atr_propio;
+end;
+
+c_hija obj;
+
+// Funcion ordinaria
+shortint FUNCTION duplicar(shortint num)
+begin
+  ret(num * 2$s);
+end;
+
+// Tema 21: AUTO FUNCTION con inferencia de retorno y Tema 34: conversion tos()
+AUTO FUNCTION calcular(shortint x, singlef y)
+begin
+  ret(tos(y) + x);
+end;
+
+begin
+  // Tema 22: Asignacion estatica a comptime
+  limite_estatico := 5$s;
+
+  // Asignaciones basicas (Temas 1 y 7)
+  a := 2$s;
+  f1 := 10.5;
+
+  // Tema 17: Asignacion en expresion y Tema 34: tos()
+  b := c = (tos(f1) + a);
+
+  // Tema 29: Acceso posicional a atributos (por constante y por variable)
+  obj[0$s] := 20$s;
+  obj[a] := 30$s;
+
+  // Invocacion a metodo heredado y funcion auto
+  c := obj.metodo_a(a);
+  a := calcular(c, f1);
+
+  // Control de flujo: IF-ELSE
+  if (a > limite_estatico)
+  begin
+    b := duplicar(a);
+  end
+  else
+  begin
+    b := 0$s;
+  end
+  end_if;
+
+  // Tema 12: Iteracion REPEAT-UNTIL
+  repeat
+  begin
+    b := b - 1$s;
+  end
+  until (b <= 0$s);
+
+  // Tema 10: Cadena multilinea en sentencia pout
+  pout("Integracion Grupo 20
+finalizada exitosamente");
+
+end

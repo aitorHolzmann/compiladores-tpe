@@ -8,8 +8,7 @@ public class ASe extends Accion_Semantica{
     @Override 
     public int ejecutar(StringBuilder token_actual, PushbackReader reader, char caracter_actual){
         token_actual.append(caracter_actual);
-        System.out.println("Error en linea "+ AnalizadorLexico.getLineaActual());
-        System.out.println(token_actual.toString() + " No pertenece al lenguaje");
+        AnalizadorLexico.mostrarError("Caracter o simbolo no pertenece al lenguaje: '" + token_actual.toString() + "'");
         return 0;
     }
 }

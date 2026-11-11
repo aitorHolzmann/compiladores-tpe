@@ -33,7 +33,7 @@ public class AS6 extends Accion_Semantica{
             return TablaPalabrasReservadas.obtenerIdentificador("CTE_SHORTINT");
         }
 
-        AnalizadorLexico.mostrarError(": Constante shortint fuera de rango (" + valor + ")");
+        AnalizadorLexico.mostrarError("Constante shortint fuera de rango ([-128, 127]): " + valor);
         return 0;
     }
 }

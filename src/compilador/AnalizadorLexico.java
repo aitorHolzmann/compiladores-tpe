@@ -2,6 +2,7 @@ package src.compilador;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Scanner;
 import src.accion_semantica.*;
 
@@ -41,6 +42,19 @@ public class AnalizadorLexico {
     public static PushbackReader reader;
     public static int estado_actual = 0;
     private static int linea_actual = 1;   
+
+    public static boolean debug = false;
+    public static final ArrayList<String> errores = new ArrayList<>();
+    public static final ArrayList<String> warnings = new ArrayList<>();
+
+    public static void reiniciar() {
+        errores.clear();
+        warnings.clear();
+        linea_actual = 1;
+        estado_actual = 0;
+        token_actual.setLength(0);
+        referenciaTablaSimbolos = null;
+    }   
 
     // Cantidad de estados del automata 13 + Final + Error
     private static final int CANT_ESTADOS = 15;
@@ -91,11 +105,19 @@ public class AnalizadorLexico {
     }
 
     public static void mostrarWarning(String mensaje){
-        System.out.println(" - WARNING: Linea: " + linea_actual + "\n -- " + mensaje);
+        String w = "Warning lexico (linea " + linea_actual + "): " + mensaje;
+        warnings.add(w);
+        if (debug) {
+            System.out.println(" - WARNING: Linea: " + linea_actual + "\n -- " + mensaje);
+        }
     }
 
     public static void mostrarError(String mensaje){
-        System.out.println(" - ERROR: Linea: " + linea_actual + "\n -- " + mensaje);
+        String e = "Error lexico (linea " + linea_actual + "): " + mensaje;
+        errores.add(e);
+        if (debug) {
+            System.out.println(" - ERROR: Linea: " + linea_actual + "\n -- " + mensaje);
+        }
     }
 
     
@@ -186,7 +208,9 @@ public class AnalizadorLexico {
                 int token = analizar((char) caracter_leido);
                 
                 if (token != token_abierto){
-                    System.out.println("El token es: " + token);
+                    if (debug) {
+                        System.out.println("El token es: " + token);
+                    }
                     return token;
                 }
                 caracter_leido = reader.read();
@@ -194,7 +218,9 @@ public class AnalizadorLexico {
             if (token_actual.length() > 0) {
                 int token = analizar((char) 10);
                 if (token != token_abierto) {
-                    System.out.println("El token es: " + token);
+                    if (debug) {
+                        System.out.println("El token es: " + token);
+                    }
                     return token;
                 }
             }
@@ -231,6 +257,17 @@ public class AnalizadorLexico {
         int[][] matriz = new int[filas][columnas];
 
         InputStream recurso = AnalizadorLexico.class.getResourceAsStream(path);
+        if (recurso == null) {
+            java.io.File f = new java.io.File("." + path);
+            if (!f.exists()) {
+                f = new java.io.File(path.startsWith("/") ? path.substring(1) : path);
+            }
+            if (f.exists()) {
+                try {
+                    recurso = new java.io.FileInputStream(f);
+                } catch (Exception e) {}
+            }
+        }
         if (recurso == null) {
             System.out.println("No se encontro la tabla " + path + " dentro del programa");
             return matriz;
