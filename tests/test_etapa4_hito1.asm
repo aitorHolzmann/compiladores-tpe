@@ -26,6 +26,7 @@ printf PROTO C :VARARG
     _str_4 DB "--- Fin prueba Hito 1 ---", 0
     @aux_print_short DW ?
     @aux_print_float DQ ?
+    @aux_tos DW ?
 
 .code
 start:

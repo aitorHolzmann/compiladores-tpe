@@ -97,7 +97,7 @@ Todo el código generado se guarda en un archivo `.asm` que se divide en distint
 * **Sección `.data`:** donde se reservan e inicializan los datos estáticos del programa (variables, constantes literales y variables auxiliares del compilador).
 * **Sección `.code`:** contiene las instrucciones ejecutables, marcando el inicio con la etiqueta `start:` y el fin del proceso con `invoke ExitProcess, 0` seguido de `end start`.
 
-##  Condición Previa: Control de Errores
+##  .data
 
 Antes de generar el Assembler, en el **main** de **gram.y** debemos validar que las etapas anteriores hayan finalizado sin errores. Si se cumple entonces podemos empezar a construir el **assembler** llamando a **GeneradorAssembler.generarAssembler()**. 
 
@@ -130,30 +130,28 @@ Para reservar el espacio tuvimos en cuenta los rangos de los tipos de datos:
   ```
 
 
-## 4. Sección `.code`: Traducción de Tercetos y la Sentencia `POUT`
+## Sentencia POUT
+//Se ataco solo lo del pout. Hay que entender mejor como funciona la impresion.
 
 En el Hito 1, nos concentramos en traducir la sentencia `POUT` dentro del ámbito raíz (`main`). Recorremos los tercetos de `main` obtenidos con `GeneradorTerceto.obtenerTercetosPorAmbito()`.
 
 Cuando encontramos un terceto `( POUT , op1 , - )`, consultamos el tipo de `op1` y generamos las instrucciones correspondientes:
 
-### Caso A: Impresión de Cadenas (`CADENA`)
+### Impresión de`CADENA`
 ```nasm
 invoke printf, cfm$("%s\n"), OFFSET _str_0
 ```
-* **`OFFSET`:** es obligatorio porque `printf` espera el puntero (la dirección en memoria de la cadena). Sin `OFFSET`, intentaría pasar el texto desreferenciado como un número y el programa colapsaría (*crash*).
-* **`cfm$()`:** macro de MASM32 que crea la cadena de formato terminada en `0` en tiempo de ensamblado.
-
-### Caso B: Impresión de Enteros Cortos (`SHORTINT` - 8 bits con signo)
+`OFFSET` es obligatorio porque `printf` espera el puntero (la dirección en memoria de la cadena). Sin `OFFSET`, intentaría pasar el texto desreferenciado como un número y el programa colapsaría (*crash*).`cfm$()` es un macro de MASM32 que crea la cadena de formato terminada en `0` en tiempo de ensamblado.
+### Impresión de `SHORTINT`
 ```nasm
 MOV AL, _cte_neg_5
 MOVSX AX, AL
 MOV @aux_print_short, AX
 invoke printf, cfm$("%hd\n"), @aux_print_short
 ```
-* **El problema:** `printf` no tiene un modificador estándar de 8 bits en este runtime; usa `%hd` esperando un entero de 16 bits (`WORD`).
-* **La solución:** cargamos el byte en `AL` y usamos **`MOVSX AX, AL`** (*Move with Sign-Extension*). Esta instrucción copia `AL` a `AX` y rellena la parte alta `AH` replicando el bit de signo. Si `AL` vale `-5`, `AX` conserva exactamente el valor `-5` en 16 bits. (Si usáramos `MOVZX` o no limpiáramos `AH`, rellenaría con ceros o basura convirtiendo un negativo en un positivo enorme).
+`printf` espera un entero de 16 bits (`WORD`). Entonces cargamos el byte en `AL` y usamos **`MOVSX AX, AL`** (*Move with Sign-Extension*). Esta instrucción copia `AL` a `AX` y rellena la parte alta `AH` replicando el bit de signo. (Si usáramos `MOVZX` o no limpiáramos `AH`, rellenaría con ceros o basura convirtiendo un negativo en un positivo enorme).
 
-### Caso C: Impresión de Flotantes (`SINGLEF` - 32 bits)
+### Impresión de`SINGLEF`
 ```nasm
 FLD _cte_3_14
 FSTP @aux_print_float

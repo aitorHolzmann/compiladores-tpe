@@ -10,10 +10,10 @@
 ## 🗺️ Mapa General de la Etapa 4 en Hitos Progresivos
 
 ```text
-[Hito 1] Estructura MASM32, Sección .data e Impresión por Consola (POUT) (EN CURSO)
+[Hito 1] Estructura MASM32, Sección .data e Impresión por Consola (POUT) (COMPLETADO)
     │
     ▼
-[Hito 2] Variables Auxiliares (@aux), Aritmética Entera/Flotante, Asignaciones y tos() (Tema 34)
+[Hito 2] Variables Auxiliares (@aux), Aritmética Entera/Flotante, Asignaciones y tos() (Tema 34) (COMPLETADO)
     │
     ▼
 [Hito 3] Control de Flujo: Comparaciones Enteras/Flotantes, Lógica Inversa y Saltos (IF, REPEAT UNTIL)
@@ -432,5 +432,431 @@ A continuación se presentan 5 preguntas incisivas típicas de la mesa evaluador
 
 ---
 
-### 1.6. Próximo Paso: Hito 2
-Una vez consolidada la infraestructura base y la capacidad de emitir `.data` y `POUT`, avanzaremos hacia el **Hito 2: Variables Auxiliares (`@aux`), Expresiones Aritméticas, Asignaciones y Conversión `tos()` (Tema 34)**, donde implementaremos la generación de código para las operaciones aritméticas de enteros en la CPU y de flotantes en la FPU, garantizando el pre-registro de las variables auxiliares en la Tabla de Símbolos.
+### 1.6. Próximo Paso: Hito 2 (Completado)
+La infraestructura base y la capacidad de emitir `.data` y `POUT` quedaron plenamente consolidadas en el Hito 1. A continuación se detalla la implementación y defensa oral del Hito 2.
+
+---
+
+## 📌 Hito 2: Variables Auxiliares (`@aux`), Aritmética Entera/Flotante, Asignaciones y `tos()` (Tema 34)
+
+---
+
+### 2.1. Introducción a la Arquitectura: CPU vs. Memoria RAM
+
+Para entender el código Assembler que genera este hito, hay que comprender una regla física de la arquitectura Intel x86:
+
+> **Regla de Oro de x86:** El procesador **NO puede operar de memoria a memoria**.  
+> Una instrucción como `ADD _a, _b` (donde ambas variables residen en la RAM) es **inválida e ilegal** para el hardware.
+
+#### ¿Cómo resuelve una operación la CPU?
+La CPU tiene unos pequeños casilleros de almacenamiento ultrarrápidos dentro del propio chip llamados **Registros**. Para hacer cualquier cuenta aritmética (`+`, `-`, `*`, `/`):
+1. Trae uno de los operandos desde la memoria RAM a un registro interno (`MOV AL, operando1`).
+2. Realiza la operación aritmética combinando ese registro con el segundo operando (`ADD AL, operando2`).
+3. Guarda el resultado obtenido en una variable de memoria para no perderlo (`MOV @aux, AL`).
+
+```text
+    Memoria RAM (.data)               CPU (Registro AL)               Memoria RAM (.data)
+   ┌───────────────────┐             ┌─────────────────┐             ┌───────────────────┐
+   │     _main@a       │ ──[ MOV ]──>│       AL        │             │                   │
+   └───────────────────┘             │   (Operación    │             │      @aux0        │
+   ┌───────────────────┐             │    ADD / SUB    │ ──[ MOV ]──>│ (Resultado para   │
+   │     _main@b       │ ──[ ADD ]──>│   IMUL / IDIV)  │             │  próximo terceto) │
+   └───────────────────┘             └─────────────────┘             └───────────────────┘
+```
+
+#### ¿Por qué usamos Variables Auxiliares (`@aux`) y cómo se pre-registran?
+En la Etapa 3, cada operación aritmética generó un terceto con un índice local (por ejemplo, el terceto `3: (+, a, b)`). Cuando tercetos posteriores quieren usar ese resultado, lo referencian como `[3]`.
+
+En Assembler, como los registros de la CPU son escasos y se sobreescriben en la siguiente instrucción, **cada terceto que produce un resultado se asocia a una variable auxiliar en memoria (`@aux3`)**:
+- En el ámbito `"main"`, el terceto `i` genera la variable `@aux<i>` (ej. `@aux3`, `@aux4`, `@aux17`).
+- En ámbitos anidados (funciones/métodos), genera `@aux_<ambito>_<i>`.
+- **Pre-registro en la Tabla de Símbolos:** Antes de emitir la sección `.data`, el generador recorre los tercetos, detecta las operaciones (`+`, `-`, `*`, `/`, `tos`) e inserta en la Tabla de Símbolos la entrada `@aux<i>` con su tipo (`SHORTINT` o `SINGLEF`) y uso `"auxiliar"`. Así, la sección `.data` emite automáticamente `@aux3 DB ?` (si es entero) o `@aux17 DD ?` (si es flotante).
+
+---
+
+### 2.2. Aritmética Entera de 8 bits (`SHORTINT`)
+
+El tipo `SHORTINT` del Grupo 20 ocupa **1 byte con signo (`[-128, 127]`)**, por lo que se opera con la parte baja del registro acumulador: **`AL`** (8 bits).
+
+#### 1. Suma (`+`) y Resta (`-`)
+Directas y simétricas:
+- **Suma:**
+  ```nasm
+  MOV AL, _main@a       ; Carga operando 1 en AL
+  ADD AL, _main@b       ; Suma operando 2 a AL (AL = AL + b)
+  MOV @aux0, AL         ; Almacena resultado en la variable auxiliar
+  ```
+- **Resta:**
+  ```nasm
+  MOV AL, _main@a       ; Carga operando 1 en AL
+  SUB AL, _main@b       ; Resta operando 2 a AL (AL = AL - b)
+  MOV @aux1, AL         ; Almacena resultado en la variable auxiliar
+  ```
+
+#### 2. Multiplicación Entera con Signo: `IMUL`
+En x86, multiplicar dos números de 8 bits puede dar un resultado de hasta 16 bits (ejemplo: $100 \times 2 = 200$, que no cabe en 8 bits).  
+Por eso, la instrucción de multiplicación entera con signo **`IMUL operando2`**:
+- Multiplica implícitamente el contenido de **`AL`** por el operando especificado.
+- Deposita el resultado completo de 16 bits en el registro **`AX`** (`AH:AL`).
+- La parte baja del resultado queda en **`AL`**, que es lo que guardamos en nuestra variable auxiliar `DB`:
+  ```nasm
+  MOV AL, _main@b       ; Carga multiplicando en AL
+  IMUL _cte_2           ; AX = AL * 2 (con signo)
+  MOV @aux3, AL         ; Guarda el byte de resultado en @aux3
+  ```
+
+#### 3. División Entera con Signo: `IDIV` y la necesidad crítica de `CBW`
+La división en x86 tiene una particularidad de diseño que los docentes preguntan siempre en la defensa:
+> **Particularidad de x86:** Cuando se ejecuta `IDIV divisor` con un divisor de 8 bits (un byte), el procesador **NO toma a `AL` como dividendo**, sino que **espera obligatoriamente un dividendo de 16 bits alojado en todo el registro `AX` (`AH:AL`)**.
+
+Si solo cargáramos `MOV AL, dividendo`, la parte alta **`AH` contendría basura** de instrucciones anteriores, produciendo un resultado completamente erróneo o una excepción de división por cero/desbordamiento (*Divide Overflow Exception*).
+
+##### ¿Cómo se prepara `AX` de forma segura? La instrucción `CBW`
+Para extender el signo del byte en `AL` a los 16 bits de `AX`, la arquitectura x86 provee la instrucción nativa **`CBW` (*Convert Byte to Word*)**:
+- Si `AL` es positivo (bit 7 en `0`), `CBW` rellena `AH` con `0x00`.
+- Si `AL` es negativo (bit 7 en `1`), `CBW` rellena `AH` con `0xFF`.
+- Tras ejecutar `IDIV divisor`:
+  - El **cociente** entero de la división queda en **`AL`**.
+  - El **resto** (módulo) queda en **`AH`**.
+
+Código emitido por nuestro compilador:
+```nasm
+MOV AL, _cte_6          ; Carga dividendo de 8 bits en AL
+CBW                     ; Extiende signo de AL a todo AX (AH:AL)
+IDIV _main@b            ; Divide AX por b. Cociente en AL, resto en AH
+MOV @aux5, AL           ; Guarda el cociente en @aux5
+```
+
+---
+
+### 2.3. Aritmética de Punto Flotante (`SINGLEF`) en el Coprocesador 80x87 (FPU)
+
+A diferencia de los enteros que usan los registros de propósito general (`AL`, `AX`), los números de punto flotante `SINGLEF` (32 bits IEEE 754, directiva `DD`) se procesan en el **Coprocesador Matemático 80x87 (FPU)**.
+
+#### La Pila de Registros de la FPU: `ST(0)` a `ST(7)`
+El coprocesador opera como una **calculadora de notación polaca inversa (RPN)** basada en una pila circular de 8 registros de 80 bits:
+- **`ST(0)`** es el tope de la pila (*Top of Stack*).
+- **`FLD operando` (*Float Load*):** Empuja un valor a la pila. Lo que estaba en `ST(0)` pasa a `ST(1)`, y el nuevo dato queda en `ST(0)`.
+- **`FSTP destino` (*Float Store and Pop*):** Copia el valor de `ST(0)` a la memoria RAM (convirtiéndolo a 32 bits `DD`) y **desapila el registro**.
+
+> **Principio de Limpieza de Pila:** La FPU solo tiene 8 registros. Si dejáramos valores acumulados sin desapilar, al cabo de 8 cálculos la pila se desbordaría (*Floating-Point Stack Overflow*). Por eso, **cada operación de terceto flotante siempre culmina con `FSTP @aux`, garantizando que la pila quede vacía y lista para el siguiente cálculo**.
+
+#### Traducción de las Operaciones Flotantes:
+- **Suma (`+`):**
+  ```nasm
+  FLD @aux17            ; Carga operando 1 en ST(0)
+  FADD @aux18           ; ST(0) = ST(0) + @aux18
+  FSTP @aux19           ; Guarda en memoria (DD) y limpia la pila
+  ```
+- **Resta (`-`):**
+  ```nasm
+  FLD @aux19            ; Carga operando 1 en ST(0)
+  FSUB _cte_1_5         ; ST(0) = ST(0) - 1.5
+  FSTP @aux20           ; Guarda en memoria y limpia la pila
+  ```
+- **Multiplicación (`*`):**
+  ```nasm
+  FLD _cte_3_0          ; Carga operando 1 en ST(0)
+  FMUL _main@y          ; ST(0) = ST(0) * y
+  FSTP @aux18           ; Guarda en memoria y limpia la pila
+  ```
+- **División (`/`):**
+  ```nasm
+  FLD _main@x           ; Carga dividendo en ST(0)
+  FDIV _main@y          ; ST(0) = ST(0) / y
+  FSTP @aux17           ; Guarda en memoria y limpia la pila
+  ```
+
+---
+
+### 2.4. Asignaciones (`:=`) e Inline Assignment (Tema 17)
+
+#### 1. Asignación Simple (`:=`)
+Copia el valor del operando derecho al operando izquierdo a través de un registro intermedio:
+- **Para `SHORTINT`:**
+  ```nasm
+  MOV AL, _cte_10       ; Carga valor en registro AL
+  MOV _main@a, AL       ; Almacena en la variable destino
+  ```
+- **Para `SINGLEF`:**
+  ```nasm
+  FLD _cte_12_5         ; Carga valor en ST(0) de la FPU
+  FSTP _main@x          ; Almacena en variable destino y desapila
+  ```
+
+#### 2. Asignaciones dentro de Expresiones (Tema 17: `b = (exp)`)
+En nuestro lenguaje, el Tema 17 permite expresiones como `c := (b = (4$s)) + a;`.
+- En la Etapa 3, la asignación genera un terceto de asignación: `7: (:=, b, 4$s)`.
+- El terceto que suma referenciará a esa asignación mediante `[7]`.
+- **Resolución en el generador (`resolverOperandoAsm`):** Cuando un operando es una referencia a un terceto cuyo operador es `":="`, el compilador sabe que el valor calculado ya fue asignado a su variable destino (`b`). Por lo tanto, en lugar de buscar un `@aux7`, lee directamente la variable asignada `_main@b`, generando código limpio y sin variables redundantes:
+  ```nasm
+  MOV AL, _cte_4
+  MOV _main@b, AL       ; Se ejecuta la asignacion b = 4
+  MOV AL, _main@b       ; Se lee el valor asignado de b
+  ADD AL, _main@a       ; Se suma con a
+  MOV @aux10, AL
+  MOV AL, @aux10
+  MOV _main@c, AL       ; Se asigna a c
+  ```
+
+---
+
+### 2.5. Conversión Explícita `tos()` (Tema 34: `SINGLEF` a `SHORTINT`)
+
+El **Tema 34** asignado al Grupo 20 define la función de conversión explícita `tos(expresion)`, que toma un número de punto flotante de 32 bits (`SINGLEF`) y lo convierte a un entero corto de 8 bits con signo (`SHORTINT`).
+
+#### El Desafío de Hardware:
+En el coprocesador 80x87, la instrucción para convertir un flotante a entero y almacenarlo en memoria es **`FISTP` (*Floating-Point Integer Store and Pop*)**.  
+Sin embargo:
+> **Limitación del 80x87:** La instrucción `FISTP` **solo soporta enteros de 16 bits (`WORD` / `DW`), 32 bits (`DWORD` / `DD`) o 64 bits (`QWORD` / `DQ`)**. El hardware de la FPU **no puede escribir un entero de 8 bits (`BYTE` / `DB`) directamente**.
+
+#### La Solución del Grupo 20 con `@aux_tos DW ?`:
+Para sortear esta restricción física de la FPU, incorporamos en la sección `.data` una variable auxiliar de puente de 16 bits:
+```nasm
+.data
+    @aux_tos DW ?       ; Variable puente de 16 bits para FISTP
+```
+Y generamos la siguiente secuencia de traducción:
+```nasm
+FLD _main@x             ; 1. Carga el flotante en ST(0)
+FISTP @aux_tos          ; 2. FPU trunca/redondea a entero de 16 bits y guarda en @aux_tos (libera ST(0))
+MOV AX, @aux_tos        ; 3. Carga los 16 bits en AX
+MOV @aux26, AL          ; 4. Toma la parte baja AL (8 bits) y la guarda en la variable auxiliar SHORTINT
+```
+De esta manera, respetamos la convención de tipos de la cátedra, cumplimos con la física del coprocesador y obtenemos el `SHORTINT` exacto en un byte.
+
+---
+
+### 2.6. Traza Completa de Verificación: Programa de Prueba Hito 2
+
+A continuación se muestra el programa fuente de prueba (`tests/etapa4_hito2_aritmetica.txt`), los tercetos intermedios generados y el código Assembler resultante verificado:
+
+#### Código Fuente (`tests/etapa4_hito2_aritmetica.txt`):
+```text
+SHORTINT a, b, c, res_int;
+SINGLEF x, y, z, res_flt;
+
+// Aritmetica entera
+a := 10$s;
+b := 3$s;
+res_int := a + b * 2$s - 6$s / b;
+POUT(res_int);
+
+// Asignacion en expresion (Tema 17)
+c := (b = (4$s)) + a;
+POUT(b);
+POUT(c);
+
+// Aritmetica flotante
+x := 12.5;
+y := 2.5;
+z := x / y + 3.0 * y - 1.5;
+POUT(z);
+
+// Conversion explicita tos() (Tema 34)
+res_flt := x + y;
+res_int := tos(res_flt) + a;
+POUT(res_int);
+POUT(tos(x));
+```
+
+#### Código Assembler Emitido (`tests/etapa4_hito2_aritmetica.asm`):
+```nasm
+.386
+.model flat, stdcall
+option casemap :none
+include \masm32\include\masm32rt.inc
+includelib \masm32\lib\kernel32.lib
+includelib \masm32\lib\masm32.lib
+dll_dllcrt0 PROTO C
+printf PROTO C :VARARG
+
+.data
+    _main@a DB ?
+    _main@b DB ?
+    _main@c DB ?
+    _main@res_int DB ?
+    _main@x DD ?
+    _main@y DD ?
+    _main@z DD ?
+    _main@res_flt DD ?
+    _str_0 DB "--- Prueba Hito 2: Aritmetica Entera (SHORTINT) ---", 0
+    _cte_10 DB 10
+    _cte_3 DB 3
+    _cte_2 DB 2
+    _cte_6 DB 6
+    _cte_4 DB 4
+    _str_1 DB "--- Prueba Hito 2: Aritmetica Flotante (SINGLEF) ---", 0
+    _cte_12_5 DD 12.5
+    _cte_2_5 DD 2.5
+    _cte_3_0 DD 3.0
+    _cte_1_5 DD 1.5
+    _str_2 DB "--- Prueba Hito 2: Conversion explicita tos() (Tema 34) ---", 0
+    @aux3 DB ?
+    @aux4 DB ?
+    @aux5 DB ?
+    @aux6 DB ?
+    @aux10 DB ?
+    @aux17 DD ?
+    @aux18 DD ?
+    @aux19 DD ?
+    @aux20 DD ?
+    @aux24 DD ?
+    @aux26 DB ?
+    @aux27 DB ?
+    @aux30 DB ?
+    @aux_print_short DW ?
+    @aux_print_float DQ ?
+    @aux_tos DW ?
+
+.code
+start:
+    ; a := 10$s; b := 3$s;
+    MOV AL, _cte_10
+    MOV _main@a, AL
+    MOV AL, _cte_3
+    MOV _main@b, AL
+
+    ; res_int := a + b * 2$s - 6$s / b;
+    MOV AL, _main@b
+    IMUL _cte_2
+    MOV @aux3, AL
+    MOV AL, _main@a
+    ADD AL, @aux3
+    MOV @aux4, AL
+    MOV AL, _cte_6
+    CBW
+    IDIV _main@b
+    MOV @aux5, AL
+    MOV AL, @aux4
+    SUB AL, @aux5
+    MOV @aux6, AL
+    MOV AL, @aux6
+    MOV _main@res_int, AL
+
+    ; Asignacion en expresion: c := (b = (4$s)) + a;
+    MOV AL, _cte_4
+    MOV _main@b, AL
+    MOV AL, _main@b
+    ADD AL, _main@a
+    MOV @aux10, AL
+    MOV AL, @aux10
+    MOV _main@c, AL
+
+    ; Aritmetica flotante: z := x / y + 3.0 * y - 1.5;
+    FLD _main@x
+    FDIV _main@y
+    FSTP @aux17
+    FLD _cte_3_0
+    FMUL _main@y
+    FSTP @aux18
+    FLD @aux17
+    FADD @aux18
+    FSTP @aux19
+    FLD @aux19
+    FSUB _cte_1_5
+    FSTP @aux20
+    FLD @aux20
+    FSTP _main@z
+
+    ; Conversion explicita tos(): res_int := tos(res_flt) + a;
+    FLD _main@res_flt
+    FISTP @aux_tos
+    MOV AX, @aux_tos
+    MOV @aux26, AL
+    MOV AL, @aux26
+    ADD AL, _main@a
+    MOV @aux27, AL
+    MOV AL, @aux27
+    MOV _main@res_int, AL
+
+    invoke ExitProcess, 0
+end start
+```
+
+---
+
+### 2.7. Preguntas de Defensa Oral del Hito 2 (Con Respuestas Modelo)
+
+---
+
+#### ❓ Pregunta 1: En la división entera de `SHORTINT`, ¿por qué es estrictamente obligatorio ejecutar la instrucción `CBW` antes de `IDIV`? ¿Qué pasaría si la omitiéramos cuando dividimos un número negativo?
+
+* **Respuesta Modelo para la Defensa:**  
+  "En la arquitectura Intel x86, cuando ejecutamos `IDIV` pasando como operando un divisor de 8 bits (un byte), el microprocesador **asume obligatoriamente que el dividendo tiene 16 bits y se encuentra en el registro `AX` (`AH:AL`)**.
+  
+  Si cargamos nuestro dividendo en `AL` con `MOV AL, dividendo` y no ejecutamos `CBW`, la parte alta `AH` contendrá cualquier valor basura que haya quedado de instrucciones previas.
+  
+  La instrucción **`CBW` (*Convert Byte to Word*)** realiza una **extensión de signo por hardware**: toma el bit más significativo (bit 7) de `AL` y lo replica en los 8 bits de `AH`:
+  - Si el número es positivo (ej. `+6`), `CBW` coloca `0x00` en `AH`, formando `0x0006` en `AX`.
+  - Si el número es negativo (ej. `-6`, que en complemento a dos es `0xFA`), `CBW` coloca `0xFF` en `AH`, formando `0xFFFA` en `AX`, que es exactamente `-6` en 16 bits.
+  
+  **¿Qué pasaría si la omitiéramos con un número negativo?**  
+  Si `AL` vale `-6` (`0xFA`) y `AH` quedó en `0x00` de una cuenta anterior, el registro `AX` valdría `0x00FA` (decimal `+250`). Al dividir, por ejemplo, por `+2`, obtendríamos `+125` en lugar de `-3`, alterando por completo el resultado aritmético o provocando una interrupción por desbordamiento de división."
+
+---
+
+#### ❓ Pregunta 2: ¿Por qué en x86 no generamos código del estilo `ADD _main@a, _main@b`? ¿Cómo se vincula esta limitación física con las variables auxiliares `@aux` de la cátedra?
+
+* **Respuesta Modelo para la Defensa:**  
+  "La arquitectura CISC x86 de Intel prohíbe las operaciones aritméticas de memoria a memoria en una sola instrucción. Toda operación aritmética binaria exige que al menos uno de los operandos resida en un registro de la CPU (`ADD registro, memoria` o `ADD memoria, registro`).
+  
+  Por este motivo, para sumar `a + b`:
+  1. Cargamos una variable en un registro: `MOV AL, _main@a`.
+  2. Operamos contra la segunda variable: `ADD AL, _main@b`.
+  
+  Aquí surge la necesidad de las **variables auxiliares (`@aux`)**: los registros de la CPU son muy limitados (en 8 bits prácticamente solo disponemos de `AL`, `BL`, `CL`, `DL`) y en la siguiente operación intermedia o llamada a función ese registro se sobreescribirá.
+  
+  Siguiendo la técnica de la cátedra, cada terceto `i` almacena inmediatamente su resultado en una variable auxiliar en memoria (`MOV @aux<i>, AL`). De esta manera, cualquier terceto posterior que referencie a `[i]` puede leer de forma unívoca y segura el valor desde `@aux<i>` en la sección `.data`, sin riesgo de que se haya perdido de los registros."
+
+---
+
+#### ❓ Pregunta 3: En las operaciones de punto flotante en la FPU, ¿por qué cada terceto termina con `FSTP @aux` y no con `FST @aux`? ¿Qué consecuencia fatal tendría usar `FST` en una expresión compleja?
+
+* **Respuesta Modelo para la Defensa:**  
+  "El coprocesador 80x87 posee una pila física de solo **8 registros de datos (`ST(0)` a `ST(7)`)**.
+  
+  - La instrucción **`FST @aux` (*Float Store*)** copia el valor de `ST(0)` a la memoria, pero **deja el valor en la pila**.
+  - La instrucción **`FSTP @aux` (*Float Store and Pop*)** copia el valor a la memoria y **desapila el registro** (*pop*), liberando esa posición de la pila.
+  
+  Si usáramos `FST`, cada operación aritmética dejaría un número flotante residual en la pila del coprocesador. En un programa con expresiones con más de 8 operaciones o dentro de un bucle `REPEAT UNTIL`, la pila se llenaría rápidamente.
+  
+  Al llegar al noveno `FLD`, la FPU detectaría un **desbordamiento de pila (*FPU Stack Overflow*)**, activaría la bandera de error `IE` (*Invalid Operation Exception*) y comenzaría a devolver valores especiales `NaN` (*Not a Number*) o `IND` (*Indeterminate*), arruinando todos los cálculos posteriores. Al usar rigurosamente **`FSTP`**, garantizamos que la pila de la FPU comience y termine completamente vacía en cada terceto."
+
+---
+
+#### ❓ Pregunta 4: En el Tema 34 (conversión explícita `tos()`), ¿por qué no guardamos el resultado directamente de la FPU a la variable de 1 byte usando `FISTP @aux`? ¿Por qué es obligatoria la variable intermedia `@aux_tos DW ?`?
+
+* **Respuesta Modelo para la Defensa:**  
+  "Esto se debe a una **restricción física de diseño del coprocesador Intel 80x87**.
+  
+  La instrucción `FISTP` (*Floating-Point Integer Store and Pop*) fue diseñada para convertir números reales en enteros de hardware, pero sus formatos admitidos por el microcódigo son exclusivamente:
+  - Enteros cortos de 16 bits (`WORD`, 2 bytes).
+  - Enteros estándar de 32 bits (`DWORD`, 4 bytes).
+  - Enteros largos de 64 bits (`QWORD`, 8 bytes).
+  
+  El hardware del coprocesador **no implementa una microinstrucción para almacenar enteros de 8 bits (un byte)**. Intentar hacer `FISTP` sobre una variable declarada con `DB` provocaría un error de sintaxis en MASM32 o corrompería el byte adyacente en memoria al escribir 2 bytes donde solo se reservó 1.
+  
+  Para resolver esto de forma limpia y defendible:
+  1. Declaramos en `.data` una variable soporte de 16 bits: `@aux_tos DW ?`.
+  2. Ejecutamos `FISTP @aux_tos`, descargando el entero de 16 bits válido.
+  3. Lo cargamos en el registro `AX`: `MOV AX, @aux_tos`.
+  4. Extraemos su byte inferior `AL` (los 8 bits con signo que corresponden al rango `[-128, 127]`) y lo guardamos en la variable auxiliar de destino: `MOV @aux, AL`."
+
+---
+
+#### ❓ Pregunta 5: ¿Cómo maneja el generador de código del Grupo 20 las asignaciones dentro de expresiones del Tema 17 (ejemplo: `c := (b = (4$s)) + a;`) sin generar tercetos ni variables auxiliares redundantes?
+
+* **Respuesta Modelo para la Defensa:**  
+  "En nuestro compilador, las asignaciones en expresiones del Tema 17 se sintetizan en la Etapa 3 como tercetos de asignación ordinarios: `7: (:=, b, 4$s)`. La expresión que suma recibe como operando la referencia `[7]`.
+  
+  En lugar de crear una variable auxiliar redundante `@aux7` para duplicar el valor de `b`, el método `resolverOperandoAsm` inspecciona el operador del terceto referenciado:
+  - Si el terceto de origen es una operación aritmética (`+`, `-`, etc.), retorna su variable auxiliar `@aux<i>`.
+  - Si el terceto de origen es una asignación `":="`, el compilador deduce que el valor ya fue transferido a su variable receptora (`b`).
+  
+  Por lo tanto, la referencia `[7]` se resuelve directamente al nombre de ensamblador de la variable asignada: `_main@b`. Esto produce un código Assembler natural, directo y eficiente, tal como lo escribiría un alumno o un compilador optimizador tradicional."
+
+---
+
+### 2.8. Próximo Paso: Hito 3
+Con la aritmética entera, flotante, asignaciones y conversión de tipos completadas y verificadas, avanzaremos al **Hito 3: Control de Flujo: Comparaciones Enteras y Flotantes, Lógica Inversa y Saltos Condicionales/Incondicionales (`IF`, `REPEAT UNTIL`)**.

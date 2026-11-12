@@ -82,12 +82,110 @@ public class GeneradorAssembler {
         return formateado;
     }
 
+    // Genera el nombre de la variable auxiliar asociada a un terceto
+    public static String obtenerNombreAux(String ambito, int indice) {
+        if (TablaSimbolos.AMBITO_GLOBAL.equals(ambito)) {
+            return "@aux" + indice;
+        }
+        return "@aux_" + ambito.replace(TablaSimbolos.SEPARADOR, "_") + "_" + indice;
+    }
+
+    // Si un operando constante plegado no estaba en la Tabla de Simbolos, lo da de alta
+    private static void registrarConstanteSiFalta(String op, String tipoSugerido) {
+        if (op == null || op.equals("-") || op.equals("_") || op.equals("?") || op.startsWith("[")) {
+            return;
+        }
+        if (op.contains("[") && op.endsWith("]")) {
+            return;
+        }
+        if (!TablaSimbolos.existeSimbolo(op) && !op.contains(TablaSimbolos.SEPARADOR)) {
+            String tipo = tipoSugerido;
+            if (op.startsWith("\"")) {
+                tipo = "CADENA";
+            } else if (op.contains(".") || op.contains("s") || op.contains("S") || op.contains("e") || op.contains("E")) {
+                tipo = "SINGLEF";
+            } else if (tipo == null) {
+                tipo = "SHORTINT";
+            }
+            TablaSimbolos.agregarOBuscarConstante(op, tipo);
+        }
+    }
+
+    // Pre-registra variables @aux y constantes plegadas en la Tabla de Simbolos antes de emitir .data
+    private static void registrarAuxiliaresYConstantes(Map<String, ArrayList<Terceto>> tercetosPorAmbito) {
+        if (tercetosPorAmbito == null) {
+            return;
+        }
+        for (Map.Entry<String, ArrayList<Terceto>> entry : tercetosPorAmbito.entrySet()) {
+            String ambito = entry.getKey();
+            ArrayList<Terceto> lista = entry.getValue();
+            if (lista == null) {
+                continue;
+            }
+            for (int i = 0; i < lista.size(); i++) {
+                Terceto t = lista.get(i);
+                String op = t.getOperador();
+                String tipo = t.getTipo();
+
+                if ("tos".equals(op)) {
+                    registrarConstanteSiFalta(t.getOperando1(), "SINGLEF");
+                } else {
+                    registrarConstanteSiFalta(t.getOperando1(), tipo);
+                    registrarConstanteSiFalta(t.getOperando2(), tipo);
+                }
+
+                if ("+".equals(op) || "-".equals(op) || "*".equals(op) || "/".equals(op) || "tos".equals(op)) {
+                    String nombreAux = obtenerNombreAux(ambito, i);
+                    String tipoAux = tipo;
+                    if ("tos".equals(op) && tipoAux == null) {
+                        tipoAux = "SHORTINT";
+                    }
+                    if (!TablaSimbolos.existeSimbolo(nombreAux)) {
+                        TablaSimbolos.agregarIdentificador(nombreAux);
+                        TablaSimbolos.agregarAtributo(nombreAux, TablaSimbolos.TIPO, tipoAux);
+                        TablaSimbolos.agregarAtributo(nombreAux, TablaSimbolos.USO, "auxiliar");
+                    }
+                }
+            }
+        }
+    }
+
+    // Resuelve el acceso posicional si corresponde (Tema 29)
+    private static String resolverAccesoPosicional(String op) {
+        if (op == null) {
+            return "";
+        }
+        return op;
+    }
+
+    // Traduce un operando de terceto (variable, constante o referencia [i]) a su nombre en Assembler
+    public static String resolverOperandoAsm(String op, String ambito, ArrayList<Terceto> lista) {
+        if (op == null) {
+            return "";
+        }
+        if (op.startsWith("[") && op.endsWith("]")) {
+            int idx = Integer.parseInt(op.substring(1, op.length() - 1));
+            if (lista != null && idx >= 0 && idx < lista.size()) {
+                Terceto ref = lista.get(idx);
+                // Tema 17: si referencia a una asignacion en expresion, el valor quedo en operando1
+                if (":=".equals(ref.getOperador())) {
+                    return obtenerNombreAsm(resolverAccesoPosicional(ref.getOperando1()));
+                }
+            }
+            return obtenerNombreAux(ambito, idx);
+        }
+        return obtenerNombreAsm(resolverAccesoPosicional(op));
+    }
+
     // Genera el codigo Assembler completo para MASM32
     public static String generarAssembler() {
         mapaNombresAsm.clear();
         contadorStr = 0;
         codigoData = new StringBuilder();
         codigoCode = new StringBuilder();
+
+        Map<String, ArrayList<Terceto>> tercetosPorAmbito = GeneradorTerceto.obtenerTercetosPorAmbito();
+        registrarAuxiliaresYConstantes(tercetosPorAmbito);
 
         // 1. Encabezado estandar MASM32 de la catedra
         StringBuilder encabezado = new StringBuilder();
@@ -145,32 +243,123 @@ public class GeneradorAssembler {
             }
         }
         codigoData.append("    @aux_print_short DW ?\n");
-        codigoData.append("    @aux_print_float DQ ?\n\n");
+        codigoData.append("    @aux_print_float DQ ?\n");
+        codigoData.append("    @aux_tos DW ?\n\n");
 
         // 3. Seccion .code con inicio en start:
         codigoCode.append(".code\n");
         codigoCode.append("start:\n");
 
-        Map<String, ArrayList<Terceto>> tercetosPorAmbito = GeneradorTerceto.obtenerTercetosPorAmbito();
-        ArrayList<Terceto> tercetosMain = tercetosPorAmbito.get(TablaSimbolos.AMBITO_GLOBAL);
+        String ambitoMain = TablaSimbolos.AMBITO_GLOBAL;
+        ArrayList<Terceto> tercetosMain = tercetosPorAmbito.get(ambitoMain);
         if (tercetosMain != null) {
             for (int i = 0; i < tercetosMain.size(); i++) {
                 Terceto t = tercetosMain.get(i);
-                if ("POUT".equals(t.getOperador())) {
-                    String op1 = t.getOperando1();
-                    String tipo = t.getTipo();
+                String op = t.getOperador();
+                String tipo = t.getTipo();
+
+                if ("+".equals(op)) {
+                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
+                    String op2 = resolverOperandoAsm(t.getOperando2(), ambitoMain, tercetosMain);
+                    String aux = obtenerNombreAux(ambitoMain, i);
+                    if ("SHORTINT".equals(tipo)) {
+                        // Suma entera de 8 bits en registro AL
+                        codigoCode.append("    MOV AL, ").append(op1).append("\n");
+                        codigoCode.append("    ADD AL, ").append(op2).append("\n");
+                        codigoCode.append("    MOV ").append(aux).append(", AL\n");
+                    } else if ("SINGLEF".equals(tipo)) {
+                        // Suma flotante de 32 bits en coprocesador 80x87
+                        codigoCode.append("    FLD ").append(op1).append("\n");
+                        codigoCode.append("    FADD ").append(op2).append("\n");
+                        codigoCode.append("    FSTP ").append(aux).append("\n");
+                    }
+                } else if ("-".equals(op)) {
+                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
+                    String op2 = resolverOperandoAsm(t.getOperando2(), ambitoMain, tercetosMain);
+                    String aux = obtenerNombreAux(ambitoMain, i);
+                    if ("SHORTINT".equals(tipo)) {
+                        // Resta entera de 8 bits en registro AL
+                        codigoCode.append("    MOV AL, ").append(op1).append("\n");
+                        codigoCode.append("    SUB AL, ").append(op2).append("\n");
+                        codigoCode.append("    MOV ").append(aux).append(", AL\n");
+                    } else if ("SINGLEF".equals(tipo)) {
+                        // Resta flotante de 32 bits en coprocesador 80x87
+                        codigoCode.append("    FLD ").append(op1).append("\n");
+                        codigoCode.append("    FSUB ").append(op2).append("\n");
+                        codigoCode.append("    FSTP ").append(aux).append("\n");
+                    }
+                } else if ("*".equals(op)) {
+                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
+                    String op2 = resolverOperandoAsm(t.getOperando2(), ambitoMain, tercetosMain);
+                    String aux = obtenerNombreAux(ambitoMain, i);
+                    if ("SHORTINT".equals(tipo)) {
+                        // Multiplicacion entera con signo de 8 bits (AL * op2 -> AX, parte baja en AL)
+                        codigoCode.append("    MOV AL, ").append(op1).append("\n");
+                        codigoCode.append("    IMUL ").append(op2).append("\n");
+                        codigoCode.append("    MOV ").append(aux).append(", AL\n");
+                    } else if ("SINGLEF".equals(tipo)) {
+                        // Multiplicacion flotante de 32 bits en coprocesador 80x87
+                        codigoCode.append("    FLD ").append(op1).append("\n");
+                        codigoCode.append("    FMUL ").append(op2).append("\n");
+                        codigoCode.append("    FSTP ").append(aux).append("\n");
+                    }
+                } else if ("/".equals(op)) {
+                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
+                    String op2 = resolverOperandoAsm(t.getOperando2(), ambitoMain, tercetosMain);
+                    String aux = obtenerNombreAux(ambitoMain, i);
+                    if ("SHORTINT".equals(tipo)) {
+                        // Division entera con signo de 8 bits (CBW extiende AL a AX; cociente en AL)
+                        codigoCode.append("    MOV AL, ").append(op1).append("\n");
+                        codigoCode.append("    CBW\n");
+                        codigoCode.append("    IDIV ").append(op2).append("\n");
+                        codigoCode.append("    MOV ").append(aux).append(", AL\n");
+                    } else if ("SINGLEF".equals(tipo)) {
+                        // Division flotante de 32 bits en coprocesador 80x87
+                        codigoCode.append("    FLD ").append(op1).append("\n");
+                        codigoCode.append("    FDIV ").append(op2).append("\n");
+                        codigoCode.append("    FSTP ").append(aux).append("\n");
+                    }
+                } else if (":=".equals(op)) {
+                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
+                    String op2 = resolverOperandoAsm(t.getOperando2(), ambitoMain, tercetosMain);
                     if (tipo == null) {
-                        tipo = TablaSimbolos.obtenerTipo(op1);
+                        tipo = TablaSimbolos.obtenerTipo(t.getOperando1());
+                    }
+                    if ("SHORTINT".equals(tipo)) {
+                        codigoCode.append("    MOV AL, ").append(op2).append("\n");
+                        codigoCode.append("    MOV ").append(op1).append(", AL\n");
+                    } else if ("SINGLEF".equals(tipo)) {
+                        codigoCode.append("    FLD ").append(op2).append("\n");
+                        codigoCode.append("    FSTP ").append(op1).append("\n");
+                    }
+                } else if ("tos".equals(op)) {
+                    // Tema 34: conversion explicita de SINGLEF a SHORTINT
+                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
+                    String aux = obtenerNombreAux(ambitoMain, i);
+                    codigoCode.append("    FLD ").append(op1).append("\n");
+                    codigoCode.append("    FISTP @aux_tos\n");
+                    codigoCode.append("    MOV AX, @aux_tos\n");
+                    codigoCode.append("    MOV ").append(aux).append(", AL\n");
+                } else if ("POUT".equals(op)) {
+                    String op1Raw = t.getOperando1();
+                    String opAsm = resolverOperandoAsm(op1Raw, ambitoMain, tercetosMain);
+                    if (tipo == null) {
+                        if (op1Raw != null && op1Raw.startsWith("[") && op1Raw.endsWith("]")) {
+                            int idx = Integer.parseInt(op1Raw.substring(1, op1Raw.length() - 1));
+                            tipo = tercetosMain.get(idx).getTipo();
+                        } else {
+                            tipo = TablaSimbolos.obtenerTipo(op1Raw);
+                        }
                     }
                     if ("CADENA".equals(tipo)) {
-                        codigoCode.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET ").append(obtenerNombreAsm(op1)).append("\n");
+                        codigoCode.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET ").append(opAsm).append("\n");
                     } else if ("SHORTINT".equals(tipo)) {
-                        codigoCode.append("    MOV AL, ").append(obtenerNombreAsm(op1)).append("\n");
+                        codigoCode.append("    MOV AL, ").append(opAsm).append("\n");
                         codigoCode.append("    MOVSX AX, AL\n");
                         codigoCode.append("    MOV @aux_print_short, AX\n");
                         codigoCode.append("    invoke printf, cfm$(\"%hd\\n\"), @aux_print_short\n");
                     } else if ("SINGLEF".equals(tipo)) {
-                        codigoCode.append("    FLD ").append(obtenerNombreAsm(op1)).append("\n");
+                        codigoCode.append("    FLD ").append(opAsm).append("\n");
                         codigoCode.append("    FSTP @aux_print_float\n");
                         codigoCode.append("    invoke printf, cfm$(\"%Lf\\n\"), @aux_print_float\n");
                     }

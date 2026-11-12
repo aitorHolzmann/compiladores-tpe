@@ -1,0 +1,29 @@
+test_hito2_aritmetica
+
+shortint a, b, c, res_int;
+singlef x, y, z, res_flt;
+
+BEGIN
+    pout("--- Prueba Hito 2: Aritmetica Entera (SHORTINT) ---");
+    a := 10$s;
+    b := 3$s;
+    res_int := a + b * 2$s - 6$s / b;
+    pout(res_int);
+
+    // Tema 17: asignacion en expresion con '='
+    c := b = (4$s) + a;
+    pout(b);
+    pout(c);
+
+    pout("--- Prueba Hito 2: Aritmetica Flotante (SINGLEF) ---");
+    x := 12.5;
+    y := 2.5;
+    z := x / y + 3.0 * y - 1.5;
+    pout(z);
+
+    pout("--- Prueba Hito 2: Conversion explicita tos() (Tema 34) ---");
+    res_flt := x + y;
+    res_int := tos(res_flt) + a;
+    pout(res_int);
+    pout(tos(x));
+END
