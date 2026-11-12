@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 public class GeneradorAssembler {
@@ -177,6 +178,50 @@ public class GeneradorAssembler {
         return obtenerNombreAsm(resolverAccesoPosicional(op));
     }
 
+    // Extrae el indice numerico de un operando de salto "[dest]"
+    private static int extraerIndiceDestino(String op) {
+        if (op == null) {
+            return -1;
+        }
+        String limpio = op.replace("[", "").replace("]", "").trim();
+        try {
+            return Integer.parseInt(limpio);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    // Determina el tipo de un operando (SHORTINT o SINGLEF)
+    private static String obtenerTipoOperando(String op, ArrayList<Terceto> lista) {
+        if (op == null) {
+            return "SHORTINT";
+        }
+        if (op.startsWith("[") && op.endsWith("]")) {
+            try {
+                int idx = Integer.parseInt(op.substring(1, op.length() - 1));
+                if (lista != null && idx >= 0 && idx < lista.size()) {
+                    String tipo = lista.get(idx).getTipo();
+                    if (tipo != null && !tipo.isEmpty()) {
+                        return tipo;
+                    }
+                }
+            } catch (NumberFormatException e) {
+                // ignorar
+            }
+        }
+        String tipo = TablaSimbolos.obtenerTipo(op);
+        if (tipo != null && !tipo.isEmpty()) {
+            return tipo;
+        }
+        if (op.endsWith("$s") || op.contains("$")) {
+            return "SHORTINT";
+        }
+        if (op.contains(".") || op.contains("s") || op.contains("S") || op.contains("e") || op.contains("E")) {
+            return "SINGLEF";
+        }
+        return "SHORTINT";
+    }
+
     // Genera el codigo Assembler completo para MASM32
     public static String generarAssembler() {
         mapaNombresAsm.clear();
@@ -253,7 +298,32 @@ public class GeneradorAssembler {
         String ambitoMain = TablaSimbolos.AMBITO_GLOBAL;
         ArrayList<Terceto> tercetosMain = tercetosPorAmbito.get(ambitoMain);
         if (tercetosMain != null) {
+            // Hito 3: recoleccion previa de etiquetas destino (Alternativa 1 de la catedra)
+            HashSet<Integer> etiquetas = new HashSet<Integer>();
             for (int i = 0; i < tercetosMain.size(); i++) {
+                Terceto t = tercetosMain.get(i);
+                String op = t.getOperador();
+                if ("BF".equals(op)) {
+                    int dest = extraerIndiceDestino(t.getOperando2());
+                    if (dest >= 0) {
+                        etiquetas.add(dest);
+                    }
+                } else if ("BI".equals(op)) {
+                    int dest = extraerIndiceDestino(t.getOperando1());
+                    if (dest >= 0) {
+                        etiquetas.add(dest);
+                    }
+                }
+            }
+
+            String ultimoOpComp = "";
+            String ultimoTipoComp = "";
+
+            for (int i = 0; i < tercetosMain.size(); i++) {
+                if (etiquetas.contains(i)) {
+                    codigoCode.append("Label_").append(ambitoMain).append("_").append(i).append(":\n");
+                }
+
                 Terceto t = tercetosMain.get(i);
                 String op = t.getOperador();
                 String tipo = t.getTipo();
@@ -363,7 +433,76 @@ public class GeneradorAssembler {
                         codigoCode.append("    FSTP @aux_print_float\n");
                         codigoCode.append("    invoke printf, cfm$(\"%Lf\\n\"), @aux_print_float\n");
                     }
+                } else if (">".equals(op) || "<".equals(op) || ">=".equals(op) || "<=".equals(op) || "==".equals(op) || "!=".equals(op)) {
+                    ultimoOpComp = op;
+                    String tipo1 = obtenerTipoOperando(t.getOperando1(), tercetosMain);
+                    String tipo2 = obtenerTipoOperando(t.getOperando2(), tercetosMain);
+                    if ("SINGLEF".equals(tipo1) || "SINGLEF".equals(tipo2)) {
+                        ultimoTipoComp = "SINGLEF";
+                    } else {
+                        ultimoTipoComp = "SHORTINT";
+                    }
+                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
+                    String op2 = resolverOperandoAsm(t.getOperando2(), ambitoMain, tercetosMain);
+                    if ("SHORTINT".equals(ultimoTipoComp)) {
+                        // Hito 3: comparacion entera en AL
+                        codigoCode.append("    MOV AL, ").append(op1).append("\n");
+                        codigoCode.append("    CMP AL, ").append(op2).append("\n");
+                    } else if ("SINGLEF".equals(ultimoTipoComp)) {
+                        // Hito 3: comparacion flotante en coprocesador 80x87
+                        codigoCode.append("    FLD ").append(op1).append("\n");
+                        codigoCode.append("    FCOMP ").append(op2).append("\n");
+                        codigoCode.append("    FSTSW AX\n");
+                        codigoCode.append("    SAHF\n");
+                    }
+                } else if ("BF".equals(op)) {
+                    int dest = extraerIndiceDestino(t.getOperando2());
+                    String etiqueta = "Label_" + ambitoMain + "_" + dest;
+                    String salto = "";
+                    if ("SHORTINT".equals(ultimoTipoComp)) {
+                        // Hito 3: salto condicional BF invertido para enteros con signo
+                        if (">".equals(ultimoOpComp)) {
+                            salto = "JLE";
+                        } else if (">=".equals(ultimoOpComp)) {
+                            salto = "JL";
+                        } else if ("<".equals(ultimoOpComp)) {
+                            salto = "JGE";
+                        } else if ("<=".equals(ultimoOpComp)) {
+                            salto = "JG";
+                        } else if ("==".equals(ultimoOpComp)) {
+                            salto = "JNE";
+                        } else if ("!=".equals(ultimoOpComp)) {
+                            salto = "JE";
+                        }
+                    } else if ("SINGLEF".equals(ultimoTipoComp)) {
+                        // Hito 3: salto condicional BF invertido para flotantes (flags 80x87 via SAHF)
+                        if (">".equals(ultimoOpComp)) {
+                            salto = "JBE";
+                        } else if (">=".equals(ultimoOpComp)) {
+                            salto = "JB";
+                        } else if ("<".equals(ultimoOpComp)) {
+                            salto = "JAE";
+                        } else if ("<=".equals(ultimoOpComp)) {
+                            salto = "JA";
+                        } else if ("==".equals(ultimoOpComp)) {
+                            salto = "JNE";
+                        } else if ("!=".equals(ultimoOpComp)) {
+                            salto = "JE";
+                        }
+                    }
+                    if (!salto.isEmpty()) {
+                        codigoCode.append("    ").append(salto).append(" ").append(etiqueta).append("\n");
+                    }
+                } else if ("BI".equals(op)) {
+                    // Hito 3: salto incondicional BI
+                    int dest = extraerIndiceDestino(t.getOperando1());
+                    String etiqueta = "Label_" + ambitoMain + "_" + dest;
+                    codigoCode.append("    JMP ").append(etiqueta).append("\n");
                 }
+            }
+
+            if (etiquetas.contains(tercetosMain.size())) {
+                codigoCode.append("Label_").append(ambitoMain).append("_").append(tercetosMain.size()).append(":\n");
             }
         }
 

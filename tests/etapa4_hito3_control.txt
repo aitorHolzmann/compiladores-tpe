@@ -1,0 +1,67 @@
+programa_hito3_control
+
+shortint a, b, c;
+singlef x, y, z;
+
+BEGIN
+  // Inicializacion de variables
+  a := 10$s;
+  b := 5$s;
+  c := 0$s;
+  x := 1.5;
+  y := 3.0;
+  z := 0.0;
+
+  // 1. IF simple con condicion SHORTINT (>=)
+  pout("1. Test IF simple shortint (a >= b):");
+  IF (a >= b)
+    c := 1$s;
+  END_IF;
+  pout("   Valor de c esperado 1:");
+  pout(c);
+
+  // 2. IF-ELSE con condicion SHORTINT (==)
+  pout("2. Test IF-ELSE shortint (a == b):");
+  IF (a == b)
+    c := 9$s;
+  ELSE
+    c := 2$s;
+  END_IF;
+  pout("   Valor de c esperado 2:");
+  pout(c);
+
+  // 3. IF-ELSE con condicion SINGLEF (<)
+  pout("3. Test IF-ELSE singlef (x < y):");
+  IF (x < y)
+    z := 10.0;
+  ELSE
+    z := 20.0;
+  END_IF;
+  pout("   Valor de z esperado 10.0:");
+  pout(z);
+
+  // 4. REPEAT UNTIL con condicion SHORTINT (sentencia simple)
+  pout("4. Test REPEAT UNTIL shortint:");
+  a := 0$s;
+  REPEAT
+    a := a + 1$s;
+  UNTIL (a == 5$s);
+  pout("   Valor de a esperado 5:");
+  pout(a);
+
+  // 5. REPEAT UNTIL con bloque BEGIN...END y condicion SINGLEF (>=)
+  pout("5. Test REPEAT UNTIL singlef con bloque BEGIN...END:");
+  x := 0.0;
+  REPEAT
+  BEGIN
+    x := x + 0.5;
+    z := z + 1.0;
+  END
+  UNTIL (x >= 2.0);
+  pout("   Valor de x esperado 2.0:");
+  pout(x);
+  pout("   Valor de z esperado 14.0:");
+  pout(z);
+
+  pout("Hito 3: Todas las sentencias de control ejecutadas.");
+END
