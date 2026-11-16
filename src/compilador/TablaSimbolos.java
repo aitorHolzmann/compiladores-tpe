@@ -206,6 +206,38 @@ public class TablaSimbolos {
         return (atrs != null) ? atrs : new ArrayList<>();
     }
 
+    // Devuelve la lista completa de claves absolutas de atributos de una clase (incluyendo herencia múltiple recursiva)
+    public static ArrayList<String> obtenerAtributosTotalesClase(String claveClase) {
+        ArrayList<String> totales = new ArrayList<>();
+        if (claveClase == null) {
+            return totales;
+        }
+        // Primero los atributos heredados de los padres en orden de declaracion EXTENDS
+        ArrayList<String> padres = obtenerHerencia(claveClase);
+        for (int i = 0; i < padres.size(); i++) {
+            String padreNombre = padres.get(i);
+            String clavePadre = AMBITO_GLOBAL + SEPARADOR + padreNombre;
+            ArrayList<String> atrsPadre = obtenerAtributosTotalesClase(clavePadre);
+            for (int j = 0; j < atrsPadre.size(); j++) {
+                String atr = atrsPadre.get(j);
+                if (!totales.contains(atr)) {
+                    totales.add(atr);
+                }
+            }
+        }
+        // Luego los propios de la clase
+        ArrayList<String> atrsPropios = obtenerAtributosClase(claveClase);
+        for (int i = 0; i < atrsPropios.size(); i++) {
+            String nombreAtr = atrsPropios.get(i);
+            // clave completa del atributo: claveClase + "@" + nombreAtr
+            String claveAtrAbsoluta = claveClase + SEPARADOR + nombreAtr;
+            if (!totales.contains(claveAtrAbsoluta)) {
+                totales.add(claveAtrAbsoluta);
+            }
+        }
+        return totales;
+    }
+
     // Gestion de herencia (Tema 30)
     public static void registrarHerencia(String claveClase, ArrayList<String> padres) {
         agregarAtributo(claveClase, "HERENCIA", new ArrayList<>(padres));

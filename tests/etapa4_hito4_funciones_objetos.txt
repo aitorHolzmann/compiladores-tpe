@@ -1,0 +1,66 @@
+programa_hito4_subrutinas_objetos
+
+// Declaracion de variables globales
+shortint a, b, res;
+singlef f1;
+
+// Clases con visibilidad y herencia multiple (Temas 26 y 30)
+class c_base_a
+begin
+  shortint atr_a export to c_hija;
+  shortint sumar_base(shortint p)
+  begin
+    ret(p + 10$s);
+  end export to c_hija;
+end;
+
+class c_base_b
+begin
+  singlef atr_b export to c_hija;
+end;
+
+class c_hija import from c_base_a, c_base_b
+begin
+  extends c_base_a, c_base_b;
+  shortint atr_propio;
+end;
+
+c_hija obj;
+
+// Funcion ordinaria con tipo explicito
+shortint FUNCTION triplicar(shortint num)
+begin
+  ret(num * 3$s);
+end;
+
+// Tema 21: AUTO FUNCTION con inferencia de retorno y Tema 34: tos()
+AUTO FUNCTION combinar(shortint x, singlef y)
+begin
+  ret(tos(y) + x);
+end;
+
+begin
+  a := 2$s;
+  f1 := 5.0;
+
+  // Tema 29: Acceso posicional por constante y por variable
+  obj[0$s] := 15$s;
+  obj[a] := 25$s;
+
+  // Invocacion a metodo heredado
+  b := obj.sumar_base(a);
+  pout("Resultado de obj.sumar_base(2) esperado 12:");
+  pout(b);
+
+  // Invocacion a AUTO FUNCTION
+  res := combinar(b, f1);
+  pout("Resultado de combinar(12, 5.0) esperado 17:");
+  pout(res);
+
+  // Invocacion a funcion ordinaria
+  res := triplicar(a);
+  pout("Resultado de triplicar(2) esperado 6:");
+  pout(res);
+
+  pout("Hito 4 ejecutado correctamente.");
+end

@@ -10,13 +10,11 @@ import java.util.Map;
 
 public class GeneradorAssembler {
 
-    // Mapeo de claves de la tabla de simbolos a identificadores validos en MASM32
     private static final Map<String, String> mapaNombresAsm = new HashMap<>();
     private static int contadorStr = 0;
     private static StringBuilder codigoData;
     private static StringBuilder codigoCode;
 
-    // Obtiene el identificador valido para MASM32 segun el tipo de simbolo
     public static String obtenerNombreAsm(String claveTS) {
         if (claveTS == null) {
             return "";
@@ -24,7 +22,6 @@ public class GeneradorAssembler {
         if (mapaNombresAsm.containsKey(claveTS)) {
             return mapaNombresAsm.get(claveTS);
         }
-        // Auxiliares del sistema o internas que ya empiezan con @
         if (claveTS.startsWith("@")) {
             return claveTS;
         }
@@ -32,7 +29,6 @@ public class GeneradorAssembler {
         String uso = TablaSimbolos.obtenerUso(claveTS);
         Object ocs = TablaSimbolos.obtenerAtributo(claveTS, "OCURRENCIAS");
 
-        // Si es una constante registrada en la tabla de simbolos
         if (uso == null && ocs != null) {
             String tipo = TablaSimbolos.obtenerTipo(claveTS);
             String nombre;
@@ -40,7 +36,6 @@ public class GeneradorAssembler {
                 nombre = "_str_" + contadorStr;
                 contadorStr++;
             } else {
-                // Constante SHORTINT o SINGLEF
                 String limpio = claveTS.replace("-", "neg_")
                                        .replace(".", "_")
                                        .replace("+", "pos_");
@@ -50,20 +45,17 @@ public class GeneradorAssembler {
             return nombre;
         }
 
-        // Variables, parametros o atributos con ambito
         if (claveTS.contains(TablaSimbolos.SEPARADOR)) {
-            String nombre = "_" + claveTS;
+            String nombre = "_" + claveTS.replace(TablaSimbolos.SEPARADOR, "_");
             mapaNombresAsm.put(claveTS, nombre);
             return nombre;
         }
 
-        // Por defecto prefijo _
         String nombre = "_" + claveTS;
         mapaNombresAsm.put(claveTS, nombre);
         return nombre;
     }
 
-    // Formatea el literal flotante para directiva DD de MASM32
     private static String formatearLiteralSinglef(String lit) {
         if (lit == null || lit.isEmpty()) {
             return "0.0";
@@ -83,7 +75,6 @@ public class GeneradorAssembler {
         return formateado;
     }
 
-    // Genera el nombre de la variable auxiliar asociada a un terceto
     public static String obtenerNombreAux(String ambito, int indice) {
         if (TablaSimbolos.AMBITO_GLOBAL.equals(ambito)) {
             return "@aux" + indice;
@@ -91,7 +82,6 @@ public class GeneradorAssembler {
         return "@aux_" + ambito.replace(TablaSimbolos.SEPARADOR, "_") + "_" + indice;
     }
 
-    // Si un operando constante plegado no estaba en la Tabla de Simbolos, lo da de alta
     private static void registrarConstanteSiFalta(String op, String tipoSugerido) {
         if (op == null || op.equals("-") || op.equals("_") || op.equals("?") || op.startsWith("[")) {
             return;
@@ -112,7 +102,6 @@ public class GeneradorAssembler {
         }
     }
 
-    // Pre-registra variables @aux y constantes plegadas en la Tabla de Simbolos antes de emitir .data
     private static void registrarAuxiliaresYConstantes(Map<String, ArrayList<Terceto>> tercetosPorAmbito) {
         if (tercetosPorAmbito == null) {
             return;
@@ -135,10 +124,13 @@ public class GeneradorAssembler {
                     registrarConstanteSiFalta(t.getOperando2(), tipo);
                 }
 
-                if ("+".equals(op) || "-".equals(op) || "*".equals(op) || "/".equals(op) || "tos".equals(op)) {
+                if ("+".equals(op) || "-".equals(op) || "*".equals(op) || "/".equals(op) || "tos".equals(op) || "CALL".equals(op)) {
                     String nombreAux = obtenerNombreAux(ambito, i);
                     String tipoAux = tipo;
                     if ("tos".equals(op) && tipoAux == null) {
+                        tipoAux = "SHORTINT";
+                    }
+                    if ("CALL".equals(op) && tipoAux == null) {
                         tipoAux = "SHORTINT";
                     }
                     if (!TablaSimbolos.existeSimbolo(nombreAux)) {
@@ -151,34 +143,60 @@ public class GeneradorAssembler {
         }
     }
 
-    // Resuelve el acceso posicional si corresponde (Tema 29)
-    private static String resolverAccesoPosicional(String op) {
+    // Resuelve acceso posicional obj[idx] (Tema 29)
+    private static String resolverAccesoPosicional(String op, String ambito, ArrayList<Terceto> lista) {
         if (op == null) {
             return "";
+        }
+        if (op.contains("[") && op.endsWith("]")) {
+            int corchete = op.indexOf('[');
+            String claveObj = op.substring(0, corchete);
+            String contenidoIdx = op.substring(corchete + 1, op.length() - 1);
+
+            String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+            String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+            ArrayList<String> atrsTotales = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
+
+            // Intentar parsear como indice constante (ej: 0$s o 0)
+            String limpioIdx = contenidoIdx.replace("$s", "").replace("$f", "").trim();
+            try {
+                int idx = Integer.parseInt(limpiadoConstante(limpioIdx));
+                if (idx >= 0 && idx < atrsTotales.size()) {
+                    String claveAtrAbs = atrsTotales.get(idx);
+                    return obtenerNombreAsm(claveObj + "_" + TablaSimbolos.obtenerNombre(claveAtrAbs));
+                }
+            } catch (NumberFormatException e) {
+                // Es un indice variable (ej: main@a)
+            }
         }
         return op;
     }
 
-    // Traduce un operando de terceto (variable, constante o referencia [i]) a su nombre en Assembler
+    private static String limpiadoConstante(String s) {
+        if (s.startsWith("-")) {
+            return "-" + s.substring(1).replaceAll("[^0-9.]", "");
+        }
+        return s.replaceAll("[^0-9.]", "");
+    }
+
     public static String resolverOperandoAsm(String op, String ambito, ArrayList<Terceto> lista) {
         if (op == null) {
             return "";
         }
-        if (op.startsWith("[") && op.endsWith("]")) {
-            int idx = Integer.parseInt(op.substring(1, op.length() - 1));
+        String opResuelto = resolverAccesoPosicional(op, ambito, lista);
+        if (opResuelto.startsWith("[") && opResuelto.endsWith("]")) {
+            int idx = Integer.parseInt(opResuelto.substring(1, opResuelto.length() - 1));
             if (lista != null && idx >= 0 && idx < lista.size()) {
                 Terceto ref = lista.get(idx);
-                // Tema 17: si referencia a una asignacion en expresion, el valor quedo en operando1
                 if (":=".equals(ref.getOperador())) {
-                    return obtenerNombreAsm(resolverAccesoPosicional(ref.getOperando1()));
+                    return obtenerNombreAsm(resolverAccesoPosicional(ref.getOperando1(), ambito, lista));
                 }
             }
             return obtenerNombreAux(ambito, idx);
         }
-        return obtenerNombreAsm(resolverAccesoPosicional(op));
+        return obtenerNombreAsm(opResuelto);
     }
 
-    // Extrae el indice numerico de un operando de salto "[dest]"
     private static int extraerIndiceDestino(String op) {
         if (op == null) {
             return -1;
@@ -191,7 +209,6 @@ public class GeneradorAssembler {
         }
     }
 
-    // Determina el tipo de un operando (SHORTINT o SINGLEF)
     private static String obtenerTipoOperando(String op, ArrayList<Terceto> lista) {
         if (op == null) {
             return "SHORTINT";
@@ -222,7 +239,352 @@ public class GeneradorAssembler {
         return "SHORTINT";
     }
 
-    // Genera el codigo Assembler completo para MASM32
+    private static void generarCodigoAmbito(String ambito, ArrayList<Terceto> listaTercetos, StringBuilder sb) {
+        if (listaTercetos == null) {
+            return;
+        }
+        String ambitoLimpio = ambito.replace(TablaSimbolos.SEPARADOR, "_");
+        HashSet<Integer> etiquetas = new HashSet<Integer>();
+        for (int i = 0; i < listaTercetos.size(); i++) {
+            Terceto t = listaTercetos.get(i);
+            String op = t.getOperador();
+            if ("BF".equals(op)) {
+                int dest = extraerIndiceDestino(t.getOperando2());
+                if (dest >= 0) {
+                    etiquetas.add(dest);
+                }
+            } else if ("BI".equals(op)) {
+                int dest = extraerIndiceDestino(t.getOperando1());
+                if (dest >= 0) {
+                    etiquetas.add(dest);
+                }
+            }
+        }
+
+        String ultimoOpComp = "";
+        String ultimoTipoComp = "";
+
+        for (int i = 0; i < listaTercetos.size(); i++) {
+            if (etiquetas.contains(i)) {
+                sb.append("Label_").append(ambitoLimpio).append("_").append(i).append(":\n");
+            }
+
+            Terceto t = listaTercetos.get(i);
+            String op = t.getOperador();
+            String tipo = t.getTipo();
+
+            if ("+".equals(op)) {
+                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
+                String op2 = resolverOperandoAsm(t.getOperando2(), ambito, listaTercetos);
+                String aux = obtenerNombreAux(ambito, i);
+                if ("SHORTINT".equals(tipo)) {
+                    sb.append("    MOV AL, ").append(op1).append("\n");
+                    sb.append("    ADD AL, ").append(op2).append("\n");
+                    sb.append("    MOV ").append(aux).append(", AL\n");
+                } else if ("SINGLEF".equals(tipo)) {
+                    // Chequeo c: overflow en suma de flotantes
+                    sb.append("    FLD ").append(op1).append("\n");
+                    sb.append("    FADD ").append(op2).append("\n");
+                    sb.append("    FLD ST(0)\n");
+                    sb.append("    FABS\n");
+                    sb.append("    FCOMP @max_singlef\n");
+                    sb.append("    FSTSW AX\n");
+                    sb.append("    SAHF\n");
+                    sb.append("    JA _err_overflow_float\n");
+                    sb.append("    FSTP ").append(aux).append("\n");
+                }
+            } else if ("-".equals(op)) {
+                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
+                String op2 = resolverOperandoAsm(t.getOperando2(), ambito, listaTercetos);
+                String aux = obtenerNombreAux(ambito, i);
+                if ("SHORTINT".equals(tipo)) {
+                    sb.append("    MOV AL, ").append(op1).append("\n");
+                    sb.append("    SUB AL, ").append(op2).append("\n");
+                    sb.append("    MOV ").append(aux).append(", AL\n");
+                } else if ("SINGLEF".equals(tipo)) {
+                    sb.append("    FLD ").append(op1).append("\n");
+                    sb.append("    FSUB ").append(op2).append("\n");
+                    sb.append("    FSTP ").append(aux).append("\n");
+                }
+            } else if ("*".equals(op)) {
+                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
+                String op2 = resolverOperandoAsm(t.getOperando2(), ambito, listaTercetos);
+                String aux = obtenerNombreAux(ambito, i);
+                if ("SHORTINT".equals(tipo)) {
+                    // Chequeo d: overflow en producto de enteros
+                    sb.append("    MOV AL, ").append(op1).append("\n");
+                    sb.append("    IMUL ").append(op2).append("\n");
+                    sb.append("    JO _err_overflow_entero\n");
+                    sb.append("    MOV ").append(aux).append(", AL\n");
+                } else if ("SINGLEF".equals(tipo)) {
+                    sb.append("    FLD ").append(op1).append("\n");
+                    sb.append("    FMUL ").append(op2).append("\n");
+                    sb.append("    FSTP ").append(aux).append("\n");
+                }
+            } else if ("/".equals(op)) {
+                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
+                String op2 = resolverOperandoAsm(t.getOperando2(), ambito, listaTercetos);
+                String aux = obtenerNombreAux(ambito, i);
+                if ("SHORTINT".equals(tipo)) {
+                    sb.append("    MOV AL, ").append(op1).append("\n");
+                    sb.append("    CBW\n");
+                    sb.append("    IDIV ").append(op2).append("\n");
+                    sb.append("    MOV ").append(aux).append(", AL\n");
+                } else if ("SINGLEF".equals(tipo)) {
+                    sb.append("    FLD ").append(op1).append("\n");
+                    sb.append("    FDIV ").append(op2).append("\n");
+                    sb.append("    FSTP ").append(aux).append("\n");
+                }
+            } else if (":=".equals(op)) {
+                String op1Raw = t.getOperando1();
+                String op2 = resolverOperandoAsm(t.getOperando2(), ambito, listaTercetos);
+                if (tipo == null) {
+                    tipo = TablaSimbolos.obtenerTipo(op1Raw);
+                }
+
+                if (op1Raw != null && op1Raw.contains("[") && op1Raw.endsWith("]")) {
+                    int corchete = op1Raw.indexOf('[');
+                    String claveObj = op1Raw.substring(0, corchete);
+                    String contenidoIdx = op1Raw.substring(corchete + 1, op1Raw.length() - 1);
+                    String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+                    String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+                    ArrayList<String> atrsTotales = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
+
+                    String limpioIdx = contenidoIdx.replace("$s", "").replace("$f", "").trim();
+                    boolean esConstante = true;
+                    int idxConst = -1;
+                    try {
+                        idxConst = Integer.parseInt(limpiadoConstante(limpioIdx));
+                    } catch (NumberFormatException e) {
+                        esConstante = false;
+                    }
+
+                    if (esConstante) {
+                        String claveAtrAbs = atrsTotales.get(idxConst);
+                        String op1Asm = obtenerNombreAsm(claveObj + "_" + TablaSimbolos.obtenerNombre(claveAtrAbs));
+                        if ("SHORTINT".equals(tipo)) {
+                            sb.append("    MOV AL, ").append(op2).append("\n");
+                            sb.append("    MOV ").append(op1Asm).append(", AL\n");
+                        } else if ("SINGLEF".equals(tipo)) {
+                            sb.append("    FLD ").append(op2).append("\n");
+                            sb.append("    FSTP ").append(op1Asm).append("\n");
+                        }
+                    } else {
+                        String varIdxAsm = resolverOperandoAsm(contenidoIdx, ambito, listaTercetos);
+                        for (int k = 0; k < atrsTotales.size(); k++) {
+                            String claveAtrAbs = atrsTotales.get(k);
+                            String tipoAtrK = TablaSimbolos.obtenerTipo(claveAtrAbs);
+                            if (tipo != null && tipoAtrK != null && !tipo.equals(tipoAtrK)) {
+                                continue;
+                            }
+                            String op1Asm = obtenerNombreAsm(claveObj + "_" + TablaSimbolos.obtenerNombre(claveAtrAbs));
+                    String etiquetaSkip = "Label_skip_pos_" + ambitoLimpio + "_" + i + "_" + k;
+                    sb.append("    MOV AL, ").append(varIdxAsm).append("\n");
+                    sb.append("    CMP AL, ").append(k).append("\n");
+                    sb.append("    JNE ").append(etiquetaSkip).append("\n");
+                    if ("SHORTINT".equals(tipoAtrK)) {
+                        sb.append("    MOV AL, ").append(op2).append("\n");
+                        sb.append("    MOV ").append(op1Asm).append(", AL\n");
+                    } else if ("SINGLEF".equals(tipoAtrK)) {
+                        sb.append("    FLD ").append(op2).append("\n");
+                        sb.append("    FSTP ").append(op1Asm).append("\n");
+                    }
+                    sb.append(etiquetaSkip).append(":\n");
+                        }
+                    }
+                } else {
+                    String op1 = resolverOperandoAsm(op1Raw, ambito, listaTercetos);
+                    if ("SHORTINT".equals(tipo)) {
+                        sb.append("    MOV AL, ").append(op2).append("\n");
+                        sb.append("    MOV ").append(op1).append(", AL\n");
+                    } else if ("SINGLEF".equals(tipo)) {
+                        sb.append("    FLD ").append(op2).append("\n");
+                        sb.append("    FSTP ").append(op1).append("\n");
+                    }
+                }
+            } else if ("tos".equals(op)) {
+                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
+                String aux = obtenerNombreAux(ambito, i);
+                // Chequeo g: perdida de informacion en conversion tos()
+                sb.append("    FLD ").append(op1).append("\n");
+                sb.append("    FCOMP @max_shortint_f\n");
+                sb.append("    FSTSW AX\n");
+                sb.append("    SAHF\n");
+                sb.append("    JA _err_perdida_info\n");
+                sb.append("    FLD ").append(op1).append("\n");
+                sb.append("    FCOMP @min_shortint_f\n");
+                sb.append("    FSTSW AX\n");
+                sb.append("    SAHF\n");
+                sb.append("    JB _err_perdida_info\n");
+                sb.append("    FLD ").append(op1).append("\n");
+                sb.append("    FISTP @aux_tos\n");
+                sb.append("    FILD @aux_tos\n");
+                sb.append("    FLD ").append(op1).append("\n");
+                sb.append("    FCOMPP\n");
+                sb.append("    FSTSW AX\n");
+                sb.append("    SAHF\n");
+                sb.append("    JNE _err_perdida_info\n");
+                sb.append("    MOV AX, @aux_tos\n");
+                sb.append("    MOV ").append(aux).append(", AL\n");
+            } else if ("RET".equals(op)) {
+                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
+                if (tipo == null) {
+                    tipo = TablaSimbolos.obtenerTipo(t.getOperando1());
+                }
+                if ("SHORTINT".equals(tipo)) {
+                    sb.append("    MOV AL, ").append(op1).append("\n");
+                    sb.append("    MOV _ret_").append(ambitoLimpio).append(", AL\n");
+                } else if ("SINGLEF".equals(tipo)) {
+                    sb.append("    FLD ").append(op1).append("\n");
+                    sb.append("    FSTP _ret_").append(ambitoLimpio).append("\n");
+                }
+                sb.append("    JMP _fin_").append(ambitoLimpio).append("\n");
+            } else if ("CALL".equals(op)) {
+                String claveSub = t.getOperando1();
+                String claveObj = t.getOperando2();
+                String subLimpio = claveSub.replace(TablaSimbolos.SEPARADOR, "_");
+
+                if (claveObj != null && !"".equals(claveObj) && !"-".equals(claveObj)) {
+                    String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+                    String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+                    ArrayList<String> atrsTotales = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
+                    for (int k = 0; k < atrsTotales.size(); k++) {
+                        String claveAtrAbs = atrsTotales.get(k);
+                        String nomAtr = TablaSimbolos.obtenerNombre(claveAtrAbs);
+                        String varObjAtr = obtenerNombreAsm(claveObj + "_" + nomAtr);
+                        String varClaseAtr = obtenerNombreAsm(claveAtrAbs);
+                        String tipoAtr = TablaSimbolos.obtenerTipo(claveAtrAbs);
+                        if ("SHORTINT".equals(tipoAtr)) {
+                            sb.append("    MOV AL, ").append(varObjAtr).append("\n");
+                            sb.append("    MOV ").append(varClaseAtr).append(", AL\n");
+                        } else if ("SINGLEF".equals(tipoAtr)) {
+                            sb.append("    FLD ").append(varObjAtr).append("\n");
+                            sb.append("    FSTP ").append(varClaseAtr).append("\n");
+                        }
+                    }
+                }
+
+                sb.append("    CALL _proc_").append(subLimpio).append("\n");
+
+                if (claveObj != null && !"".equals(claveObj) && !"-".equals(claveObj)) {
+                    String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+                    String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+                    ArrayList<String> atrsTotales = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
+                    for (int k = 0; k < atrsTotales.size(); k++) {
+                        String claveAtrAbs = atrsTotales.get(k);
+                        String nomAtr = TablaSimbolos.obtenerNombre(claveAtrAbs);
+                        String varObjAtr = obtenerNombreAsm(claveObj + "_" + nomAtr);
+                        String varClaseAtr = obtenerNombreAsm(claveAtrAbs);
+                        String tipoAtr = TablaSimbolos.obtenerTipo(claveAtrAbs);
+                        if ("SHORTINT".equals(tipoAtr)) {
+                            sb.append("    MOV AL, ").append(varClaseAtr).append("\n");
+                            sb.append("    MOV ").append(varObjAtr).append(", AL\n");
+                        } else if ("SINGLEF".equals(tipoAtr)) {
+                            sb.append("    FLD ").append(varClaseAtr).append("\n");
+                            sb.append("    FSTP ").append(varObjAtr).append("\n");
+                        }
+                    }
+                }
+
+                String aux = obtenerNombreAux(ambito, i);
+                if ("SHORTINT".equals(tipo)) {
+                    sb.append("    MOV AL, _ret_").append(subLimpio).append("\n");
+                    sb.append("    MOV ").append(aux).append(", AL\n");
+                } else if ("SINGLEF".equals(tipo)) {
+                    sb.append("    FLD _ret_").append(subLimpio).append("\n");
+                    sb.append("    FSTP ").append(aux).append("\n");
+                }
+            } else if ("POUT".equals(op)) {
+                String op1Raw = t.getOperando1();
+                String opAsm = resolverOperandoAsm(op1Raw, ambito, listaTercetos);
+                if (tipo == null) {
+                    if (op1Raw != null && op1Raw.startsWith("[") && op1Raw.endsWith("]")) {
+                        int idx = Integer.parseInt(op1Raw.substring(1, op1Raw.length() - 1));
+                        tipo = listaTercetos.get(idx).getTipo();
+                    } else {
+                        tipo = TablaSimbolos.obtenerTipo(op1Raw);
+                    }
+                }
+                if ("CADENA".equals(tipo)) {
+                    sb.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET ").append(opAsm).append("\n");
+                } else if ("SHORTINT".equals(tipo)) {
+                    sb.append("    MOV AL, ").append(opAsm).append("\n");
+                    sb.append("    MOVSX AX, AL\n");
+                    sb.append("    MOV @aux_print_short, AX\n");
+                    sb.append("    invoke printf, cfm$(\"%hd\\n\"), @aux_print_short\n");
+                } else if ("SINGLEF".equals(tipo)) {
+                    sb.append("    FLD ").append(opAsm).append("\n");
+                    sb.append("    FSTP @aux_print_float\n");
+                    sb.append("    invoke printf, cfm$(\"%Lf\\n\"), @aux_print_float\n");
+                }
+            } else if (">".equals(op) || "<".equals(op) || ">=".equals(op) || "<=".equals(op) || "==".equals(op) || "!=".equals(op)) {
+                ultimoOpComp = op;
+                String tipo1 = obtenerTipoOperando(t.getOperando1(), listaTercetos);
+                String tipo2 = obtenerTipoOperando(t.getOperando2(), listaTercetos);
+                if ("SINGLEF".equals(tipo1) || "SINGLEF".equals(tipo2)) {
+                    ultimoTipoComp = "SINGLEF";
+                } else {
+                    ultimoTipoComp = "SHORTINT";
+                }
+                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
+                String op2 = resolverOperandoAsm(t.getOperando2(), ambito, listaTercetos);
+                if ("SHORTINT".equals(ultimoTipoComp)) {
+                    sb.append("    MOV AL, ").append(op1).append("\n");
+                    sb.append("    CMP AL, ").append(op2).append("\n");
+                } else if ("SINGLEF".equals(ultimoTipoComp)) {
+                    sb.append("    FLD ").append(op1).append("\n");
+                    sb.append("    FCOMP ").append(op2).append("\n");
+                    sb.append("    FSTSW AX\n");
+                    sb.append("    SAHF\n");
+                }
+            } else if ("BF".equals(op)) {
+                int dest = extraerIndiceDestino(t.getOperando2());
+                String etiqueta = "Label_" + ambitoLimpio + "_" + dest;
+                String salto = "";
+                if ("SHORTINT".equals(ultimoTipoComp)) {
+                    if (">".equals(ultimoOpComp)) {
+                        salto = "JLE";
+                    } else if (">=".equals(ultimoOpComp)) {
+                        salto = "JL";
+                    } else if ("<".equals(ultimoOpComp)) {
+                        salto = "JGE";
+                    } else if ("<=".equals(ultimoOpComp)) {
+                        salto = "JG";
+                    } else if ("==".equals(ultimoOpComp)) {
+                        salto = "JNE";
+                    } else if ("!=".equals(ultimoOpComp)) {
+                        salto = "JE";
+                    }
+                } else if ("SINGLEF".equals(ultimoTipoComp)) {
+                    if (">".equals(ultimoOpComp)) {
+                        salto = "JBE";
+                    } else if (">=".equals(ultimoOpComp)) {
+                        salto = "JB";
+                    } else if ("<".equals(ultimoOpComp)) {
+                        salto = "JAE";
+                    } else if ("<=".equals(ultimoOpComp)) {
+                        salto = "JA";
+                    } else if ("==".equals(ultimoOpComp)) {
+                        salto = "JNE";
+                    } else if ("!=".equals(ultimoOpComp)) {
+                        salto = "JE";
+                    }
+                }
+                if (!salto.isEmpty()) {
+                    sb.append("    ").append(salto).append(" ").append(etiqueta).append("\n");
+                }
+            } else if ("BI".equals(op)) {
+                int dest = extraerIndiceDestino(t.getOperando1());
+                String etiqueta = "Label_" + ambitoLimpio + "_" + dest;
+                sb.append("    JMP ").append(etiqueta).append("\n");
+            }
+        }
+
+        if (etiquetas.contains(listaTercetos.size())) {
+            sb.append("Label_").append(ambitoLimpio).append("_").append(listaTercetos.size()).append(":\n");
+        }
+    }
+
     public static String generarAssembler() {
         mapaNombresAsm.clear();
         contadorStr = 0;
@@ -232,7 +594,6 @@ public class GeneradorAssembler {
         Map<String, ArrayList<Terceto>> tercetosPorAmbito = GeneradorTerceto.obtenerTercetosPorAmbito();
         registrarAuxiliaresYConstantes(tercetosPorAmbito);
 
-        // 1. Encabezado estandar MASM32 de la catedra
         StringBuilder encabezado = new StringBuilder();
         encabezado.append(".386\n");
         encabezado.append(".model flat, stdcall\n");
@@ -243,7 +604,6 @@ public class GeneradorAssembler {
         encabezado.append("dll_dllcrt0 PROTO C\n");
         encabezado.append("printf PROTO C :VARARG\n\n");
 
-        // 2. Seccion .data con variables, constantes y auxiliares
         codigoData.append(".data\n");
         Map<String, Map<String, Object>> tabla = TablaSimbolos.obtenerTabla();
         for (Map.Entry<String, Map<String, Object>> entrada : tabla.entrySet()) {
@@ -265,6 +625,29 @@ public class GeneradorAssembler {
                         codigoData.append("    ").append(nombreAsm).append(" DB ?\n");
                     } else if ("SINGLEF".equals(tipo)) {
                         codigoData.append("    ").append(nombreAsm).append(" DD ?\n");
+                    }
+                } else if (uso.equals("funcion") || uso.equals("metodo")) {
+                    String ambitoLimpio = clave.replace(TablaSimbolos.SEPARADOR, "_");
+                    if ("SHORTINT".equals(tipo)) {
+                        codigoData.append("    _ret_").append(ambitoLimpio).append(" DB ?\n");
+                    } else if ("SINGLEF".equals(tipo)) {
+                        codigoData.append("    _ret_").append(ambitoLimpio).append(" DD ?\n");
+                    }
+                    // Chequeo i: bandera de activacion por subrutina
+                    codigoData.append("    @activa_").append(ambitoLimpio).append(" DB 0\n");
+                } else if (uso.equals("objeto")) {
+                    String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + tipo;
+                    ArrayList<String> atrsObj = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
+                    for (int k = 0; k < atrsObj.size(); k++) {
+                        String claveAtrAbs = atrsObj.get(k);
+                        String nomAtr = TablaSimbolos.obtenerNombre(claveAtrAbs);
+                        String tipoAtr = TablaSimbolos.obtenerTipo(claveAtrAbs);
+                        String nombreAsmAtr = obtenerNombreAsm(clave + "_" + nomAtr);
+                        if ("SHORTINT".equals(tipoAtr)) {
+                            codigoData.append("    ").append(nombreAsmAtr).append(" DB ?\n");
+                        } else if ("SINGLEF".equals(tipoAtr)) {
+                            codigoData.append("    ").append(nombreAsmAtr).append(" DD ?\n");
+                        }
                     }
                 }
             } else if (ocs != null) {
@@ -289,230 +672,61 @@ public class GeneradorAssembler {
         }
         codigoData.append("    @aux_print_short DW ?\n");
         codigoData.append("    @aux_print_float DQ ?\n");
-        codigoData.append("    @aux_tos DW ?\n\n");
+        codigoData.append("    @aux_tos DW ?\n");
+        codigoData.append("    @max_singlef DD 3.40282347E+38\n");
+        codigoData.append("    @min_shortint_f DD -128.0\n");
+        codigoData.append("    @max_shortint_f DD 127.0\n");
+        codigoData.append("    _msg_err_ovf_float DB \"Error en tiempo de ejecucion: Overflow en suma de punto flotante (SINGLEF)\", 0\n");
+        codigoData.append("    _msg_err_ovf_entero DB \"Error en tiempo de ejecucion: Overflow en producto de enteros (SHORTINT)\", 0\n");
+        codigoData.append("    _msg_err_perdida_tos DB \"Error en tiempo de ejecucion: Perdida de informacion en conversion tos()\", 0\n");
+        codigoData.append("    _msg_err_recursion DB \"Error en tiempo de ejecucion: Recursion mutua o directa no permitida en funciones\", 0\n\n");
 
-        // 3. Seccion .code con inicio en start:
         codigoCode.append(".code\n");
-        codigoCode.append("start:\n");
 
-        String ambitoMain = TablaSimbolos.AMBITO_GLOBAL;
-        ArrayList<Terceto> tercetosMain = tercetosPorAmbito.get(ambitoMain);
-        if (tercetosMain != null) {
-            // Hito 3: recoleccion previa de etiquetas destino (Alternativa 1 de la catedra)
-            HashSet<Integer> etiquetas = new HashSet<Integer>();
-            for (int i = 0; i < tercetosMain.size(); i++) {
-                Terceto t = tercetosMain.get(i);
-                String op = t.getOperador();
-                if ("BF".equals(op)) {
-                    int dest = extraerIndiceDestino(t.getOperando2());
-                    if (dest >= 0) {
-                        etiquetas.add(dest);
-                    }
-                } else if ("BI".equals(op)) {
-                    int dest = extraerIndiceDestino(t.getOperando1());
-                    if (dest >= 0) {
-                        etiquetas.add(dest);
-                    }
-                }
-            }
-
-            String ultimoOpComp = "";
-            String ultimoTipoComp = "";
-
-            for (int i = 0; i < tercetosMain.size(); i++) {
-                if (etiquetas.contains(i)) {
-                    codigoCode.append("Label_").append(ambitoMain).append("_").append(i).append(":\n");
-                }
-
-                Terceto t = tercetosMain.get(i);
-                String op = t.getOperador();
-                String tipo = t.getTipo();
-
-                if ("+".equals(op)) {
-                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
-                    String op2 = resolverOperandoAsm(t.getOperando2(), ambitoMain, tercetosMain);
-                    String aux = obtenerNombreAux(ambitoMain, i);
-                    if ("SHORTINT".equals(tipo)) {
-                        // Suma entera de 8 bits en registro AL
-                        codigoCode.append("    MOV AL, ").append(op1).append("\n");
-                        codigoCode.append("    ADD AL, ").append(op2).append("\n");
-                        codigoCode.append("    MOV ").append(aux).append(", AL\n");
-                    } else if ("SINGLEF".equals(tipo)) {
-                        // Suma flotante de 32 bits en coprocesador 80x87
-                        codigoCode.append("    FLD ").append(op1).append("\n");
-                        codigoCode.append("    FADD ").append(op2).append("\n");
-                        codigoCode.append("    FSTP ").append(aux).append("\n");
-                    }
-                } else if ("-".equals(op)) {
-                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
-                    String op2 = resolverOperandoAsm(t.getOperando2(), ambitoMain, tercetosMain);
-                    String aux = obtenerNombreAux(ambitoMain, i);
-                    if ("SHORTINT".equals(tipo)) {
-                        // Resta entera de 8 bits en registro AL
-                        codigoCode.append("    MOV AL, ").append(op1).append("\n");
-                        codigoCode.append("    SUB AL, ").append(op2).append("\n");
-                        codigoCode.append("    MOV ").append(aux).append(", AL\n");
-                    } else if ("SINGLEF".equals(tipo)) {
-                        // Resta flotante de 32 bits en coprocesador 80x87
-                        codigoCode.append("    FLD ").append(op1).append("\n");
-                        codigoCode.append("    FSUB ").append(op2).append("\n");
-                        codigoCode.append("    FSTP ").append(aux).append("\n");
-                    }
-                } else if ("*".equals(op)) {
-                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
-                    String op2 = resolverOperandoAsm(t.getOperando2(), ambitoMain, tercetosMain);
-                    String aux = obtenerNombreAux(ambitoMain, i);
-                    if ("SHORTINT".equals(tipo)) {
-                        // Multiplicacion entera con signo de 8 bits (AL * op2 -> AX, parte baja en AL)
-                        codigoCode.append("    MOV AL, ").append(op1).append("\n");
-                        codigoCode.append("    IMUL ").append(op2).append("\n");
-                        codigoCode.append("    MOV ").append(aux).append(", AL\n");
-                    } else if ("SINGLEF".equals(tipo)) {
-                        // Multiplicacion flotante de 32 bits en coprocesador 80x87
-                        codigoCode.append("    FLD ").append(op1).append("\n");
-                        codigoCode.append("    FMUL ").append(op2).append("\n");
-                        codigoCode.append("    FSTP ").append(aux).append("\n");
-                    }
-                } else if ("/".equals(op)) {
-                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
-                    String op2 = resolverOperandoAsm(t.getOperando2(), ambitoMain, tercetosMain);
-                    String aux = obtenerNombreAux(ambitoMain, i);
-                    if ("SHORTINT".equals(tipo)) {
-                        // Division entera con signo de 8 bits (CBW extiende AL a AX; cociente en AL)
-                        codigoCode.append("    MOV AL, ").append(op1).append("\n");
-                        codigoCode.append("    CBW\n");
-                        codigoCode.append("    IDIV ").append(op2).append("\n");
-                        codigoCode.append("    MOV ").append(aux).append(", AL\n");
-                    } else if ("SINGLEF".equals(tipo)) {
-                        // Division flotante de 32 bits en coprocesador 80x87
-                        codigoCode.append("    FLD ").append(op1).append("\n");
-                        codigoCode.append("    FDIV ").append(op2).append("\n");
-                        codigoCode.append("    FSTP ").append(aux).append("\n");
-                    }
-                } else if (":=".equals(op)) {
-                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
-                    String op2 = resolverOperandoAsm(t.getOperando2(), ambitoMain, tercetosMain);
-                    if (tipo == null) {
-                        tipo = TablaSimbolos.obtenerTipo(t.getOperando1());
-                    }
-                    if ("SHORTINT".equals(tipo)) {
-                        codigoCode.append("    MOV AL, ").append(op2).append("\n");
-                        codigoCode.append("    MOV ").append(op1).append(", AL\n");
-                    } else if ("SINGLEF".equals(tipo)) {
-                        codigoCode.append("    FLD ").append(op2).append("\n");
-                        codigoCode.append("    FSTP ").append(op1).append("\n");
-                    }
-                } else if ("tos".equals(op)) {
-                    // Tema 34: conversion explicita de SINGLEF a SHORTINT
-                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
-                    String aux = obtenerNombreAux(ambitoMain, i);
-                    codigoCode.append("    FLD ").append(op1).append("\n");
-                    codigoCode.append("    FISTP @aux_tos\n");
-                    codigoCode.append("    MOV AX, @aux_tos\n");
-                    codigoCode.append("    MOV ").append(aux).append(", AL\n");
-                } else if ("POUT".equals(op)) {
-                    String op1Raw = t.getOperando1();
-                    String opAsm = resolverOperandoAsm(op1Raw, ambitoMain, tercetosMain);
-                    if (tipo == null) {
-                        if (op1Raw != null && op1Raw.startsWith("[") && op1Raw.endsWith("]")) {
-                            int idx = Integer.parseInt(op1Raw.substring(1, op1Raw.length() - 1));
-                            tipo = tercetosMain.get(idx).getTipo();
-                        } else {
-                            tipo = TablaSimbolos.obtenerTipo(op1Raw);
-                        }
-                    }
-                    if ("CADENA".equals(tipo)) {
-                        codigoCode.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET ").append(opAsm).append("\n");
-                    } else if ("SHORTINT".equals(tipo)) {
-                        codigoCode.append("    MOV AL, ").append(opAsm).append("\n");
-                        codigoCode.append("    MOVSX AX, AL\n");
-                        codigoCode.append("    MOV @aux_print_short, AX\n");
-                        codigoCode.append("    invoke printf, cfm$(\"%hd\\n\"), @aux_print_short\n");
-                    } else if ("SINGLEF".equals(tipo)) {
-                        codigoCode.append("    FLD ").append(opAsm).append("\n");
-                        codigoCode.append("    FSTP @aux_print_float\n");
-                        codigoCode.append("    invoke printf, cfm$(\"%Lf\\n\"), @aux_print_float\n");
-                    }
-                } else if (">".equals(op) || "<".equals(op) || ">=".equals(op) || "<=".equals(op) || "==".equals(op) || "!=".equals(op)) {
-                    ultimoOpComp = op;
-                    String tipo1 = obtenerTipoOperando(t.getOperando1(), tercetosMain);
-                    String tipo2 = obtenerTipoOperando(t.getOperando2(), tercetosMain);
-                    if ("SINGLEF".equals(tipo1) || "SINGLEF".equals(tipo2)) {
-                        ultimoTipoComp = "SINGLEF";
-                    } else {
-                        ultimoTipoComp = "SHORTINT";
-                    }
-                    String op1 = resolverOperandoAsm(t.getOperando1(), ambitoMain, tercetosMain);
-                    String op2 = resolverOperandoAsm(t.getOperando2(), ambitoMain, tercetosMain);
-                    if ("SHORTINT".equals(ultimoTipoComp)) {
-                        // Hito 3: comparacion entera en AL
-                        codigoCode.append("    MOV AL, ").append(op1).append("\n");
-                        codigoCode.append("    CMP AL, ").append(op2).append("\n");
-                    } else if ("SINGLEF".equals(ultimoTipoComp)) {
-                        // Hito 3: comparacion flotante en coprocesador 80x87
-                        codigoCode.append("    FLD ").append(op1).append("\n");
-                        codigoCode.append("    FCOMP ").append(op2).append("\n");
-                        codigoCode.append("    FSTSW AX\n");
-                        codigoCode.append("    SAHF\n");
-                    }
-                } else if ("BF".equals(op)) {
-                    int dest = extraerIndiceDestino(t.getOperando2());
-                    String etiqueta = "Label_" + ambitoMain + "_" + dest;
-                    String salto = "";
-                    if ("SHORTINT".equals(ultimoTipoComp)) {
-                        // Hito 3: salto condicional BF invertido para enteros con signo
-                        if (">".equals(ultimoOpComp)) {
-                            salto = "JLE";
-                        } else if (">=".equals(ultimoOpComp)) {
-                            salto = "JL";
-                        } else if ("<".equals(ultimoOpComp)) {
-                            salto = "JGE";
-                        } else if ("<=".equals(ultimoOpComp)) {
-                            salto = "JG";
-                        } else if ("==".equals(ultimoOpComp)) {
-                            salto = "JNE";
-                        } else if ("!=".equals(ultimoOpComp)) {
-                            salto = "JE";
-                        }
-                    } else if ("SINGLEF".equals(ultimoTipoComp)) {
-                        // Hito 3: salto condicional BF invertido para flotantes (flags 80x87 via SAHF)
-                        if (">".equals(ultimoOpComp)) {
-                            salto = "JBE";
-                        } else if (">=".equals(ultimoOpComp)) {
-                            salto = "JB";
-                        } else if ("<".equals(ultimoOpComp)) {
-                            salto = "JAE";
-                        } else if ("<=".equals(ultimoOpComp)) {
-                            salto = "JA";
-                        } else if ("==".equals(ultimoOpComp)) {
-                            salto = "JNE";
-                        } else if ("!=".equals(ultimoOpComp)) {
-                            salto = "JE";
-                        }
-                    }
-                    if (!salto.isEmpty()) {
-                        codigoCode.append("    ").append(salto).append(" ").append(etiqueta).append("\n");
-                    }
-                } else if ("BI".equals(op)) {
-                    // Hito 3: salto incondicional BI
-                    int dest = extraerIndiceDestino(t.getOperando1());
-                    String etiqueta = "Label_" + ambitoMain + "_" + dest;
-                    codigoCode.append("    JMP ").append(etiqueta).append("\n");
-                }
-            }
-
-            if (etiquetas.contains(tercetosMain.size())) {
-                codigoCode.append("Label_").append(ambitoMain).append("_").append(tercetosMain.size()).append(":\n");
+        for (Map.Entry<String, ArrayList<Terceto>> entry : tercetosPorAmbito.entrySet()) {
+            String ambito = entry.getKey();
+            if (!TablaSimbolos.AMBITO_GLOBAL.equals(ambito)) {
+                String ambitoLimpio = ambito.replace(TablaSimbolos.SEPARADOR, "_");
+                codigoCode.append("_proc_").append(ambitoLimpio).append(":\n");
+                codigoCode.append("    PUSH EBP\n");
+                codigoCode.append("    MOV EBP, ESP\n");
+                // Chequeo i: control de recursion directa o mutua
+                codigoCode.append("    CMP @activa_").append(ambitoLimpio).append(", 1\n");
+                codigoCode.append("    JE _err_recursion\n");
+                codigoCode.append("    MOV @activa_").append(ambitoLimpio).append(", 1\n");
+                generarCodigoAmbito(ambito, entry.getValue(), codigoCode);
+                codigoCode.append("_fin_").append(ambitoLimpio).append(":\n");
+                codigoCode.append("    MOV @activa_").append(ambitoLimpio).append(", 0\n");
+                codigoCode.append("    MOV ESP, EBP\n");
+                codigoCode.append("    POP EBP\n");
+                codigoCode.append("    RET\n\n");
             }
         }
 
-        codigoCode.append("    invoke ExitProcess, 0\n");
+        codigoCode.append("start:\n");
+        ArrayList<Terceto> tercetosMain = tercetosPorAmbito.get(TablaSimbolos.AMBITO_GLOBAL);
+        if (tercetosMain != null) {
+            generarCodigoAmbito(TablaSimbolos.AMBITO_GLOBAL, tercetosMain, codigoCode);
+        }
+
+        codigoCode.append("    invoke ExitProcess, 0\n\n");
+        codigoCode.append("_err_overflow_float:\n");
+        codigoCode.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET _msg_err_ovf_float\n");
+        codigoCode.append("    invoke ExitProcess, 1\n\n");
+        codigoCode.append("_err_overflow_entero:\n");
+        codigoCode.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET _msg_err_ovf_entero\n");
+        codigoCode.append("    invoke ExitProcess, 1\n\n");
+        codigoCode.append("_err_perdida_info:\n");
+        codigoCode.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET _msg_err_perdida_tos\n");
+        codigoCode.append("    invoke ExitProcess, 1\n\n");
+        codigoCode.append("_err_recursion:\n");
+        codigoCode.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET _msg_err_recursion\n");
+        codigoCode.append("    invoke ExitProcess, 1\n\n");
         codigoCode.append("end start\n");
 
         return encabezado.toString() + codigoData.toString() + codigoCode.toString();
     }
 
-    // Guarda el contenido assembler reemplazando o agregando extension .asm
     public static void guardarArchivo(String rutaFuente, String contenidoAsm) {
         String rutaSalida;
         if (rutaFuente.endsWith(".txt")) {
@@ -530,7 +744,6 @@ public class GeneradorAssembler {
         }
     }
 
-    // Muestra el codigo assembler generado por consola
     public static void imprimirAssembler(String contenidoAsm) {
         System.out.println("\n----------------------------------------");
         System.out.println("         CODIGO ASSEMBLER (MASM32)      ");

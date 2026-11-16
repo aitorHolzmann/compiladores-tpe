@@ -647,16 +647,16 @@ acceso_posicional
                 } else {
                     String lexConst = $3.sval;
                     int idx = Integer.parseInt(lexConst);
-                    ArrayList<String> atrs = TablaSimbolos.obtenerAtributosClase(claveClase);
-                    int cantAtr = atrs.size();
+                    ArrayList<String> atrsTotales = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
+                    int cantAtr = atrsTotales.size();
 
                     if (idx < 0 || idx >= cantAtr) {
                         agregarErrorSemantico("Indice posicional [" + idx + "$s] fuera de rango para la clase '" + nomClase + "' (cantidad de atributos: " + cantAtr + ")");
                         $$ = new ParserVal();
                     } else {
-                        String nomAtr = atrs.get(idx);
-                        String claveAtr = claveClase + TablaSimbolos.SEPARADOR + nomAtr;
+                        String claveAtr = atrsTotales.get(idx);
                         String tipoAtr = TablaSimbolos.obtenerTipo(claveAtr);
+                        String nomAtr = TablaSimbolos.obtenerNombre(claveAtr);
 
                         // Chequeo de visibilidad (Tema 26)
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
@@ -1075,7 +1075,7 @@ invocacion_metodo
                                 agregarErrorSemantico("Cantidad incorrecta de parametros en invocacion a metodo '" + nomMetodo + "': se esperaban " + cantEsperada + " pero se recibieron 0");
                                 $$ = new ParserVal();
                             } else {
-                                int idCall = GeneradorTerceto.crearTerceto("CALL", claveMet, "-", tipoRetorno);
+                                int idCall = GeneradorTerceto.crearTerceto("CALL", claveMet, claveObj, tipoRetorno);
                                 ParserVal pv = new ParserVal("[" + idCall + "]");
                                 pv.obj = tipoRetorno;
                                 $$ = pv;
@@ -1157,7 +1157,7 @@ invocacion_metodo
                                 }
 
                                 if (paramsOk) {
-                                    int idCall = GeneradorTerceto.crearTerceto("CALL", claveMet, "-", tipoRetorno);
+                                    int idCall = GeneradorTerceto.crearTerceto("CALL", claveMet, claveObj, tipoRetorno);
                                     ParserVal pv = new ParserVal("[" + idCall + "]");
                                     pv.obj = tipoRetorno;
                                     $$ = pv;
