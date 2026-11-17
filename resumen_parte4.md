@@ -242,17 +242,17 @@ Este caso es un poco mas complejo. La subrutina del metodo de la clase se genero
   2. **Llamada:** ejecutamos `CALL _proc_main_c_base_a_sumar_base` que trabaja con las variables de clase.
   3. **Después del `CALL`:** copiamos de vuelta las variables de la clase hacia las variables del objeto `_main_obj_<atr>` y guardamos `_ret_...` en el `@aux<i>` del terceto.
 
-### Acceso Posicional a Atributos (`obj[i]`)
-Para resolver el acceso posicional del Tema 29 (`obj[0$s] := 15$s;` o `obj[a] := 25$s;`), buscamos la lista ordenada de atributos de la clase del objeto con `obtenerAtributosTotalesClase()` y separamos en dos casos:
+### Acceso posicional a atributos 
+Para resolver el acceso posicional (`obj[0$s] := 15$s;` o `obj[a] := 25$s;`), buscamos la lista ordenada de atributos de la clase del objeto con `obtenerAtributosTotalesClase()` y separamos en dos casos:
 
-* **Caso 1: Índice constante (`obj[0$s]`):**
-  Como conocemos el número de posición en tiempo de compilación, buscamos directamente qué atributo está en ese índice `k` dentro de la lista de la clase (por ejemplo, el índice `0` es `atr_a`) y lo reemplazamos directamente por la variable de ese atributo del objeto (`_main_obj_atr_a`).
+* **Caso indice constante (`obj[0$s]`):**
+  Como conocemos el número de posición en tiempo de compilación, buscamos directamente qué atributo está en ese índice `k` dentro de la lista de la clase y lo reemplazamos directamente por la variable de ese atributo del objeto. Ej:
   ```nasm
   MOV AL, _cte_15
   MOV _main_obj_atr_a, AL
   ```
 
-* **Caso 2: Índice con variable (`obj[a]`):**
+* **Caso indice con variable (`obj[a]`):**
   Como el valor de la variable `a` recién se conoce en tiempo de ejecución, generamos comparaciones en Assembler (`CMP AL, k`) para cada posición `k` compatible de la clase. Si `a` vale `k`, asigna en ese atributo; si no, salta con `JNE` al siguiente:
   ```nasm
   MOV AL, _main_a
@@ -269,18 +269,16 @@ Para resolver el acceso posicional del Tema 29 (`obj[0$s] := 15$s;` o `obj[a] :=
   Label_skip_pos_main_3_2:
   ```
 
----
+## Controles en Tiempo de Ejecución 
 
-## Controles en Tiempo de Ejecución (Grupo 20: c, d, g, i)
-
-Por consigna, al **Grupo 20** le tocaron los 4 chequeos en tiempo de ejecución **`c`, `d`, `g` e `i`**. Cuando ocurre cualquiera de estos errores, el programa salta a una rutina al final de `.code`, imprime el mensaje correspondiente con `printf` y corta la ejecución con `invoke ExitProcess, 1`.
+Nos tocaron 4 chequeos en tiempo de ejecución **`c`, `d`, `g` e `i`**. Cuando ocurre cualquiera de estos errores, el programa salta a una rutina al final de `.code`, imprime el mensaje correspondiente con `printf` y corta la ejecución con `invoke ExitProcess, 1`.
 
 Para poder hacer las comparaciones declaramos en `.data` las constantes límite (`@max_singlef DD 3.40282347E+38`, `@min_shortint_f DD -128.0`, `@max_shortint_f DD 127.0`), los 4 mensajes de error (`_msg_err_...`) y una bandera `@activa_<ambito> DB 0` por cada función o método.
 
 ### Chequeo `c`: Overflow en sumas de punto flotante (`SINGLEF`)
-Los registros `ST(0)..ST(7)` de la FPU trabajan internamente con 80 bits, así que una suma puede pasarse del límite de 32 bits (`3.40282347E+38`) antes de bajar a memoria. Después de `FADD op2`:
+Verificar que la suma no pueda pasarse del límite de 32 bits (`3.40282347E+38`). Después de `FADD op2`:
 1. Duplicamos el tope (`FLD ST(0)`) y le aplicamos valor absoluto (`FABS`) para cubrir también sumas negativas muy grandes.
-2. Comparamos `|resultado|` contra `@max_singlef` con `FCOMP @max_singlef` (desapila la copia), pasamos los flags con `FSTSW AX` + `SAHF` y si es mayor saltamos con `JA _err_overflow_float`.
+2. Comparamos `|resultado|` contra `@max_singlef` con `FCOMP @max_singlef`, pasamos los flags con `FSTSW AX` + `SAHF` y si es mayor saltamos con `JA _err_overflow_float`.
 3. Si está en rango, recién ahí guardamos el valor en `@aux` con `FSTP`.
 
 ```nasm
@@ -316,8 +314,6 @@ El lenguaje prohíbe tanto la recursión directa (`f -> f`) como la mutua (`f ->
 * En `.data` declaramos `@activa_<subrutina> DB 0` para cada función o método.
 * Al entrar a `_proc_<subrutina>:`, comparamos si ya vale `1` (`CMP @activa_..., 1` + `JE _err_recursion`); si estaba en `0`, la ponemos en `1`.
 * Al salir por `_fin_<subrutina>:`, justo antes de restaurar `EBP` y hacer `RET`, la volvemos a poner en `0` (`MOV @activa_..., 0`).
-
----
 
 ## Cierre y Guardado del Archivo
 

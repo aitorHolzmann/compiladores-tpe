@@ -157,26 +157,16 @@ public class GeneradorAssembler {
             String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
             ArrayList<String> atrsTotales = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
 
-            // Intentar parsear como indice constante (ej: 0$s o 0)
-            String limpioIdx = contenidoIdx.replace("$s", "").replace("$f", "").trim();
-            try {
-                int idx = Integer.parseInt(limpiadoConstante(limpioIdx));
+            // Si no tiene '@' es una constante (ej: 0$s); si tiene '@' es una variable (ej: main@a)
+            if (!contenidoIdx.contains(TablaSimbolos.SEPARADOR)) {
+                int idx = Integer.parseInt(contenidoIdx.replace("$s", "").trim());
                 if (idx >= 0 && idx < atrsTotales.size()) {
                     String claveAtrAbs = atrsTotales.get(idx);
                     return obtenerNombreAsm(claveObj + "_" + TablaSimbolos.obtenerNombre(claveAtrAbs));
                 }
-            } catch (NumberFormatException e) {
-                // Es un indice variable (ej: main@a)
             }
         }
         return op;
-    }
-
-    private static String limpiadoConstante(String s) {
-        if (s.startsWith("-")) {
-            return "-" + s.substring(1).replaceAll("[^0-9.]", "");
-        }
-        return s.replaceAll("[^0-9.]", "");
     }
 
     public static String resolverOperandoAsm(String op, String ambito, ArrayList<Terceto> lista) {
@@ -350,16 +340,9 @@ public class GeneradorAssembler {
                     String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
                     ArrayList<String> atrsTotales = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
 
-                    String limpioIdx = contenidoIdx.replace("$s", "").replace("$f", "").trim();
-                    boolean esConstante = true;
-                    int idxConst = -1;
-                    try {
-                        idxConst = Integer.parseInt(limpiadoConstante(limpioIdx));
-                    } catch (NumberFormatException e) {
-                        esConstante = false;
-                    }
-
-                    if (esConstante) {
+                    // Si el indice no tiene '@' es constante (ej: 0$s); si tiene '@' es variable (ej: main@a)
+                    if (!contenidoIdx.contains(TablaSimbolos.SEPARADOR)) {
+                        int idxConst = Integer.parseInt(contenidoIdx.replace("$s", "").trim());
                         String claveAtrAbs = atrsTotales.get(idxConst);
                         String op1Asm = obtenerNombreAsm(claveObj + "_" + TablaSimbolos.obtenerNombre(claveAtrAbs));
                         if ("SHORTINT".equals(tipo)) {
