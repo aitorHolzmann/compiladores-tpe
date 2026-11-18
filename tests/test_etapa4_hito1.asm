@@ -8,11 +8,11 @@ dll_dllcrt0 PROTO C
 printf PROTO C :VARARG
 
 .data
-    _main@a DB ?
-    _main@b DB ?
-    _main@f1 DD ?
-    _main@f2 DD ?
-    ; variable comptime omitida: _main@c_cte
+    _main_a DB ?
+    _main_b DB ?
+    _main_f1 DD ?
+    _main_f2 DD ?
+    ; variable comptime omitida: _main_c_cte
     _cte_42 DB 42
     _str_0 DB "--- Inicio prueba Hito 1 Etapa 4 ---", 0
     _str_1 DB "Imprimiendo constantes enteras:", 0
@@ -27,6 +27,13 @@ printf PROTO C :VARARG
     @aux_print_short DW ?
     @aux_print_float DQ ?
     @aux_tos DW ?
+    @max_singlef DD 3.40282347E+38
+    @min_shortint_f DD -128.0
+    @max_shortint_f DD 127.0
+    _msg_err_ovf_float DB "Error en tiempo de ejecucion: Overflow en suma de punto flotante (SINGLEF)", 0
+    _msg_err_ovf_entero DB "Error en tiempo de ejecucion: Overflow en producto de enteros (SHORTINT)", 0
+    _msg_err_perdida_tos DB "Error en tiempo de ejecucion: Perdida de informacion en conversion tos()", 0
+    _msg_err_recursion DB "Error en tiempo de ejecucion: Recursion mutua o directa no permitida en funciones", 0
 
 .code
 start:
@@ -57,4 +64,21 @@ start:
     invoke printf, cfm$("%hd\n"), @aux_print_short
     invoke printf, cfm$("%s\n"), OFFSET _str_4
     invoke ExitProcess, 0
+
+_err_overflow_float:
+    invoke printf, cfm$("%s\n"), OFFSET _msg_err_ovf_float
+    invoke ExitProcess, 1
+
+_err_overflow_entero:
+    invoke printf, cfm$("%s\n"), OFFSET _msg_err_ovf_entero
+    invoke ExitProcess, 1
+
+_err_perdida_info:
+    invoke printf, cfm$("%s\n"), OFFSET _msg_err_perdida_tos
+    invoke ExitProcess, 1
+
+_err_recursion:
+    invoke printf, cfm$("%s\n"), OFFSET _msg_err_recursion
+    invoke ExitProcess, 1
+
 end start

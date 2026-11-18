@@ -46,7 +46,7 @@ begin
 
   // Asignaciones basicas (Temas 1 y 7)
   a := 2$s;
-  f1 := 10.5;
+  f1 := 10.0;
 
   // Tema 17: Asignacion en expresion y Tema 34: tos()
   b := c = (tos(f1) + a);

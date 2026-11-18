@@ -162,7 +162,7 @@ public class GeneradorAssembler {
                 int idx = Integer.parseInt(contenidoIdx.replace("$s", "").trim());
                 if (idx >= 0 && idx < atrsTotales.size()) {
                     String claveAtrAbs = atrsTotales.get(idx);
-                    return obtenerNombreAsm(claveObj + "_" + TablaSimbolos.obtenerNombre(claveAtrAbs));
+                    return claveObj + "_" + TablaSimbolos.obtenerNombre(claveAtrAbs);
                 }
             }
         }
@@ -383,6 +383,23 @@ public class GeneradorAssembler {
                     } else if ("SINGLEF".equals(tipo)) {
                         sb.append("    FLD ").append(op2).append("\n");
                         sb.append("    FSTP ").append(op1).append("\n");
+                    } else if (tipo != null) {
+                        String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + tipo;
+                        ArrayList<String> atrsTotales = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
+                        for (int k = 0; k < atrsTotales.size(); k++) {
+                            String claveAtrAbs = atrsTotales.get(k);
+                            String nomAtr = TablaSimbolos.obtenerNombre(claveAtrAbs);
+                            String tipoAtr = TablaSimbolos.obtenerTipo(claveAtrAbs);
+                            String destAtr = obtenerNombreAsm(op1Raw + "_" + nomAtr);
+                            String origAtr = obtenerNombreAsm(t.getOperando2() + "_" + nomAtr);
+                            if ("SHORTINT".equals(tipoAtr)) {
+                                sb.append("    MOV AL, ").append(origAtr).append("\n");
+                                sb.append("    MOV ").append(destAtr).append(", AL\n");
+                            } else if ("SINGLEF".equals(tipoAtr)) {
+                                sb.append("    FLD ").append(origAtr).append("\n");
+                                sb.append("    FSTP ").append(destAtr).append("\n");
+                            }
+                        }
                     }
                 }
             } else if ("tos".equals(op)) {
@@ -414,12 +431,24 @@ public class GeneradorAssembler {
                 if (tipo == null) {
                     tipo = TablaSimbolos.obtenerTipo(t.getOperando1());
                 }
-                if ("SHORTINT".equals(tipo)) {
+                String tipoSubrutina = TablaSimbolos.obtenerTipo(ambito);
+                if (tipoSubrutina == null) {
+                    tipoSubrutina = tipo;
+                }
+                if ("SHORTINT".equals(tipoSubrutina)) {
                     sb.append("    MOV AL, ").append(op1).append("\n");
                     sb.append("    MOV _ret_").append(ambitoLimpio).append(", AL\n");
-                } else if ("SINGLEF".equals(tipo)) {
-                    sb.append("    FLD ").append(op1).append("\n");
-                    sb.append("    FSTP _ret_").append(ambitoLimpio).append("\n");
+                } else if ("SINGLEF".equals(tipoSubrutina)) {
+                    if ("SHORTINT".equals(tipo)) {
+                        sb.append("    MOV AL, ").append(op1).append("\n");
+                        sb.append("    CBW\n");
+                        sb.append("    MOV @aux_tos, AX\n");
+                        sb.append("    FILD @aux_tos\n");
+                        sb.append("    FSTP _ret_").append(ambitoLimpio).append("\n");
+                    } else {
+                        sb.append("    FLD ").append(op1).append("\n");
+                        sb.append("    FSTP _ret_").append(ambitoLimpio).append("\n");
+                    }
                 }
                 sb.append("    JMP _fin_").append(ambitoLimpio).append("\n");
             } else if ("CALL".equals(op)) {
@@ -502,12 +531,16 @@ public class GeneradorAssembler {
                 }
             } else if (">".equals(op) || "<".equals(op) || ">=".equals(op) || "<=".equals(op) || "==".equals(op) || "!=".equals(op)) {
                 ultimoOpComp = op;
-                String tipo1 = obtenerTipoOperando(t.getOperando1(), listaTercetos);
-                String tipo2 = obtenerTipoOperando(t.getOperando2(), listaTercetos);
-                if ("SINGLEF".equals(tipo1) || "SINGLEF".equals(tipo2)) {
-                    ultimoTipoComp = "SINGLEF";
+                if (tipo != null && !tipo.isEmpty()) {
+                    ultimoTipoComp = tipo;
                 } else {
-                    ultimoTipoComp = "SHORTINT";
+                    String tipo1 = obtenerTipoOperando(t.getOperando1(), listaTercetos);
+                    String tipo2 = obtenerTipoOperando(t.getOperando2(), listaTercetos);
+                    if ("SINGLEF".equals(tipo1) || "SINGLEF".equals(tipo2)) {
+                        ultimoTipoComp = "SINGLEF";
+                    } else {
+                        ultimoTipoComp = "SHORTINT";
+                    }
                 }
                 String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
                 String op2 = resolverOperandoAsm(t.getOperando2(), ambito, listaTercetos);
@@ -600,7 +633,21 @@ public class GeneradorAssembler {
             Object ocs = atr.get("OCURRENCIAS");
 
             if (uso != null) {
-                if (uso.equals("variable") || uso.equals("parametro") || uso.equals("auxiliar") || uso.equals("atributo")) {
+                if (uso.equals("objeto") || (uso.equals("parametro") && !"SHORTINT".equals(tipo) && !"SINGLEF".equals(tipo))) {
+                    String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + tipo;
+                    ArrayList<String> atrsObj = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
+                    for (int k = 0; k < atrsObj.size(); k++) {
+                        String claveAtrAbs = atrsObj.get(k);
+                        String nomAtr = TablaSimbolos.obtenerNombre(claveAtrAbs);
+                        String tipoAtr = TablaSimbolos.obtenerTipo(claveAtrAbs);
+                        String nombreAsmAtr = obtenerNombreAsm(clave + "_" + nomAtr);
+                        if ("SHORTINT".equals(tipoAtr)) {
+                            codigoData.append("    ").append(nombreAsmAtr).append(" DB ?\n");
+                        } else if ("SINGLEF".equals(tipoAtr)) {
+                            codigoData.append("    ").append(nombreAsmAtr).append(" DD ?\n");
+                        }
+                    }
+                } else if (uso.equals("variable") || uso.equals("parametro") || uso.equals("auxiliar") || uso.equals("atributo")) {
                     String nombreAsm = obtenerNombreAsm(clave);
                     if (TablaSimbolos.esComptime(clave)) {
                         codigoData.append("    ; variable comptime omitida: ").append(nombreAsm).append("\n");
@@ -618,20 +665,6 @@ public class GeneradorAssembler {
                     }
                     // Chequeo i: bandera de activacion por subrutina
                     codigoData.append("    @activa_").append(ambitoLimpio).append(" DB 0\n");
-                } else if (uso.equals("objeto")) {
-                    String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + tipo;
-                    ArrayList<String> atrsObj = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
-                    for (int k = 0; k < atrsObj.size(); k++) {
-                        String claveAtrAbs = atrsObj.get(k);
-                        String nomAtr = TablaSimbolos.obtenerNombre(claveAtrAbs);
-                        String tipoAtr = TablaSimbolos.obtenerTipo(claveAtrAbs);
-                        String nombreAsmAtr = obtenerNombreAsm(clave + "_" + nomAtr);
-                        if ("SHORTINT".equals(tipoAtr)) {
-                            codigoData.append("    ").append(nombreAsmAtr).append(" DB ?\n");
-                        } else if ("SINGLEF".equals(tipoAtr)) {
-                            codigoData.append("    ").append(nombreAsmAtr).append(" DD ?\n");
-                        }
-                    }
                 }
             } else if (ocs != null) {
                 String nombreAsm = obtenerNombreAsm(clave);

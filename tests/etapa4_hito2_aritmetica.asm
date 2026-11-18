@@ -163,20 +163,20 @@ start:
     MOVSX AX, AL
     MOV @aux_print_short, AX
     invoke printf, cfm$("%hd\n"), @aux_print_short
-    FLD _main_x
+    FLD _main_res_flt
     FCOMP @max_shortint_f
     FSTSW AX
     SAHF
     JA _err_perdida_info
-    FLD _main_x
+    FLD _main_res_flt
     FCOMP @min_shortint_f
     FSTSW AX
     SAHF
     JB _err_perdida_info
-    FLD _main_x
+    FLD _main_res_flt
     FISTP @aux_tos
     FILD @aux_tos
-    FLD _main_x
+    FLD _main_res_flt
     FCOMPP
     FSTSW AX
     SAHF

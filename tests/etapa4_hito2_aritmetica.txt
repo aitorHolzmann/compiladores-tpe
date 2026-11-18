@@ -25,5 +25,5 @@ BEGIN
     res_flt := x + y;
     res_int := tos(res_flt) + a;
     pout(res_int);
-    pout(tos(x));
+    pout(tos(res_flt));
 END

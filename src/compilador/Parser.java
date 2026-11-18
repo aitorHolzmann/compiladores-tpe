@@ -712,7 +712,7 @@ final static String yyrule[] = {
 "sentencia_ret : RET '(' expresion ')'",
 };
 
-//#line 1543 "gram.y"
+//#line 1567 "gram.y"
 
 /* CODIGO DE SOPORTE                                                         */
 
@@ -1249,7 +1249,7 @@ case 27:
                 Boolean tieneRet = (Boolean) TablaSimbolos.obtenerAtributo(mangling, "TIENE_RET");
                 if (!Boolean.TRUE.equals(tieneRet)) {
                     String tipo = TablaSimbolos.obtenerTipo(mangling);
-                    String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0$s";
+                    String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0";
                     GeneradorTerceto.crearTerceto("RET", valDef, "-", tipo);
                 }
             }
@@ -1268,7 +1268,7 @@ case 30:
                 Boolean tieneRet = (Boolean) TablaSimbolos.obtenerAtributo(mangling, "TIENE_RET");
                 if (!Boolean.TRUE.equals(tieneRet)) {
                     String tipo = TablaSimbolos.obtenerTipo(mangling);
-                    String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0$s";
+                    String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0";
                     GeneradorTerceto.crearTerceto("RET", valDef, "-", tipo);
                 }
             }
@@ -1480,7 +1480,7 @@ case 56:
                 Boolean tieneRet = (Boolean) TablaSimbolos.obtenerAtributo(mangling, "TIENE_RET");
                 if (!Boolean.TRUE.equals(tieneRet)) {
                     String tipo = TablaSimbolos.obtenerTipo(mangling);
-                    String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0$s";
+                    String valDef = "SINGLEF".equals(tipo) ? "0.0" : "0";
                     GeneradorTerceto.crearTerceto("RET", valDef, "-", tipo);
                 }
                 if (val_peek(1) != null && val_peek(1).obj != null) {
@@ -1619,17 +1619,34 @@ case 78:
                 String lexema = val_peek(2).sval;
                 String claveVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
                 if (claveVar != null) {
-                    boolean esComp = TablaSimbolos.esComptime(claveVar);
-                    String tipoVar = TablaSimbolos.obtenerTipo(claveVar);
-                    String tipoExp = (String) val_peek(0).obj;
+                    String uso = TablaSimbolos.obtenerUso(claveVar);
+                    if (!"variable".equals(uso) && !"parametro".equals(uso) && !"atributo".equals(uso)) {
+                        agregarErrorSemantico("Uso incorrecto del identificador '" + lexema + "' (uso: " + uso + ") en el lado izquierdo de una asignacion");
+                    } else {
+                        boolean esComp = TablaSimbolos.esComptime(claveVar);
+                        String tipoVar = TablaSimbolos.obtenerTipo(claveVar);
+                        String tipoExp = (String) val_peek(0).obj;
 
-                    if (esComp) {
-                        if (!esConstante(val_peek(0))) {
-                            agregarErrorSemantico("La variable comptime '" + lexema + "' no puede recibir una expresion dependiente de tiempo de ejecucion");
+                        if (esComp) {
+                            if (!esConstante(val_peek(0))) {
+                                agregarErrorSemantico("La variable comptime '" + lexema + "' no puede recibir una expresion dependiente de tiempo de ejecucion");
+                            } else {
+                                if (tipoExp != null) {
+                                    if (tipoVar != null && tipoVar.equals(tipoExp)) {
+                                        TablaSimbolos.guardarValorComptime(claveVar, val_peek(0).sval);
+                                    } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
+                                        agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
+                                    } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
+                                        agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF '" + lexema + "'");
+                                    } else {
+                                        agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + lexema + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
+                                    }
+                                }
+                            }
                         } else {
                             if (tipoExp != null) {
                                 if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                                    TablaSimbolos.guardarValorComptime(claveVar, val_peek(0).sval);
+                                    GeneradorTerceto.crearTerceto(":=", claveVar, val_peek(0).sval, tipoVar);
                                 } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
                                     agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
                                 } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
@@ -1637,18 +1654,6 @@ case 78:
                                 } else {
                                     agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + lexema + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
                                 }
-                            }
-                        }
-                    } else {
-                        if (tipoExp != null) {
-                            if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                                GeneradorTerceto.crearTerceto(":=", claveVar, val_peek(0).sval, tipoVar);
-                            } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
-                                agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
-                            } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
-                                agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF '" + lexema + "'");
-                            } else {
-                                agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + lexema + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
                             }
                         }
                     }
@@ -1659,7 +1664,7 @@ case 78:
         }
 break;
 case 79:
-//#line 608 "gram.y"
+//#line 613 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipoVar = (String) val_peek(2).obj;
@@ -1680,7 +1685,7 @@ case 79:
         }
 break;
 case 80:
-//#line 630 "gram.y"
+//#line 635 "gram.y"
 {
             String nomObj = val_peek(3).sval;
             String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
@@ -1714,15 +1719,16 @@ case 80:
 
                         /* Chequeo de visibilidad (Tema 26)*/
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
+                        String claseDueniaAtr = obtenerClaseDeAmbito(TablaSimbolos.obtenerAmbito(claveAtr));
                         boolean accesoValido = true;
-                        if (claseActual != null && !claseActual.equals(nomClase)) {
+                        if (claseActual != null && claseDueniaAtr != null && !claseActual.equals(claseDueniaAtr)) {
                             String claveClaseActual = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + claseActual;
                             ArrayList<String> imports = TablaSimbolos.obtenerImports(claveClaseActual);
-                            if (imports == null || !imports.contains(nomClase)) {
-                                agregarErrorSemantico("La clase '" + claseActual + "' no importa a la clase '" + nomClase + "'");
+                            if (imports == null || !imports.contains(claseDueniaAtr)) {
+                                agregarErrorSemantico("La clase '" + claseActual + "' no importa a la clase '" + claseDueniaAtr + "'");
                                 accesoValido = false;
                             } else if (!TablaSimbolos.estaExportadoA(claveAtr, claseActual)) {
-                                agregarErrorSemantico("El atributo '" + nomAtr + "' de la clase '" + nomClase + "' no esta exportado a la clase '" + claseActual + "'");
+                                agregarErrorSemantico("El atributo '" + nomAtr + "' de la clase '" + claseDueniaAtr + "' no esta exportado a la clase '" + claseActual + "'");
                                 accesoValido = false;
                             }
                         }
@@ -1740,7 +1746,7 @@ case 80:
         }
 break;
 case 81:
-//#line 688 "gram.y"
+//#line 694 "gram.y"
 {
             String nomObj = val_peek(3).sval;
             String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
@@ -1771,8 +1777,8 @@ case 81:
                             agregarErrorSemantico("El indice de acceso posicional debe ser de tipo SHORTINT (se encontro: " + tipoIdx + ")");
                             yyval = new ParserVal();
                         } else {
-                            ArrayList<String> atrs = TablaSimbolos.obtenerAtributosClase(claveClase);
-                            String tipoDefecto = (!atrs.isEmpty()) ? TablaSimbolos.obtenerTipo(claveClase + TablaSimbolos.SEPARADOR + atrs.get(0)) : "SHORTINT";
+                            ArrayList<String> atrsTotales = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
+                            String tipoDefecto = (!atrsTotales.isEmpty()) ? TablaSimbolos.obtenerTipo(atrsTotales.get(0)) : "SHORTINT";
                             if (tipoDefecto == null) tipoDefecto = "SHORTINT";
 
                             ParserVal pv = new ParserVal(claveObj + "[" + claveVarIdx + "]");
@@ -1785,17 +1791,17 @@ case 81:
         }
 break;
 case 82:
-//#line 731 "gram.y"
+//#line 737 "gram.y"
 { yyerror("Acceso posicional invalido: solo se permite constante SHORTINT positiva o identificador"); yyval = new ParserVal(); }
 break;
 case 83:
-//#line 737 "gram.y"
+//#line 743 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 84:
-//#line 741 "gram.y"
+//#line 747 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -1826,7 +1832,7 @@ case 84:
         }
 break;
 case 85:
-//#line 770 "gram.y"
+//#line 776 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -1857,25 +1863,25 @@ case 85:
         }
 break;
 case 86:
-//#line 798 "gram.y"
+//#line 804 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 87:
-//#line 799 "gram.y"
+//#line 805 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 88:
-//#line 800 "gram.y"
+//#line 806 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 89:
-//#line 804 "gram.y"
+//#line 810 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
 case 90:
-//#line 808 "gram.y"
+//#line 814 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -1906,7 +1912,7 @@ case 90:
         }
 break;
 case 91:
-//#line 837 "gram.y"
+//#line 843 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
@@ -1937,55 +1943,61 @@ case 91:
         }
 break;
 case 92:
-//#line 865 "gram.y"
+//#line 871 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 93:
-//#line 866 "gram.y"
+//#line 872 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 94:
-//#line 867 "gram.y"
+//#line 873 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 95:
-//#line 868 "gram.y"
+//#line 874 "gram.y"
 { yyerror("Falta un operando en la expresion"); yyval = new ParserVal(); }
 break;
 case 96:
-//#line 869 "gram.y"
+//#line 875 "gram.y"
 { yyerror("Falta operador en la expresion"); yyval = new ParserVal(); }
 break;
 case 97:
-//#line 870 "gram.y"
+//#line 876 "gram.y"
 { yyerror("Falta operador en la expresion"); yyval = new ParserVal(); }
 break;
 case 98:
-//#line 871 "gram.y"
+//#line 877 "gram.y"
 { yyerror("Falta operador en la expresion"); yyval = new ParserVal(); }
 break;
 case 99:
-//#line 876 "gram.y"
+//#line 882 "gram.y"
 {
             String lexema = val_peek(0).sval;
             String claveVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
             if (claveVar != null) {
-                String tipo = TablaSimbolos.obtenerTipo(claveVar);
-                boolean esComp = TablaSimbolos.esComptime(claveVar);
-                if (esComp) {
-                    if (TablaSimbolos.tieneValorComptime(claveVar)) {
-                        String val = TablaSimbolos.obtenerValorComptime(claveVar);
-                        ParserVal pv = new ParserVal(val);
+                String uso = TablaSimbolos.obtenerUso(claveVar);
+                if ("funcion".equals(uso) || "metodo".equals(uso) || "nombre_clase".equals(uso) || "nombre_programa".equals(uso)) {
+                    agregarErrorSemantico("Uso incorrecto del identificador '" + lexema + "' (uso: " + uso + ") como operando en una expresion");
+                    yyval = new ParserVal();
+                } else {
+                    String tipo = TablaSimbolos.obtenerTipo(claveVar);
+                    boolean esComp = TablaSimbolos.esComptime(claveVar);
+                    if (esComp) {
+                        if (TablaSimbolos.tieneValorComptime(claveVar)) {
+                            String val = TablaSimbolos.obtenerValorComptime(claveVar);
+                            ParserVal pv = new ParserVal(val);
+                            pv.obj = tipo;
+                            yyval = pv;
+                        } else {
+                            agregarErrorSemantico("La variable comptime '" + lexema + "' se utiliza antes de ser inicializada con un valor estatico");
+                            yyval = new ParserVal();
+                        }
+                    } else {
+                        ParserVal pv = new ParserVal(claveVar);
                         pv.obj = tipo;
                         yyval = pv;
-                    } else {
-                        agregarErrorSemantico("La variable comptime '" + lexema + "' se utiliza antes de ser inicializada con un valor estatico");
-                        yyval = new ParserVal();
                     }
-                } else {
-                    ParserVal pv = new ParserVal(claveVar);
-                    pv.obj = tipo;
-                    yyval = pv;
                 }
             } else {
                 agregarErrorSemantico("Variable '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
@@ -1994,7 +2006,7 @@ case 99:
         }
 break;
 case 100:
-//#line 903 "gram.y"
+//#line 915 "gram.y"
 {
             String lexema = val_peek(0).sval;
             int valor = Integer.parseInt(lexema);
@@ -2008,7 +2020,7 @@ case 100:
         }
 break;
 case 101:
-//#line 915 "gram.y"
+//#line 927 "gram.y"
 {
             String lexema = val_peek(0).sval;
             double valor = Double.parseDouble(lexema);
@@ -2022,7 +2034,7 @@ case 101:
         }
 break;
 case 102:
-//#line 927 "gram.y"
+//#line 939 "gram.y"
 {
             String lexema = val_peek(2).sval;
             String claveFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
@@ -2053,7 +2065,7 @@ case 102:
         }
 break;
 case 103:
-//#line 956 "gram.y"
+//#line 968 "gram.y"
 {
             String lexema = val_peek(3).sval;
             String claveFunc = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
@@ -2106,31 +2118,31 @@ case 103:
         }
 break;
 case 105:
-//#line 1008 "gram.y"
-{
-            yyval = val_peek(0);
-        }
-break;
-case 106:
-//#line 1012 "gram.y"
-{
-            yyval = val_peek(0);
-        }
-break;
-case 107:
-//#line 1016 "gram.y"
-{
-            yyval = val_peek(0);
-        }
-break;
-case 108:
 //#line 1020 "gram.y"
 {
             yyval = val_peek(0);
         }
 break;
+case 106:
+//#line 1024 "gram.y"
+{
+            yyval = val_peek(0);
+        }
+break;
+case 107:
+//#line 1028 "gram.y"
+{
+            yyval = val_peek(0);
+        }
+break;
+case 108:
+//#line 1032 "gram.y"
+{
+            yyval = val_peek(0);
+        }
+break;
 case 109:
-//#line 1027 "gram.y"
+//#line 1039 "gram.y"
 {
             String nomObj = val_peek(4).sval;
             String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
@@ -2155,6 +2167,9 @@ case 109:
                     String claveMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
                     if (claveMet == null) {
                         agregarErrorSemantico("Metodo '" + nomMetodo + "' no encontrado en la clase '" + nomClase + "' ni en su jerarquia de herencia");
+                        yyval = new ParserVal();
+                    } else if (!"metodo".equals(TablaSimbolos.obtenerUso(claveMet))) {
+                        agregarErrorSemantico("El miembro '" + nomMetodo + "' de la clase '" + nomClase + "' no es un metodo");
                         yyval = new ParserVal();
                     } else {
                         /* Chequeo de visibilidad (Tema 26)*/
@@ -2196,7 +2211,7 @@ case 109:
         }
 break;
 case 110:
-//#line 1091 "gram.y"
+//#line 1106 "gram.y"
 {
             String nomObj = val_peek(5).sval;
             String claveObj = TablaSimbolos.buscarIdentificador(nomObj, ambitoActual);
@@ -2220,6 +2235,9 @@ case 110:
                     String claveMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
                     if (claveMet == null) {
                         agregarErrorSemantico("Metodo '" + nomMetodo + "' no encontrado en la clase '" + nomClase + "' ni en su jerarquia de herencia");
+                        yyval = new ParserVal();
+                    } else if (!"metodo".equals(TablaSimbolos.obtenerUso(claveMet))) {
+                        agregarErrorSemantico("El miembro '" + nomMetodo + "' de la clase '" + nomClase + "' no es un metodo");
                         yyval = new ParserVal();
                     } else {
                         /* Chequeo de visibilidad (Tema 26)*/
@@ -2283,7 +2301,7 @@ case 110:
         }
 break;
 case 111:
-//#line 1179 "gram.y"
+//#line 1197 "gram.y"
 {
             ArrayList<ParserVal> lista = new ArrayList<>();
             lista.add(val_peek(0));
@@ -2293,7 +2311,7 @@ case 111:
         }
 break;
 case 112:
-//#line 1187 "gram.y"
+//#line 1205 "gram.y"
 {
             ArrayList<ParserVal> lista = (ArrayList<ParserVal>) val_peek(2).obj;
             lista.add(val_peek(0));
@@ -2301,25 +2319,51 @@ case 112:
         }
 break;
 case 113:
-//#line 1197 "gram.y"
+//#line 1215 "gram.y"
 {
             if (val_peek(1) != null && val_peek(1).sval != null) {
                 String lexema = val_peek(4).sval;
                 String claveVar = TablaSimbolos.buscarIdentificador(lexema, ambitoActual);
                 if (claveVar != null) {
-                    boolean esComp = TablaSimbolos.esComptime(claveVar);
-                    String tipoVar = TablaSimbolos.obtenerTipo(claveVar);
-                    String tipoExp = (String) val_peek(1).obj;
+                    String uso = TablaSimbolos.obtenerUso(claveVar);
+                    if (!"variable".equals(uso) && !"parametro".equals(uso) && !"atributo".equals(uso)) {
+                        agregarErrorSemantico("Uso incorrecto del identificador '" + lexema + "' (uso: " + uso + ") en asignacion dentro de expresion");
+                        yyval = new ParserVal();
+                    } else {
+                        boolean esComp = TablaSimbolos.esComptime(claveVar);
+                        String tipoVar = TablaSimbolos.obtenerTipo(claveVar);
+                        String tipoExp = (String) val_peek(1).obj;
 
-                    if (esComp) {
-                        if (!esConstante(val_peek(1))) {
-                            agregarErrorSemantico("La variable comptime '" + lexema + "' no puede recibir una expresion dependiente de tiempo de ejecucion");
-                            yyval = new ParserVal();
+                        if (esComp) {
+                            if (!esConstante(val_peek(1))) {
+                                agregarErrorSemantico("La variable comptime '" + lexema + "' no puede recibir una expresion dependiente de tiempo de ejecucion");
+                                yyval = new ParserVal();
+                            } else {
+                                if (tipoExp != null) {
+                                    if (tipoVar != null && tipoVar.equals(tipoExp)) {
+                                        TablaSimbolos.guardarValorComptime(claveVar, val_peek(1).sval);
+                                        ParserVal pv = new ParserVal(val_peek(1).sval);
+                                        pv.obj = tipoVar;
+                                        yyval = pv;
+                                    } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
+                                        agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
+                                        yyval = new ParserVal();
+                                    } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
+                                        agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF '" + lexema + "'");
+                                        yyval = new ParserVal();
+                                    } else {
+                                        agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + lexema + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
+                                        yyval = new ParserVal();
+                                    }
+                                } else {
+                                    yyval = new ParserVal();
+                                }
+                            }
                         } else {
                             if (tipoExp != null) {
                                 if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                                    TablaSimbolos.guardarValorComptime(claveVar, val_peek(1).sval);
-                                    ParserVal pv = new ParserVal(val_peek(1).sval);
+                                    int idTerceto = GeneradorTerceto.crearTerceto(":=", claveVar, val_peek(1).sval, tipoVar);
+                                    ParserVal pv = new ParserVal("[" + idTerceto + "]");
                                     pv.obj = tipoVar;
                                     yyval = pv;
                                 } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
@@ -2336,26 +2380,6 @@ case 113:
                                 yyval = new ParserVal();
                             }
                         }
-                    } else {
-                        if (tipoExp != null) {
-                            if (tipoVar != null && tipoVar.equals(tipoExp)) {
-                                int idTerceto = GeneradorTerceto.crearTerceto(":=", claveVar, val_peek(1).sval, tipoVar);
-                                ParserVal pv = new ParserVal("[" + idTerceto + "]");
-                                pv.obj = tipoVar;
-                                yyval = pv;
-                            } else if ("SHORTINT".equals(tipoVar) && "SINGLEF".equals(tipoExp)) {
-                                agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SINGLEF a la variable SHORTINT '" + lexema + "' sin conversion explicita 'tos'");
-                                yyval = new ParserVal();
-                            } else if ("SINGLEF".equals(tipoVar) && "SHORTINT".equals(tipoExp)) {
-                                agregarErrorSemantico("Incompatibilidad de tipos en la asignacion: no se puede asignar SHORTINT a la variable SINGLEF '" + lexema + "'");
-                                yyval = new ParserVal();
-                            } else {
-                                agregarErrorSemantico("Incompatibilidad de tipos en la asignacion a '" + lexema + "': se esperaba " + tipoVar + " pero se encontro " + tipoExp);
-                                yyval = new ParserVal();
-                            }
-                        } else {
-                            yyval = new ParserVal();
-                        }
                     }
                 } else {
                     agregarErrorSemantico("Variable '" + lexema + "' no declarada o no visible en el ambito actual (" + ambitoActual + ")");
@@ -2367,14 +2391,14 @@ case 113:
         }
 break;
 case 114:
-//#line 1261 "gram.y"
+//#line 1285 "gram.y"
 {
             yyerror("Uso del simbolo ':=' donde debe usarse '=' en asignacion dentro de expresion");
             yyval = new ParserVal();
         }
 break;
 case 115:
-//#line 1269 "gram.y"
+//#line 1293 "gram.y"
 {
             String lexemaPos = val_peek(0).sval;
             String claveNeg = TablaSimbolos.convertirANegativo(lexemaPos);
@@ -2385,7 +2409,7 @@ case 115:
         }
 break;
 case 116:
-//#line 1278 "gram.y"
+//#line 1302 "gram.y"
 {
             String lexemaPos = val_peek(0).sval;
             String claveNeg = TablaSimbolos.convertirANegativo(lexemaPos);
@@ -2396,7 +2420,7 @@ case 116:
         }
 break;
 case 117:
-//#line 1291 "gram.y"
+//#line 1315 "gram.y"
 {
             if (val_peek(1) != null && val_peek(1).sval != null) {
                 String tipoExp = (String) val_peek(1).obj;
@@ -2428,7 +2452,7 @@ case 117:
         }
 break;
 case 118:
-//#line 1325 "gram.y"
+//#line 1349 "gram.y"
 {
             if (val_peek(1) != null && val_peek(1).sval != null) {
                 int idBF = GeneradorTerceto.crearTerceto("BF", val_peek(1).sval, "?");
@@ -2437,15 +2461,15 @@ case 118:
         }
 break;
 case 120:
-//#line 1336 "gram.y"
+//#line 1360 "gram.y"
 { yyerror("Falta '(' de apertura en condicion de seleccion"); }
 break;
 case 121:
-//#line 1338 "gram.y"
+//#line 1362 "gram.y"
 { yyerror("Condicion de seleccion malformada o error en parentesis"); }
 break;
 case 122:
-//#line 1343 "gram.y"
+//#line 1367 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idBF = pilaSaltos.pop();
@@ -2456,7 +2480,7 @@ case 122:
         }
 break;
 case 123:
-//#line 1355 "gram.y"
+//#line 1379 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idSalto = pilaSaltos.pop();
@@ -2465,7 +2489,7 @@ case 123:
         }
 break;
 case 124:
-//#line 1362 "gram.y"
+//#line 1386 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idBI = pilaSaltos.pop();
@@ -2474,7 +2498,7 @@ case 124:
         }
 break;
 case 125:
-//#line 1369 "gram.y"
+//#line 1393 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idSalto = pilaSaltos.pop();
@@ -2484,7 +2508,7 @@ case 125:
         }
 break;
 case 126:
-//#line 1377 "gram.y"
+//#line 1401 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int idBI = pilaSaltos.pop();
@@ -2494,14 +2518,14 @@ case 126:
         }
 break;
 case 127:
-//#line 1388 "gram.y"
+//#line 1412 "gram.y"
 {
             if (val_peek(2) != null && val_peek(2).sval != null && val_peek(0) != null && val_peek(0).sval != null) {
                 String tipo1 = (String) val_peek(2).obj;
                 String tipo2 = (String) val_peek(0).obj;
                 if (tipo1 != null && tipo2 != null) {
                     if (tipo1.equals(tipo2)) {
-                        int idTerceto = GeneradorTerceto.crearTerceto(val_peek(1).sval, val_peek(2).sval, val_peek(0).sval);
+                        int idTerceto = GeneradorTerceto.crearTerceto(val_peek(1).sval, val_peek(2).sval, val_peek(0).sval, tipo1);
                         yyval = new ParserVal("[" + idTerceto + "]");
                     } else {
                         agregarErrorSemantico("Incompatibilidad de tipos en comparacion: no se puede comparar " + tipo1 + " con " + tipo2 + " (requiere conversion explicita 'tos')");
@@ -2516,41 +2540,41 @@ case 127:
         }
 break;
 case 128:
-//#line 1410 "gram.y"
+//#line 1434 "gram.y"
 { yyval = new ParserVal(">="); }
 break;
 case 129:
-//#line 1411 "gram.y"
+//#line 1435 "gram.y"
 { yyval = new ParserVal("<="); }
 break;
 case 130:
-//#line 1412 "gram.y"
+//#line 1436 "gram.y"
 { yyval = new ParserVal("=="); }
 break;
 case 131:
-//#line 1413 "gram.y"
+//#line 1437 "gram.y"
 { yyval = new ParserVal("!="); }
 break;
 case 132:
-//#line 1414 "gram.y"
+//#line 1438 "gram.y"
 { yyval = new ParserVal(">"); }
 break;
 case 133:
-//#line 1415 "gram.y"
+//#line 1439 "gram.y"
 { yyval = new ParserVal("<"); }
 break;
 case 136:
-//#line 1422 "gram.y"
+//#line 1446 "gram.y"
 { yyerror("Falta el delimitador END en el bloque de sentencias"); }
 break;
 case 137:
-//#line 1428 "gram.y"
+//#line 1452 "gram.y"
 {
             pilaSaltos.push(GeneradorTerceto.getProximoIndice());
         }
 break;
 case 138:
-//#line 1435 "gram.y"
+//#line 1459 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) {
                 int dirInicio = pilaSaltos.pop();
@@ -2561,75 +2585,75 @@ case 138:
         }
 break;
 case 139:
-//#line 1444 "gram.y"
+//#line 1468 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta el cuerpo de la iteracion REPEAT");
         }
 break;
 case 140:
-//#line 1449 "gram.y"
+//#line 1473 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta palabra clave UNTIL en la iteracion REPEAT");
         }
 break;
 case 141:
-//#line 1454 "gram.y"
+//#line 1478 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta palabra clave UNTIL y cuerpo en la iteracion REPEAT");
         }
 break;
 case 142:
-//#line 1459 "gram.y"
+//#line 1483 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta palabra clave UNTIL y ')' en la iteracion REPEAT");
         }
 break;
 case 143:
-//#line 1464 "gram.y"
+//#line 1488 "gram.y"
 {
             if (!pilaSaltos.isEmpty()) pilaSaltos.pop();
             yyerror("Falta palabra clave UNTIL, cuerpo y ')' en la iteracion REPEAT");
         }
 break;
 case 144:
-//#line 1472 "gram.y"
+//#line 1496 "gram.y"
 {
             yyval = val_peek(1);
         }
 break;
 case 145:
-//#line 1476 "gram.y"
+//#line 1500 "gram.y"
 {
             yyval = val_peek(1);
             yyerror("Falta '(' de apertura en condicion de iteracion");
         }
 break;
 case 146:
-//#line 1481 "gram.y"
+//#line 1505 "gram.y"
 {
             yyval = val_peek(0);
             yyerror("Falta ')' de cierre en condicion de iteracion");
         }
 break;
 case 147:
-//#line 1486 "gram.y"
+//#line 1510 "gram.y"
 {
             yyval = val_peek(0);
             yyerror("Faltan parentesis en condicion de iteracion");
         }
 break;
 case 148:
-//#line 1495 "gram.y"
+//#line 1519 "gram.y"
 {
             GeneradorTerceto.crearTerceto("POUT", val_peek(1).sval, "-");
         }
 break;
 case 149:
-//#line 1499 "gram.y"
+//#line 1523 "gram.y"
 {
             if (val_peek(1) != null && val_peek(1).sval != null) {
                 GeneradorTerceto.crearTerceto("POUT", val_peek(1).sval, "-", (String) val_peek(1).obj);
@@ -2637,11 +2661,11 @@ case 149:
         }
 break;
 case 150:
-//#line 1505 "gram.y"
+//#line 1529 "gram.y"
 { yyerror("Falta argumento en sentencia pout"); }
 break;
 case 151:
-//#line 1510 "gram.y"
+//#line 1534 "gram.y"
 {
             String funcionActual = obtenerFuncionActualMangled();
             if (funcionActual == null) {
@@ -2673,7 +2697,7 @@ case 151:
             }
         }
 break;
-//#line 2599 "Parser.java"
+//#line 2623 "Parser.java"
 //########## END OF USER-SUPPLIED ACTIONS ##########
     }//switch
     //#### Now let's reduce... ####

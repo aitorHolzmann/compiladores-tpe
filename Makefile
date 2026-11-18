@@ -9,7 +9,7 @@
 #   make clean        -> borra bin/
 
 FUENTES := $(wildcard src/compilador/*.java src/accion_semantica/*.java)
-PRUEBAS := $(filter-out %.java %.md, $(wildcard tests/*))
+PRUEBAS := $(filter-out %.java %.md %.asm, $(wildcard tests/*))
 DESTINO := src/compilador
 IMAGEN  := compiladores-tpe
 

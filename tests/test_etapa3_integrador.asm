@@ -32,7 +32,7 @@ printf PROTO C :VARARG
     _main_calcular_x DB ?
     _main_calcular_y DD ?
     _cte_5 DB 5
-    _cte_10_5 DD 10.5
+    _cte_10_0 DD 10.0
     _cte_0 DB 0
     _cte_20 DB 20
     _cte_30 DB 30
@@ -137,7 +137,7 @@ _fin_main_calcular:
 start:
     MOV AL, _cte_2
     MOV _main_a, AL
-    FLD _cte_10_5
+    FLD _cte_10_0
     FSTP _main_f1
     FLD _main_f1
     FCOMP @max_shortint_f
