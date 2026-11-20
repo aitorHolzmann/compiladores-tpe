@@ -1,0 +1,53 @@
+programa_funciones_error
+
+shortint a;
+singlef x;
+
+// Tipo de retorno incompatible en funcion con tipo declarado
+shortint function func_retorno_incompatible(shortint p)
+begin
+    ret (3.14);
+end;
+
+// Ausencia de sentencia RET en funcion AUTO
+auto function auto_sin_ret(shortint p)
+begin
+    p := p + 1$s;
+end;
+
+shortint function func_params(shortint p1, shortint p2)
+begin
+    ret (p1);
+end;
+
+// Funcion AUTO con retornos mixtos (infiere SINGLEF)
+auto function auto_mixta(shortint p, singlef q)
+begin
+    if (p > 0$s)
+        ret (p);
+    else
+        ret (q);
+    end_if;
+end;
+
+begin
+    // RET fuera de una funcion
+    ret (1$s);
+
+    // Invocacion a funcion no declarada
+    a := funcion_fantasma(1$s);
+
+    // Invocar una variable como funcion
+    a := a(1$s);
+
+    // Cantidad incorrecta de parametros
+    a := func_params(1$s);
+
+    // Tipo incompatible en parametro
+    a := func_params(1$s, 2.5);
+
+    // Asignacion incompatible del tipo inferido de AUTO FUNCTION
+    a := auto_mixta(1$s, 2.0);
+
+    pout("Fin de pruebas errores");
+end

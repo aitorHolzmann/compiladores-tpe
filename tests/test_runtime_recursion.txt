@@ -1,0 +1,18 @@
+programa_runtime_recursion
+
+shortint res;
+
+shortint FUNCTION contar(shortint n)
+BEGIN
+  IF (n > 0$s)
+  BEGIN
+    RET(contar(n - 1$s));
+  END
+  END_IF;
+  RET(0$s);
+END;
+
+BEGIN
+  res := contar(2$s);
+  pout(res);
+END

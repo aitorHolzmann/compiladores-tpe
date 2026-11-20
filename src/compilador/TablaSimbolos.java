@@ -176,7 +176,7 @@ public class TablaSimbolos {
         return (idx >= 0) ? clave.substring(0, idx) : "";
     }
 
-    // Gestion de parametros de funciones (Tema 21)
+    // Gestion de parametros de funciones
     public static void agregarParametro(String claveFuncion, String lexemaParam) {
         ArrayList<String> params = (ArrayList<String>) obtenerAtributo(claveFuncion, "PARAMETROS");
         if (params == null) {
@@ -191,7 +191,7 @@ public class TablaSimbolos {
         return (params != null) ? params : new ArrayList<>();
     }
 
-    // Gestion de atributos de clases (Tema 29)
+    // Gestion de atributos de clases
     public static void agregarAtributoAClase(String claveClase, String lexemaAtr) {
         ArrayList<String> atrs = (ArrayList<String>) obtenerAtributo(claveClase, "ATRIBUTOS");
         if (atrs == null) {
@@ -206,7 +206,7 @@ public class TablaSimbolos {
         return (atrs != null) ? atrs : new ArrayList<>();
     }
 
-    // Devuelve la lista completa de claves absolutas de atributos de una clase (incluyendo herencia múltiple recursiva)
+    // Devuelve la lista completa de claves absolutas de atributos de una clase (incluyendo herencia)
     public static ArrayList<String> obtenerAtributosTotalesClase(String claveClase) {
         ArrayList<String> totales = new ArrayList<>();
         if (claveClase == null) {
@@ -238,7 +238,7 @@ public class TablaSimbolos {
         return totales;
     }
 
-    // Gestion de herencia (Tema 30)
+    // Gestion de herencia
     public static void registrarHerencia(String claveClase, ArrayList<String> padres) {
         agregarAtributo(claveClase, "HERENCIA", new ArrayList<>(padres));
     }
@@ -265,7 +265,7 @@ public class TablaSimbolos {
         return false;
     }
 
-    // Gestion de imports/exports entre clases (Tema 26)
+    // Gestion de imports/exports entre clases 
     public static void registrarImports(String claveClase, ArrayList<String> imports) {
         agregarAtributo(claveClase, "IMPORTS", new ArrayList<>(imports));
     }
@@ -284,7 +284,7 @@ public class TablaSimbolos {
         return (lista != null && lista.contains(claseDestino));
     }
 
-    // Variables en tiempo de compilacion (Tema 22)
+    // Variables en tiempo de compilacion
     public static boolean esComptime(String clave) {
         return Boolean.TRUE.equals(obtenerAtributo(clave, "COMPTIME"));
     }
@@ -301,7 +301,7 @@ public class TablaSimbolos {
         return obtenerAtributo(clave, "VALOR_COMPTIME") != null;
     }
 
-    // Resolucion de miembros en jerarquia de herencia (Tema 30)
+    // Resolucion de miembros en jerarquia de herencia
     public static String buscarMiembroEnJerarquia(String nomClase, String nombreMiembro) {
         if (nomClase == null) {
             return null;
@@ -313,7 +313,7 @@ public class TablaSimbolos {
             return clavePropia;
         }
 
-        // Buscar en orden en la lista EXTENDS (Tema 30: Desambiguado Opcion 1)
+        // Buscar en orden en la lista EXTENDS 
         ArrayList<String> padres = obtenerHerencia(AMBITO_GLOBAL + SEPARADOR + nomClase);
         for (int i = 0; i < padres.size(); i++) {
             String padre = padres.get(i);

@@ -29,7 +29,7 @@ begin
     p := p + 1$s;
 end;
 
-// Caso de funcion anidada para verificar ambitos independientes de tercetos
+// Funcion anidada para verificar ambitos independientes
 shortint function f_externa(shortint p_ext)
     shortint function f_interna(shortint p_int)
     begin
@@ -45,29 +45,28 @@ begin
     a := 10$s;
     b := 20$s;
     x := 1.5;
-    y := 3.5;
+    y := 3.0;
 
-    // Llamada basica a funcion estatica
     res_short := suma(a, b);
+    pout(res_short);
 
-    // Llamada a AUTO FUNCTION con inferencia SHORTINT
     res_short := cuadrado(5$s);
+    pout(res_short);
 
-    // Llamada a AUTO FUNCTION con retornos mixtos (inferencia a SINGLEF)
     res_single := max_abarcativo(a, y);
+    pout(res_single);
 
-    // Llamada en expresion aritmetica
     res_short := suma(2$s, 3$s) + 4$s;
+    pout(res_short);
 
-    // Llamada con asignacion en expresion (Tema 17)
     res_short := suma(a, b = (5$s));
+    pout(res_short);
 
-    // Llamada a funcion sin retorno explicito (genera retorno default)
     res_short := sin_retorno(a);
+    pout(res_short);
 
-    // Llamada a funcion anidada (f_externa invoca a f_interna)
     res_short := f_externa(10$s);
+    pout(res_short);
 
     pout("Fin de pruebas funciones ok");
 end
-

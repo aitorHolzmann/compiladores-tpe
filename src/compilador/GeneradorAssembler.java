@@ -143,7 +143,75 @@ public class GeneradorAssembler {
         }
     }
 
-    // Resuelve acceso posicional obj[idx] (Tema 29)
+    private static boolean esAccesoPosicionalVariable(String op) {
+        if (op == null || op.startsWith("[") || !op.contains("[") || !op.endsWith("]")) {
+            return false;
+        }
+        int corchete = op.indexOf('[');
+        String contenidoIdx = op.substring(corchete + 1, op.length() - 1);
+        return contenidoIdx.contains(TablaSimbolos.SEPARADOR);
+    }
+
+    private static String obtenerTipoAccesoPosicional(String op) {
+        int corchete = op.indexOf('[');
+        String claveObj = op.substring(0, corchete);
+        String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+        String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+        ArrayList<String> atrsTotales = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
+        if (!atrsTotales.isEmpty()) {
+            String tipoAtr = TablaSimbolos.obtenerTipo(atrsTotales.get(0));
+            if (tipoAtr != null && !tipoAtr.isEmpty()) {
+                return tipoAtr;
+            }
+        }
+        return "SHORTINT";
+    }
+
+    // Resuelve lectura de operandos, incluyendo acceso posicional con indice variable
+    private static String resolverOperandoLectura(String opRaw, String tipoEsperado, String ambito, String ambitoLimpio, int idxTerceto, int nroOp, ArrayList<Terceto> lista, StringBuilder sb) {
+        if (!esAccesoPosicionalVariable(opRaw)) {
+            return resolverOperandoAsm(opRaw, ambito, lista);
+        }
+        int corchete = opRaw.indexOf('[');
+        String claveObj = opRaw.substring(0, corchete);
+        String contenidoIdx = opRaw.substring(corchete + 1, opRaw.length() - 1);
+        String nomClase = TablaSimbolos.obtenerTipo(claveObj);
+        String claveClase = TablaSimbolos.AMBITO_GLOBAL + TablaSimbolos.SEPARADOR + nomClase;
+        ArrayList<String> atrsTotales = TablaSimbolos.obtenerAtributosTotalesClase(claveClase);
+
+        String tipoDest = (tipoEsperado != null && !tipoEsperado.isEmpty()) ? tipoEsperado : obtenerTipoAccesoPosicional(opRaw);
+        String auxPos;
+        if ("SINGLEF".equals(tipoDest)) {
+            auxPos = (nroOp == 1) ? "@aux_pos_f1" : "@aux_pos_f2";
+        } else {
+            auxPos = (nroOp == 1) ? "@aux_pos_s1" : "@aux_pos_s2";
+        }
+
+        String varIdxAsm = resolverOperandoAsm(contenidoIdx, ambito, lista);
+        for (int k = 0; k < atrsTotales.size(); k++) {
+            String claveAtrAbs = atrsTotales.get(k);
+            String tipoAtrK = TablaSimbolos.obtenerTipo(claveAtrAbs);
+            if (tipoDest != null && tipoAtrK != null && !tipoDest.equals(tipoAtrK)) {
+                continue;
+            }
+            String atrAsm = obtenerNombreAsm(claveObj + "_" + TablaSimbolos.obtenerNombre(claveAtrAbs));
+            String etiquetaSkip = "Label_read_pos_" + ambitoLimpio + "_" + idxTerceto + "_" + nroOp + "_" + k;
+            sb.append("    MOV AL, ").append(varIdxAsm).append("\n");
+            sb.append("    CMP AL, ").append(k).append("\n");
+            sb.append("    JNE ").append(etiquetaSkip).append("\n");
+            if ("SHORTINT".equals(tipoAtrK)) {
+                sb.append("    MOV AL, ").append(atrAsm).append("\n");
+                sb.append("    MOV ").append(auxPos).append(", AL\n");
+            } else if ("SINGLEF".equals(tipoAtrK)) {
+                sb.append("    FLD ").append(atrAsm).append("\n");
+                sb.append("    FSTP ").append(auxPos).append("\n");
+            }
+            sb.append(etiquetaSkip).append(":\n");
+        }
+        return auxPos;
+    }
+
+    // Resuelve acceso posicional obj[idx]
     private static String resolverAccesoPosicional(String op, String ambito, ArrayList<Terceto> lista) {
         if (op == null) {
             return "";
@@ -216,6 +284,9 @@ public class GeneradorAssembler {
                 // ignorar
             }
         }
+        if (esAccesoPosicionalVariable(op)) {
+            return obtenerTipoAccesoPosicional(op);
+        }
         String tipo = TablaSimbolos.obtenerTipo(op);
         if (tipo != null && !tipo.isEmpty()) {
             return tipo;
@@ -264,15 +335,15 @@ public class GeneradorAssembler {
             String tipo = t.getTipo();
 
             if ("+".equals(op)) {
-                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
-                String op2 = resolverOperandoAsm(t.getOperando2(), ambito, listaTercetos);
+                String op1 = resolverOperandoLectura(t.getOperando1(), tipo, ambito, ambitoLimpio, i, 1, listaTercetos, sb);
+                String op2 = resolverOperandoLectura(t.getOperando2(), tipo, ambito, ambitoLimpio, i, 2, listaTercetos, sb);
                 String aux = obtenerNombreAux(ambito, i);
                 if ("SHORTINT".equals(tipo)) {
                     sb.append("    MOV AL, ").append(op1).append("\n");
                     sb.append("    ADD AL, ").append(op2).append("\n");
                     sb.append("    MOV ").append(aux).append(", AL\n");
                 } else if ("SINGLEF".equals(tipo)) {
-                    // Chequeo c: overflow en suma de flotantes
+                    // Control overflow en suma de flotantes
                     sb.append("    FLD ").append(op1).append("\n");
                     sb.append("    FADD ").append(op2).append("\n");
                     sb.append("    FLD ST(0)\n");
@@ -284,8 +355,8 @@ public class GeneradorAssembler {
                     sb.append("    FSTP ").append(aux).append("\n");
                 }
             } else if ("-".equals(op)) {
-                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
-                String op2 = resolverOperandoAsm(t.getOperando2(), ambito, listaTercetos);
+                String op1 = resolverOperandoLectura(t.getOperando1(), tipo, ambito, ambitoLimpio, i, 1, listaTercetos, sb);
+                String op2 = resolverOperandoLectura(t.getOperando2(), tipo, ambito, ambitoLimpio, i, 2, listaTercetos, sb);
                 String aux = obtenerNombreAux(ambito, i);
                 if ("SHORTINT".equals(tipo)) {
                     sb.append("    MOV AL, ").append(op1).append("\n");
@@ -297,11 +368,11 @@ public class GeneradorAssembler {
                     sb.append("    FSTP ").append(aux).append("\n");
                 }
             } else if ("*".equals(op)) {
-                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
-                String op2 = resolverOperandoAsm(t.getOperando2(), ambito, listaTercetos);
+                String op1 = resolverOperandoLectura(t.getOperando1(), tipo, ambito, ambitoLimpio, i, 1, listaTercetos, sb);
+                String op2 = resolverOperandoLectura(t.getOperando2(), tipo, ambito, ambitoLimpio, i, 2, listaTercetos, sb);
                 String aux = obtenerNombreAux(ambito, i);
                 if ("SHORTINT".equals(tipo)) {
-                    // Chequeo d: overflow en producto de enteros
+                    // Control overflow en producto de enteros
                     sb.append("    MOV AL, ").append(op1).append("\n");
                     sb.append("    IMUL ").append(op2).append("\n");
                     sb.append("    JO _err_overflow_entero\n");
@@ -312,8 +383,8 @@ public class GeneradorAssembler {
                     sb.append("    FSTP ").append(aux).append("\n");
                 }
             } else if ("/".equals(op)) {
-                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
-                String op2 = resolverOperandoAsm(t.getOperando2(), ambito, listaTercetos);
+                String op1 = resolverOperandoLectura(t.getOperando1(), tipo, ambito, ambitoLimpio, i, 1, listaTercetos, sb);
+                String op2 = resolverOperandoLectura(t.getOperando2(), tipo, ambito, ambitoLimpio, i, 2, listaTercetos, sb);
                 String aux = obtenerNombreAux(ambito, i);
                 if ("SHORTINT".equals(tipo)) {
                     sb.append("    MOV AL, ").append(op1).append("\n");
@@ -327,10 +398,10 @@ public class GeneradorAssembler {
                 }
             } else if (":=".equals(op)) {
                 String op1Raw = t.getOperando1();
-                String op2 = resolverOperandoAsm(t.getOperando2(), ambito, listaTercetos);
                 if (tipo == null) {
                     tipo = TablaSimbolos.obtenerTipo(op1Raw);
                 }
+                String op2 = resolverOperandoLectura(t.getOperando2(), tipo, ambito, ambitoLimpio, i, 2, listaTercetos, sb);
 
                 if (op1Raw != null && op1Raw.contains("[") && op1Raw.endsWith("]")) {
                     int corchete = op1Raw.indexOf('[');
@@ -361,18 +432,18 @@ public class GeneradorAssembler {
                                 continue;
                             }
                             String op1Asm = obtenerNombreAsm(claveObj + "_" + TablaSimbolos.obtenerNombre(claveAtrAbs));
-                    String etiquetaSkip = "Label_skip_pos_" + ambitoLimpio + "_" + i + "_" + k;
-                    sb.append("    MOV AL, ").append(varIdxAsm).append("\n");
-                    sb.append("    CMP AL, ").append(k).append("\n");
-                    sb.append("    JNE ").append(etiquetaSkip).append("\n");
-                    if ("SHORTINT".equals(tipoAtrK)) {
-                        sb.append("    MOV AL, ").append(op2).append("\n");
-                        sb.append("    MOV ").append(op1Asm).append(", AL\n");
-                    } else if ("SINGLEF".equals(tipoAtrK)) {
-                        sb.append("    FLD ").append(op2).append("\n");
-                        sb.append("    FSTP ").append(op1Asm).append("\n");
-                    }
-                    sb.append(etiquetaSkip).append(":\n");
+                            String etiquetaSkip = "Label_skip_pos_" + ambitoLimpio + "_" + i + "_" + k;
+                            sb.append("    MOV AL, ").append(varIdxAsm).append("\n");
+                            sb.append("    CMP AL, ").append(k).append("\n");
+                            sb.append("    JNE ").append(etiquetaSkip).append("\n");
+                            if ("SHORTINT".equals(tipoAtrK)) {
+                                sb.append("    MOV AL, ").append(op2).append("\n");
+                                sb.append("    MOV ").append(op1Asm).append(", AL\n");
+                            } else if ("SINGLEF".equals(tipoAtrK)) {
+                                sb.append("    FLD ").append(op2).append("\n");
+                                sb.append("    FSTP ").append(op1Asm).append("\n");
+                            }
+                            sb.append(etiquetaSkip).append(":\n");
                         }
                     }
                 } else {
@@ -403,9 +474,9 @@ public class GeneradorAssembler {
                     }
                 }
             } else if ("tos".equals(op)) {
-                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
+                String op1 = resolverOperandoLectura(t.getOperando1(), "SINGLEF", ambito, ambitoLimpio, i, 1, listaTercetos, sb);
                 String aux = obtenerNombreAux(ambito, i);
-                // Chequeo g: perdida de informacion en conversion tos()
+                // Control perdida de informacion en tos()
                 sb.append("    FLD ").append(op1).append("\n");
                 sb.append("    FCOMP @max_shortint_f\n");
                 sb.append("    FSTSW AX\n");
@@ -427,10 +498,15 @@ public class GeneradorAssembler {
                 sb.append("    MOV AX, @aux_tos\n");
                 sb.append("    MOV ").append(aux).append(", AL\n");
             } else if ("RET".equals(op)) {
-                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
+                String op1Raw = t.getOperando1();
                 if (tipo == null) {
-                    tipo = TablaSimbolos.obtenerTipo(t.getOperando1());
+                    if (esAccesoPosicionalVariable(op1Raw)) {
+                        tipo = obtenerTipoAccesoPosicional(op1Raw);
+                    } else {
+                        tipo = TablaSimbolos.obtenerTipo(op1Raw);
+                    }
                 }
+                String op1 = resolverOperandoLectura(op1Raw, tipo, ambito, ambitoLimpio, i, 1, listaTercetos, sb);
                 String tipoSubrutina = TablaSimbolos.obtenerTipo(ambito);
                 if (tipoSubrutina == null) {
                     tipoSubrutina = tipo;
@@ -508,15 +584,17 @@ public class GeneradorAssembler {
                 }
             } else if ("POUT".equals(op)) {
                 String op1Raw = t.getOperando1();
-                String opAsm = resolverOperandoAsm(op1Raw, ambito, listaTercetos);
                 if (tipo == null) {
                     if (op1Raw != null && op1Raw.startsWith("[") && op1Raw.endsWith("]")) {
                         int idx = Integer.parseInt(op1Raw.substring(1, op1Raw.length() - 1));
                         tipo = listaTercetos.get(idx).getTipo();
+                    } else if (esAccesoPosicionalVariable(op1Raw)) {
+                        tipo = obtenerTipoAccesoPosicional(op1Raw);
                     } else {
                         tipo = TablaSimbolos.obtenerTipo(op1Raw);
                     }
                 }
+                String opAsm = resolverOperandoLectura(op1Raw, tipo, ambito, ambitoLimpio, i, 1, listaTercetos, sb);
                 if ("CADENA".equals(tipo)) {
                     sb.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET ").append(opAsm).append("\n");
                 } else if ("SHORTINT".equals(tipo)) {
@@ -542,8 +620,8 @@ public class GeneradorAssembler {
                         ultimoTipoComp = "SHORTINT";
                     }
                 }
-                String op1 = resolverOperandoAsm(t.getOperando1(), ambito, listaTercetos);
-                String op2 = resolverOperandoAsm(t.getOperando2(), ambito, listaTercetos);
+                String op1 = resolverOperandoLectura(t.getOperando1(), ultimoTipoComp, ambito, ambitoLimpio, i, 1, listaTercetos, sb);
+                String op2 = resolverOperandoLectura(t.getOperando2(), ultimoTipoComp, ambito, ambitoLimpio, i, 2, listaTercetos, sb);
                 if ("SHORTINT".equals(ultimoTipoComp)) {
                     sb.append("    MOV AL, ").append(op1).append("\n");
                     sb.append("    CMP AL, ").append(op2).append("\n");
@@ -663,7 +741,7 @@ public class GeneradorAssembler {
                     } else if ("SINGLEF".equals(tipo)) {
                         codigoData.append("    _ret_").append(ambitoLimpio).append(" DD ?\n");
                     }
-                    // Chequeo i: bandera de activacion por subrutina
+                    // Bandera de activacion para control de recursion
                     codigoData.append("    @activa_").append(ambitoLimpio).append(" DB 0\n");
                 }
             } else if (ocs != null) {
@@ -689,6 +767,10 @@ public class GeneradorAssembler {
         codigoData.append("    @aux_print_short DW ?\n");
         codigoData.append("    @aux_print_float DQ ?\n");
         codigoData.append("    @aux_tos DW ?\n");
+        codigoData.append("    @aux_pos_s1 DB ?\n");
+        codigoData.append("    @aux_pos_s2 DB ?\n");
+        codigoData.append("    @aux_pos_f1 DD ?\n");
+        codigoData.append("    @aux_pos_f2 DD ?\n");
         codigoData.append("    @max_singlef DD 3.40282347E+38\n");
         codigoData.append("    @min_shortint_f DD -128.0\n");
         codigoData.append("    @max_shortint_f DD 127.0\n");
@@ -706,7 +788,7 @@ public class GeneradorAssembler {
                 codigoCode.append("_proc_").append(ambitoLimpio).append(":\n");
                 codigoCode.append("    PUSH EBP\n");
                 codigoCode.append("    MOV EBP, ESP\n");
-                // Chequeo i: control de recursion directa o mutua
+                // Control de recursion en invocaciones
                 codigoCode.append("    CMP @activa_").append(ambitoLimpio).append(", 1\n");
                 codigoCode.append("    JE _err_recursion\n");
                 codigoCode.append("    MOV @activa_").append(ambitoLimpio).append(", 1\n");

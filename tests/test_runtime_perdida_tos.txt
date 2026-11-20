@@ -1,0 +1,10 @@
+programa_runtime_perdida_tos
+
+singlef f;
+shortint res;
+
+BEGIN
+  f := 10.5;
+  res := tos(f);
+  pout(res);
+END

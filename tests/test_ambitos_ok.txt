@@ -12,7 +12,6 @@ END;
 
 BEGIN
   a := 10$s;
-  b := a;
+  b := sumar(a);
   pout(b);
 END
-

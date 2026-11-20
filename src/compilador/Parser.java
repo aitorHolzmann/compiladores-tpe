@@ -714,7 +714,7 @@ final static String yyrule[] = {
 
 //#line 1567 "gram.y"
 
-/* CODIGO DE SOPORTE                                                         */
+/* Codigo de soporte */
 
 static Parser parser;
 
@@ -818,7 +818,7 @@ public static void imprimirInformeErrores() {
     System.out.println("----------------------------------------\n");
 }
 
- // Soporte para variables COMPTIME y evaluacion estatica (Tema 22)
+// Evaluacion estatica para variables comptime
 public static boolean esConstante(ParserVal pv) {
     if (pv == null || pv.sval == null) {
         return false;
@@ -1717,7 +1717,7 @@ case 80:
                         String tipoAtr = TablaSimbolos.obtenerTipo(claveAtr);
                         String nomAtr = TablaSimbolos.obtenerNombre(claveAtr);
 
-                        /* Chequeo de visibilidad (Tema 26)*/
+                        /* Chequeo de visibilidad*/
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
                         String claseDueniaAtr = obtenerClaseDeAmbito(TablaSimbolos.obtenerAmbito(claveAtr));
                         boolean accesoValido = true;
@@ -2163,7 +2163,7 @@ case 109:
                 } else {
                     String nomMetodo = val_peek(2).sval;
 
-                    /* Buscar metodo con herencia multiple (Tema 30 - Desambiguado Opcion 1)*/
+                    /* Buscar metodo en la jerarquia de herencia*/
                     String claveMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
                     if (claveMet == null) {
                         agregarErrorSemantico("Metodo '" + nomMetodo + "' no encontrado en la clase '" + nomClase + "' ni en su jerarquia de herencia");
@@ -2172,7 +2172,7 @@ case 109:
                         agregarErrorSemantico("El miembro '" + nomMetodo + "' de la clase '" + nomClase + "' no es un metodo");
                         yyval = new ParserVal();
                     } else {
-                        /* Chequeo de visibilidad (Tema 26)*/
+                        /* Chequeo de visibilidad*/
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
                         boolean accesoValido = true;
                         String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAmbito(claveMet));
@@ -2240,7 +2240,7 @@ case 110:
                         agregarErrorSemantico("El miembro '" + nomMetodo + "' de la clase '" + nomClase + "' no es un metodo");
                         yyval = new ParserVal();
                     } else {
-                        /* Chequeo de visibilidad (Tema 26)*/
+                        /* Chequeo de visibilidad*/
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
                         boolean accesoValido = true;
                         String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAmbito(claveMet));

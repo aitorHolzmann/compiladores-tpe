@@ -1,0 +1,11 @@
+programa_runtime_ovf_float
+
+singlef f1, f2, f_res;
+
+BEGIN
+  // Valores validos que al sumarse superan el limite de SINGLEF
+  f1 := 10.0s38 * 2.5;
+  f2 := 10.0s38 * 2.0;
+  f_res := f1 + f2;
+  pout(f_res);
+END

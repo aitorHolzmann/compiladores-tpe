@@ -1,0 +1,28 @@
+programa_ambitos_error
+
+shortint a, b;
+shortint a;
+
+shortint FUNCTION f1(shortint p)
+  shortint loc;
+  shortint FUNCTION f_interna(shortint n)
+  BEGIN
+    RET(n + 1$s);
+  END;
+BEGIN
+  loc := f_interna(p);
+  RET(loc);
+END;
+
+shortint FUNCTION f1(shortint q)
+BEGIN
+  RET(q);
+END;
+
+BEGIN
+  a := 10$s;
+  z := 20$s;
+  b := loc;
+  b := f_interna(1$s);
+  f1 := 5$s;
+END

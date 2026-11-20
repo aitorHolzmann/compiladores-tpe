@@ -1,0 +1,26 @@
+programa_tipos_error
+
+shortint a, b;
+singlef x, y;
+
+BEGIN
+  // Operaciones binarias entre tipos incompatibles
+  a := a + x;
+  x := y * b;
+
+  // Asignaciones incompatibles
+  a := x;
+  x := a;
+
+  // Conversion tos sobre operando entero
+  b := tos(a + 5$s);
+
+  // Comparacion entre tipos distintos
+  IF (a > x)
+    pout("Error de tipos");
+  END_IF;
+
+  // Asignacion en expresion con tipo incompatible o variable sin declarar
+  a := b = (3.14);
+  a := var_no_decl = (2$s);
+END

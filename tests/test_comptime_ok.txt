@@ -1,0 +1,35 @@
+programa_comptime_ok
+
+comptime shortint c_entero1, c_entero2, c_entero3;
+comptime singlef c_float1, c_float2;
+shortint r_entero1, r_entero2;
+singlef r_float1;
+
+begin
+    // Asignaciones de constantes a variables comptime
+    c_entero1 := 3$s;
+    c_float1 := 2.5;
+
+    // Evaluacion estatica entre constantes y comptime
+    c_entero2 := c_entero1 + 7$s;
+    c_entero3 := c_entero2 * 2$s;
+    c_float2 := c_float1 + 1.5;
+
+    // Conversion tos() estatica en comptime
+    c_entero1 := tos(c_float2);
+
+    // Asignacion de comptime a variables de runtime
+    r_entero1 := c_entero1;
+    r_entero2 := c_entero3 + 5$s;
+    r_float1 := c_float2;
+
+    // Uso de comptime en condicion if
+    if (c_entero1 > 1$s)
+        r_entero1 := r_entero1 + 1$s;
+    end_if;
+
+    pout(r_entero1);
+    pout(r_entero2);
+    pout(r_float1);
+    pout(c_entero2);
+end

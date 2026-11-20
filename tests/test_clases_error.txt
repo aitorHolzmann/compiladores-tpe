@@ -16,14 +16,31 @@ begin
     end export to c_autorizada;
 end;
 
-// Error 1: Clase base no declarada en EXTENDS
+// Atributo y metodo redeclarados en la misma clase
+class c_redeclaraciones
+begin
+    shortint atr_dup;
+    shortint atr_dup;
+
+    shortint m_dup()
+    begin
+        ret(1$s);
+    end;
+
+    shortint m_dup()
+    begin
+        ret(2$s);
+    end;
+end;
+
+// Clase base no declarada en EXTENDS
 class c_herencia_invalida
 begin
     extends c_fantasma;
     shortint x;
 end;
 
-// Error 2: Clase no declarada en IMPORT FROM
+// Clase no declarada en IMPORT FROM
 class c_import_invalido import from c_inexistente
 begin
     shortint y;
@@ -33,9 +50,9 @@ class c_autorizada import from c_base
 begin
     shortint m_test(c_base obj)
     begin
-        // Error 3: Miembro no exportado a esta clase
-        obj[0$s] := 10$s; // atr_privado no esta exportado a c_autorizada
-        obj.m_privado();   // m_privado no esta exportado a c_autorizada
+        // Miembro no exportado a esta clase
+        obj[0$s] := 10$s;
+        obj.m_privado();
 
         ret(0$s);
     end;
@@ -45,7 +62,7 @@ class c_no_importa
 begin
     shortint m_test(c_base obj)
     begin
-        // Error 4: La clase c_no_importa no importa a c_base
+        // La clase c_no_importa no importa a c_base
         obj[1$s] := 20$s;
         obj.m_exportado();
 
@@ -53,14 +70,14 @@ begin
     end;
 end;
 
-// Error 11: Herencia directa a si misma (auto-ciclo)
+// Herencia directa a si misma
 class c_auto_ciclo
 begin
     extends c_auto_ciclo;
     shortint x;
 end;
 
-// Error 12: Intento de ciclo mutuo por referencia hacia adelante (clase no declarada)
+// Intento de ciclo mutuo por referencia hacia adelante
 class c_fwd_a
 begin
     extends c_fwd_b;
@@ -73,7 +90,7 @@ begin
     shortint atr_b;
 end;
 
-// Error 13: Ciclo indirecto mediante redeclaracion de clase
+// Ciclo indirecto mediante redeclaracion de clase
 class c_ciclo1
 begin
     shortint val1;
@@ -96,29 +113,28 @@ shortint r_entero;
 singlef idx_float;
 c_fwd_a obj_fwd;
 
-// Error 5: Objeto de clase no declarada
+// Objeto de clase no declarada
 c_no_existe obj_malo;
 
 begin
-    // Error 6: Indice posicional fuera de rango (c_base tiene 2 atributos: 0 y 1)
+    // Indice posicional fuera de rango
     b[5$s] := 1$s;
 
-    // Error 7: Indice de acceso posicional no es SHORTINT
+    // Indice de acceso posicional no es SHORTINT
     idx_float := 1.5;
     b[idx_float] := 1$s;
 
-    // Error 8: Metodo no encontrado en la jerarquia
+    // Metodo no encontrado en la jerarquia
     b.metodo_inexistente();
 
-    // Error 9: Acceso posicional e invocacion de metodo sobre identificador que no es objeto
+    // Acceso e invocacion sobre identificador que no es objeto
     r_entero := 5$s;
     r_entero[0$s] := 1$s;
     r_entero.m();
 
-    // Error 10: Incompatibilidad de tipos en asignacion a atributo (SINGLEF a SHORTINT sin tos)
+    // Incompatibilidad de tipos en asignacion a atributo
     b[0$s] := 3.14;
 
-    // Invocacion de metodo inexistente sobre clase con intento de ciclo mutuo (sin StackOverflowError)
+    // Metodo inexistente sobre clase con intento de ciclo mutuo
     obj_fwd.metodo_inexistente();
 end
-

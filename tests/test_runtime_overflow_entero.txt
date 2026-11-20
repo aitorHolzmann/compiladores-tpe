@@ -1,0 +1,10 @@
+programa_runtime_ovf_entero
+
+shortint a, b, res;
+
+BEGIN
+  a := 50$s;
+  b := 3$s;
+  res := a * b;
+  pout(res);
+END

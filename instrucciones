@@ -1,0 +1,48 @@
+Estamos validando en Windows el compilador de la entrega final (repo `compiladores-entrega`, Java 11+ -> Assembler MASM32).
+
+### Reglas estrictas
+- NO crear archivos de documentación, guías ni notas de IA en el repo.
+- Comentarios en código solo si son estrictamente necesarios, breves y en español neutro (sin mencionar temas, hitos, chequeos ni IA).
+- Al terminar, borrar todos los `.asm`, `.obj`, `.exe` y `bin/` generados durante las pruebas.
+
+### Tarea: ensamblar y ejecutar con MASM32
+Usando `\masm32\bin\ml.exe` y `\masm32\bin\link.exe`, compilar, ensamblar, enlazar y ejecutar estas pruebas:
+
+**Casos válidos (deben terminar con exit code 0 y salida correcta):**
+- `tests\test_ambitos_ok.txt`
+- `tests\test_tipos_y_aritmetica_ok.txt`
+- `tests\test_control_ok.txt`
+- `tests\test_funciones_ok.txt`
+- `tests\test_comptime_ok.txt`
+- `tests\test_clases_ok.txt`
+- `tests\test_integrador.txt`
+
+**Controles runtime (deben imprimir el error en tiempo de ejecución y terminar con exit code 1):**
+- `tests\test_runtime_overflow_float.txt`
+- `tests\test_runtime_overflow_entero.txt`
+- `tests\test_runtime_perdida_tos.txt`
+- `tests\test_runtime_recursion.txt`
+
+Pipeline por cada archivo (`<base>` sin `.txt`):
+1. `java -jar compilador.jar <archivo>.txt`
+2. `\masm32\bin\ml /c /Zd /coff <base>.asm`
+3. `\masm32\bin\link /SUBSYSTEM:CONSOLE <base>.obj`
+4. Ejecutar `<base>.exe` y verificar salida y exit code.
+
+### Puntos probables a corregir si `ml.exe` o `link.exe` fallan
+Todo el ensamblador se genera en `src/compilador/GeneradorAssembler.java`:
+1. Si `ml.exe` rechaza `DD` con literales flotantes (`DD 3.40282347E+38`, `DD 2.5E38`, `DD 3.14`) o con `FLD`/`FSTP`, pasar las declaraciones `SINGLEF` de `DD` a `REAL4` (y `@aux_print_float` de `DQ` a `REAL8`).
+2. Si `ml.exe` o `link.exe` da conflicto con `.386` / `.model` antes de `masm32rt.inc` o símbolo `printf` sin resolver, ajustar el encabezado en `generarAssembler()` (ej. `includelib \masm32\lib\msvcrt.lib` o quitar las directivas duplicadas por `masm32rt.inc`).
+3. Si alguna impresión `printf` dentro de una función rompe el retorno (`RET`), agregar `SUB ESP, 4 / PUSH EDI / PUSH ESI` y `POP ESI / POP EDI` en el prólogo/epílogo de subrutinas.
+
+### Si editás `GeneradorAssembler.java`
+Recompilar `compilador.jar` para Java 11+ desde la raíz del proyecto y re-ejecutar todas las pruebas:
+```powershell
+New-Item -ItemType Directory -Force -Path bin | Out-Null
+javac --release 11 -encoding UTF-8 -d bin (Get-ChildItem src\compilador\*.java, src\accion_semantica\*.java).FullName
+Copy-Item -Recurse -Force src\estructuras bin\src\
+jar --create --file compilador.jar --main-class src.compilador.Parser -C bin .
+Remove-Item -Recurse -Force bin
+```
+
+Reportar los resultados reales de cada prueba (ensamblado, linkeado, salida y exit code) y dejar `git status` sin archivos temporales (`.asm`, `.obj`, `.exe`, `bin/`).

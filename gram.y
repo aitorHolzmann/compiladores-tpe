@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Stack;
 %}
 
-/* ===== TOKENS ===== */
+/* Tokens */
 %token IDENTIFICADOR 257
 %token IF 258
 %token ELSE 259
@@ -26,7 +26,7 @@ import java.util.Stack;
 %token CTE_SHORTINT 286
 %token CTE_SINGLEF 287
 
-/* Temas particulares - palabras reservadas */
+/* Palabras reservadas adicionales */
 %token REPEAT 276
 %token UNTIL 277
 %token AUTO 278
@@ -45,7 +45,7 @@ import java.util.Stack;
 
 %%
 
-/* PROGRAMA PRINCIPAL                                                        */
+/* Programa principal */
 
 nombre_programa
     : IDENTIFICADOR
@@ -66,7 +66,7 @@ programa
         }
     ;
 
-/* SENTENCIAS DECLARATIVAS                                                   */
+/* Sentencias declarativas */
 
 sentencias_declarativas
     : /* vacio */
@@ -138,7 +138,7 @@ tipo
     | SINGLEF  { $$ = new ParserVal("SINGLEF"); }
     ;
 
-/* FUNCIONES (Tema 21: AUTO FUNCTION) */
+/* Funciones */
 
 encabezado_funcion
     : tipo FUNCTION IDENTIFICADOR
@@ -267,7 +267,7 @@ parametro_formal
     ;
     
 
-/* CLASES (Temas 26, 29, 30) */
+/* Clases */
 
 encabezado_clase
     : CLASS IDENTIFICADOR
@@ -489,7 +489,7 @@ exportacion_opcional
         }
     ;
 
-/* OBJETOS */
+/* Objetos */
 
 declaracion_objeto
     : IDENTIFICADOR lista_identificadores ';'
@@ -513,7 +513,7 @@ declaracion_objeto
         { yyerror("Falta ';' al final de la declaracion de objeto"); }
     ;
 
-/* COMPTIME (Tema 22) */
+/* Variables comptime */
 
 declaracion_comptime
     : COMPTIME tipo lista_identificadores ';'
@@ -541,7 +541,7 @@ declaracion_comptime
         }
     ;
 
-/* SENTENCIAS EJECUTABLES                                                    */
+/* Sentencias ejecutables */
 
 sentencias_ejecutables
     : /* vacio */
@@ -663,7 +663,7 @@ acceso_posicional
                         String tipoAtr = TablaSimbolos.obtenerTipo(claveAtr);
                         String nomAtr = TablaSimbolos.obtenerNombre(claveAtr);
 
-                        // Chequeo de visibilidad (Tema 26)
+                        // Chequeo de visibilidad
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
                         String claseDueniaAtr = obtenerClaseDeAmbito(TablaSimbolos.obtenerAmbito(claveAtr));
                         boolean accesoValido = true;
@@ -737,7 +737,7 @@ acceso_posicional
         { yyerror("Acceso posicional invalido: solo se permite constante SHORTINT positiva o identificador"); $$ = new ParserVal(); }
     ;
 
-/* EXPRESIONES                                                               */
+/* Expresiones */
 expresion
     : termino
         {
@@ -1056,7 +1056,7 @@ invocacion_metodo
                 } else {
                     String nomMetodo = $3.sval;
 
-                    // Buscar metodo con herencia multiple (Tema 30 - Desambiguado Opcion 1)
+                    // Buscar metodo en la jerarquia de herencia
                     String claveMet = TablaSimbolos.buscarMiembroEnJerarquia(nomClase, nomMetodo);
                     if (claveMet == null) {
                         agregarErrorSemantico("Metodo '" + nomMetodo + "' no encontrado en la clase '" + nomClase + "' ni en su jerarquia de herencia");
@@ -1065,7 +1065,7 @@ invocacion_metodo
                         agregarErrorSemantico("El miembro '" + nomMetodo + "' de la clase '" + nomClase + "' no es un metodo");
                         $$ = new ParserVal();
                     } else {
-                        // Chequeo de visibilidad (Tema 26)
+                        // Chequeo de visibilidad
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
                         boolean accesoValido = true;
                         String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAmbito(claveMet));
@@ -1131,7 +1131,7 @@ invocacion_metodo
                         agregarErrorSemantico("El miembro '" + nomMetodo + "' de la clase '" + nomClase + "' no es un metodo");
                         $$ = new ParserVal();
                     } else {
-                        // Chequeo de visibilidad (Tema 26)
+                        // Chequeo de visibilidad
                         String claseActual = obtenerClaseDeAmbito(ambitoActual);
                         boolean accesoValido = true;
                         String claseDueniaMetodo = obtenerClaseDeAmbito(TablaSimbolos.obtenerAmbito(claveMet));
@@ -1209,7 +1209,7 @@ lista_expresiones
         }
     ;
 
-/* Tema 17: Asignacion en expresion */
+/* Asignacion en expresion */
 unica
     : IDENTIFICADOR '=' '(' expresion ')'
         {
@@ -1309,7 +1309,7 @@ numero_negativo
         }
     ;
 
-/* Tema 34: Conversion explicita de flotante a entero corto */
+/* Conversion explicita tos */
 conversion_tos
     : TOS '(' expresion ')'
         {
@@ -1343,7 +1343,7 @@ conversion_tos
         }
     ;
 
-/* SENTENCIAS DE CONTROL                                                     */
+/* Sentencias de control */
 encabezado_if
     : IF '(' condicion ')'
         {
@@ -1446,7 +1446,7 @@ bloque
         { yyerror("Falta el delimitador END en el bloque de sentencias"); }
     ;
 
-/* Tema 12: Repeat-Until */
+/* Sentencia repeat until */
 inicio_repeat
     : REPEAT
         {
@@ -1512,7 +1512,7 @@ condicion_iteracion
             yyerror("Faltan parentesis en condicion de iteracion");
         }
     ;
-/* ENTRADA / SALIDA                                                          */
+/* Entrada y salida */
 
 sentencia_pout
     : POUT '(' CADENA ')'
@@ -1565,7 +1565,7 @@ sentencia_ret
 
 %%
 
-/* CODIGO DE SOPORTE                                                         */
+/* Codigo de soporte */
 
 static Parser parser;
 
@@ -1669,7 +1669,7 @@ public static void imprimirInformeErrores() {
     System.out.println("----------------------------------------\n");
 }
 
- // Soporte para variables COMPTIME y evaluacion estatica (Tema 22)
+// Evaluacion estatica para variables comptime
 public static boolean esConstante(ParserVal pv) {
     if (pv == null || pv.sval == null) {
         return false;
