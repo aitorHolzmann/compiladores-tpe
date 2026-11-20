@@ -596,16 +596,16 @@ public class GeneradorAssembler {
                 }
                 String opAsm = resolverOperandoLectura(op1Raw, tipo, ambito, ambitoLimpio, i, 1, listaTercetos, sb);
                 if ("CADENA".equals(tipo)) {
-                    sb.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET ").append(opAsm).append("\n");
+                    sb.append("    invoke crt_printf, cfm$(\"%s\\n\"), OFFSET ").append(opAsm).append("\n");
                 } else if ("SHORTINT".equals(tipo)) {
                     sb.append("    MOV AL, ").append(opAsm).append("\n");
                     sb.append("    MOVSX AX, AL\n");
                     sb.append("    MOV @aux_print_short, AX\n");
-                    sb.append("    invoke printf, cfm$(\"%hd\\n\"), @aux_print_short\n");
+                    sb.append("    invoke crt_printf, cfm$(\"%hd\\n\"), @aux_print_short\n");
                 } else if ("SINGLEF".equals(tipo)) {
                     sb.append("    FLD ").append(opAsm).append("\n");
                     sb.append("    FSTP @aux_print_float\n");
-                    sb.append("    invoke printf, cfm$(\"%Lf\\n\"), @aux_print_float\n");
+                    sb.append("    invoke crt_printf, cfm$(\"%Lf\\n\"), @aux_print_float\n");
                 }
             } else if (">".equals(op) || "<".equals(op) || ">=".equals(op) || "<=".equals(op) || "==".equals(op) || "!=".equals(op)) {
                 ultimoOpComp = op;
@@ -689,14 +689,7 @@ public class GeneradorAssembler {
         registrarAuxiliaresYConstantes(tercetosPorAmbito);
 
         StringBuilder encabezado = new StringBuilder();
-        encabezado.append(".386\n");
-        encabezado.append(".model flat, stdcall\n");
-        encabezado.append("option casemap :none\n");
-        encabezado.append("include \\masm32\\include\\masm32rt.inc\n");
-        encabezado.append("includelib \\masm32\\lib\\kernel32.lib\n");
-        encabezado.append("includelib \\masm32\\lib\\masm32.lib\n");
-        encabezado.append("dll_dllcrt0 PROTO C\n");
-        encabezado.append("printf PROTO C :VARARG\n\n");
+        encabezado.append("include \\masm32\\include\\masm32rt.inc\n\n");
 
         codigoData.append(".data\n");
         Map<String, Map<String, Object>> tabla = TablaSimbolos.obtenerTabla();
@@ -809,16 +802,16 @@ public class GeneradorAssembler {
 
         codigoCode.append("    invoke ExitProcess, 0\n\n");
         codigoCode.append("_err_overflow_float:\n");
-        codigoCode.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET _msg_err_ovf_float\n");
+        codigoCode.append("    invoke crt_printf, cfm$(\"%s\\n\"), OFFSET _msg_err_ovf_float\n");
         codigoCode.append("    invoke ExitProcess, 1\n\n");
         codigoCode.append("_err_overflow_entero:\n");
-        codigoCode.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET _msg_err_ovf_entero\n");
+        codigoCode.append("    invoke crt_printf, cfm$(\"%s\\n\"), OFFSET _msg_err_ovf_entero\n");
         codigoCode.append("    invoke ExitProcess, 1\n\n");
         codigoCode.append("_err_perdida_info:\n");
-        codigoCode.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET _msg_err_perdida_tos\n");
+        codigoCode.append("    invoke crt_printf, cfm$(\"%s\\n\"), OFFSET _msg_err_perdida_tos\n");
         codigoCode.append("    invoke ExitProcess, 1\n\n");
         codigoCode.append("_err_recursion:\n");
-        codigoCode.append("    invoke printf, cfm$(\"%s\\n\"), OFFSET _msg_err_recursion\n");
+        codigoCode.append("    invoke crt_printf, cfm$(\"%s\\n\"), OFFSET _msg_err_recursion\n");
         codigoCode.append("    invoke ExitProcess, 1\n\n");
         codigoCode.append("end start\n");
 
